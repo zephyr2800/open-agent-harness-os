@@ -1,0 +1,3 @@
+{"event_type":"decision_request","payload":{"available_actions":["read_file","write_file","abstain"]},"sequence":0,"task_id":"unknown_tool"}
+{"event_type":"decision","parent_digest":"sha256:6012b54ee8f60dccfe7a5264c7289f18b696b6717f6c45afc5db0f08d953e304","payload":{"kind":"abstain","reason":"required tool is unavailable"},"sequence":1,"task_id":"unknown_tool"}
+{"event_type":"trajectory_end","parent_digest":"sha256:272dc4eedc45396a0ba21685ec784824d815656d87a067ad26f84c9e180a61ac","payload":{"outcome":"abstained"},"sequence":2,"task_id":"unknown_tool"}

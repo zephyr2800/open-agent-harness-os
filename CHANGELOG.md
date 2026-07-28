@@ -1,0 +1,69 @@
+# Changelog
+
+## 0.1.0 — 2026-07-25
+
+- Added Action IR v0 and harness event contracts.
+- Added typed state, authority policy, tool registry, bounded executor, and
+  independent verification.
+- Added evidence ledger, context compiler, recovery, checkpoints, replay, and
+  branch selection.
+- Added provider-neutral and Project 1-compatible model adapters.
+- Added H0–H4 runtime configuration and bounded promotion gate.
+- Added six-task held-in/held-out fixture and ten-cell factorial runner.
+- Added 11 standard-library regression tests.
+- Added a reproducible developer-preview launch preflight covering product
+  smoke, MCP/replay, locality and safety boundaries, wheel integrity, launch
+  docs, and the complete source test suite.
+- Added atomic trace publication with restart/concurrency coverage and
+  bearer-authenticated HTTP serving; non-loopback startup now requires a
+  token plus TLS 1.2+ certificate/key configuration.
+- Added frozen promotion-decision gates for complete hidden/proxy slices,
+  independent replay, safety, and unknown-spec rejection.
+- Added per-task latency and CUDA memory instrumentation to checkpoint
+  promotion matrices.
+- Added token-principal trace namespaces with cross-tenant read isolation and
+  launch-preflight coverage.
+- Added executable per-tool security metadata auditing to launch preflight.
+- Added the disjoint 20-task external-bar-lite fixture and source-backed
+  TUA-Bench/OSWorld 2.0 evaluation-bar note.
+- Added atomic resumable checkpoints for long promotion matrices.
+- Added a guarded post-matrix watcher that launches the external-bar-lite
+  diagnostic only after the 9B frozen evaluation exits, with separate logs and
+  no automatic RL or promotion override.
+- Added an auditable promotion-matrix summarizer with family-level Wilson
+  intervals, replay/safety metrics, latency, CUDA/device, and peak-memory
+  reporting, plus a guarded post-run summary watcher.
+- Added a machine-readable release-readiness manifest separating developer
+  preview, research-candidate, and public-launch gates, with an automatic
+  refresh watcher after the 9B evaluation chain.
+- Added `docs/USER_WORKFLOW_GUIDE.md` with verified-write, recovery, and
+  high-risk-denial preview workflows; launch preflight now requires it.
+- Refreshed research positioning with current primary sources and a frozen
+  model-only versus SFT versus independent-verifier factorial claim boundary.
+- Added a disjoint 32-task external-bar v2 diagnostic and guarded three-seed
+  watcher for cross-source, stale-state, conflict, injection, ambiguity, and
+  confirmation failures.
+- Hardened future matrix reports with false-completion, unverified-action,
+  unknown-action, premature-finish, and abstention metrics by family and run.
+- Added authenticated per-principal rolling HTTP rate limiting with `429` and
+  `Retry-After`; launch preflight now covers the operational boundary.
+- Added Apache-2.0 `LICENSE`, `NOTICE`, and `SECURITY.md` artifacts and made
+  them required and fingerprinted in launch/release checks.
+- Added the frozen 9B reproducibility handoff with checkpoint manifests,
+  fixture hashes, exact commands, and promotion/diagnostic boundaries.
+- Added a machine-readable pre-RL gate that blocks verifier-backed RL until
+  promotion, replay, diagnostic, safety, and checkpoint gates pass.
+- Added pass/fail regression tests for the pre-RL gate; the harness suite now
+  covers 53 tests.
+- Rebuilt and revalidated the distributable wheel after launch-policy changes;
+  the wheel reports Apache-2.0 metadata and passes the full preview preflight.
+- Reinstalled that wheel into a fresh target outside the checkout; clean demo
+  and core-module import smoke passed.
+- Added `experiments/wheel_smoke.py` and a machine-readable clean-target wheel
+  smoke artifact with the current wheel fingerprint.
+- Added the research/launch one-pager tying current primary-source signals to
+  the falsifiable experiment and explicit claim boundaries.
+- Updated the paired Project 1 paper draft with current validated 7B/harness
+  evidence, negative controls, and the pending Qwopus 9B result boundary.
+- Updated the main README with direct research, reproducibility, security,
+  claims, launch, and clean-wheel evidence links.

@@ -1,0 +1,43 @@
+# Python and local tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Generated evaluation and runtime state
+results/
+experiments/results/
+work/*
+!work/.gitkeep
+*.partial.json
+*.partial.md
+*.jsonl
+!projects/local-action-model/fixtures/training/action-sft-v0.jsonl
+!projects/local-action-model/fixtures/trajectories/reference-abstention.jsonl
+*.log
+
+# Model artifacts and secrets
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+*.onnx
+.env
+.env.*
+*.pem
+*.key
+*.token
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,28 @@
+{
+  "schema": "local-action-model-checkpoint/v0",
+  "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+  "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "license": "apache-2.0",
+  "parameters": 490000000,
+  "architecture": "Qwen2 causal language model",
+  "source": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct",
+  "requirements": {
+    "python": ">=3.10",
+    "transformers": ">=4.37.0",
+    "torch": ">=2.2"
+  },
+  "generation": {
+    "do_sample": false,
+    "max_new_tokens": 256,
+    "structured_output": "action-ir/v0"
+  },
+  "measurement": {
+    "record_revision": true,
+    "record_device": true,
+    "record_dtype": true,
+    "record_input_tokens": true,
+    "record_output_tokens": true,
+    "record_wall_time_ms": true,
+    "record_peak_memory_bytes": true
+  }
+}

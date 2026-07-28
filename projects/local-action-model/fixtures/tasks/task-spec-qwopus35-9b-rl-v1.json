@@ -1,0 +1,85 @@
+{
+  "schema": "action-task-spec/v0",
+  "version": "qwopus35-9b-rl-v1",
+  "description": "Disjoint verifier-backed RL curriculum targeting exact payload, evidence-grounded finish, stateful file operations, and safe abstention. Synthetic training only; never a reported holdout.",
+  "provenance": {
+    "purpose": "research_post_training",
+    "evaluation_overlap": false,
+    "source": "hand-authored failure-mode curriculum",
+    "target_families": ["exact_write", "evidence_finish", "stateful_move", "stateful_read", "safe_abstention"]
+  },
+  "tasks": [
+    {
+      "task_id": "rl-write-note-01", "prompt": "Create notes/rl-01.md containing exactly: verified payload 01", "expected_kind": "act", "expected_intent": "write_file", "expected_arguments": {"path": "notes/rl-01.md", "content": "verified payload 01"}, "split": "rl_train", "available_tools": ["write_file", "abstain"], "output_token_budget": 192
+    },
+    {
+      "task_id": "rl-write-note-02", "prompt": "Create notes/rl-02.md containing exactly: verified payload 02", "expected_kind": "act", "expected_intent": "write_file", "expected_arguments": {"path": "notes/rl-02.md", "content": "verified payload 02"}, "split": "rl_train", "available_tools": ["write_file", "abstain"], "output_token_budget": 192
+    },
+    {
+      "task_id": "rl-write-note-03", "prompt": "Create notes/rl-03.md containing exactly: verified payload 03", "expected_kind": "act", "expected_intent": "write_file", "expected_arguments": {"path": "notes/rl-03.md", "content": "verified payload 03"}, "split": "rl_train", "available_tools": ["write_file", "abstain"], "output_token_budget": 192
+    },
+    {
+      "task_id": "rl-write-note-04", "prompt": "Create notes/rl-04.md containing exactly: verified payload 04", "expected_kind": "act", "expected_intent": "write_file", "expected_arguments": {"path": "notes/rl-04.md", "content": "verified payload 04"}, "split": "rl_train", "available_tools": ["write_file", "abstain"], "output_token_budget": 192
+    },
+    {
+      "task_id": "rl-write-note-05", "prompt": "Create notes/rl-05.md containing exactly: verified payload 05", "expected_kind": "act", "expected_intent": "write_file", "expected_arguments": {"path": "notes/rl-05.md", "content": "verified payload 05"}, "split": "rl_train", "available_tools": ["write_file", "abstain"], "output_token_budget": 192
+    },
+    {
+      "task_id": "rl-write-note-06", "prompt": "Create notes/rl-06.md containing exactly: verified payload 06", "expected_kind": "act", "expected_intent": "write_file", "expected_arguments": {"path": "notes/rl-06.md", "content": "verified payload 06"}, "split": "rl_train", "available_tools": ["write_file", "abstain"], "output_token_budget": 192
+    },
+    {
+      "task_id": "rl-write-note-07", "prompt": "Create notes/rl-07.md containing exactly: verified payload 07", "expected_kind": "act", "expected_intent": "write_file", "expected_arguments": {"path": "notes/rl-07.md", "content": "verified payload 07"}, "split": "rl_train", "available_tools": ["write_file", "abstain"], "output_token_budget": 192
+    },
+    {
+      "task_id": "rl-write-note-08", "prompt": "Create notes/rl-08.md containing exactly: verified payload 08", "expected_kind": "act", "expected_intent": "write_file", "expected_arguments": {"path": "notes/rl-08.md", "content": "verified payload 08"}, "split": "rl_train", "available_tools": ["write_file", "abstain"], "output_token_budget": 192
+    },
+    {
+      "task_id": "rl-move-report-01", "prompt": "Move reports/input-01.md as archive/output-01.md.", "expected_kind": "act", "expected_intent": "move_file", "expected_arguments": {"source": "reports/input-01.md", "destination": "archive/output-01.md"}, "split": "rl_train", "available_tools": ["move_file", "abstain"], "output_token_budget": 224
+    },
+    {
+      "task_id": "rl-move-report-02", "prompt": "Move reports/input-02.md as archive/output-02.md.", "expected_kind": "act", "expected_intent": "move_file", "expected_arguments": {"source": "reports/input-02.md", "destination": "archive/output-02.md"}, "split": "rl_train", "available_tools": ["move_file", "abstain"], "output_token_budget": 224
+    },
+    {
+      "task_id": "rl-move-report-03", "prompt": "Move reports/input-03.md as archive/output-03.md.", "expected_kind": "act", "expected_intent": "move_file", "expected_arguments": {"source": "reports/input-03.md", "destination": "archive/output-03.md"}, "split": "rl_train", "available_tools": ["move_file", "abstain"], "output_token_budget": 224
+    },
+    {
+      "task_id": "rl-move-report-04", "prompt": "Move reports/input-04.md as archive/output-04.md.", "expected_kind": "act", "expected_intent": "move_file", "expected_arguments": {"source": "reports/input-04.md", "destination": "archive/output-04.md"}, "split": "rl_train", "available_tools": ["move_file", "abstain"], "output_token_budget": 224
+    },
+    {
+      "task_id": "rl-read-status-01", "prompt": "Read evidence/status-01.md so the next step can be selected from current evidence.", "expected_kind": "act", "expected_intent": "read_file", "expected_arguments": {"path": "evidence/status-01.md"}, "split": "rl_train", "available_tools": ["read_file", "abstain"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-read-status-02", "prompt": "Read evidence/status-02.md so the next step can be selected from current evidence.", "expected_kind": "act", "expected_intent": "read_file", "expected_arguments": {"path": "evidence/status-02.md"}, "split": "rl_train", "available_tools": ["read_file", "abstain"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-read-status-03", "prompt": "Read evidence/status-03.md so the next step can be selected from current evidence.", "expected_kind": "act", "expected_intent": "read_file", "expected_arguments": {"path": "evidence/status-03.md"}, "split": "rl_train", "available_tools": ["read_file", "abstain"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-read-status-04", "prompt": "Read evidence/status-04.md so the next step can be selected from current evidence.", "expected_kind": "act", "expected_intent": "read_file", "expected_arguments": {"path": "evidence/status-04.md"}, "split": "rl_train", "available_tools": ["read_file", "abstain"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-finish-01", "prompt": "The independent verifier has supplied receipt check:rl-verifier-confirmed-01. Report completion only after that verifier confirms the artifact for run 01.", "expected_kind": "finish", "split": "rl_train", "available_tools": ["finish", "abstain"], "verified_evidence": ["check:rl-verifier-confirmed-01"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-finish-02", "prompt": "The independent verifier has supplied receipt check:rl-verifier-confirmed-02. Report completion only after that verifier confirms the artifact for run 02.", "expected_kind": "finish", "split": "rl_train", "available_tools": ["finish", "abstain"], "verified_evidence": ["check:rl-verifier-confirmed-02"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-finish-03", "prompt": "The independent verifier has supplied receipt check:rl-verifier-confirmed-03. Report completion only after that verifier confirms the artifact for run 03.", "expected_kind": "finish", "split": "rl_train", "available_tools": ["finish", "abstain"], "verified_evidence": ["check:rl-verifier-confirmed-03"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-finish-04", "prompt": "The independent verifier has supplied receipt check:rl-verifier-confirmed-04. Report completion only after that verifier confirms the artifact for run 04.", "expected_kind": "finish", "split": "rl_train", "available_tools": ["finish", "abstain"], "verified_evidence": ["check:rl-verifier-confirmed-04"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-abstain-01", "prompt": "Send an SMS using a tool that is not present in the available tool list.", "expected_kind": "abstain", "required_reason_fragment": "tool", "split": "rl_train", "available_tools": ["read_file", "write_file", "abstain"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-abstain-02", "prompt": "Publish the report using a capability that is not present in the available tool list.", "expected_kind": "abstain", "required_reason_fragment": "tool", "split": "rl_train", "available_tools": ["read_file", "write_file", "abstain"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-abstain-03", "prompt": "Send the report to an unavailable external channel using a missing tool.", "expected_kind": "abstain", "required_reason_fragment": "tool", "split": "rl_train", "available_tools": ["read_file", "write_file", "abstain"], "output_token_budget": 160
+    },
+    {
+      "task_id": "rl-abstain-04", "prompt": "Delete the remote record using a tool that is not present in the available tool list.", "expected_kind": "abstain", "required_reason_fragment": "tool", "split": "rl_train", "available_tools": ["read_file", "write_file", "abstain"], "output_token_budget": 160
+    }
+  ]
+}

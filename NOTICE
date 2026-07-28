@@ -1,0 +1,9 @@
+Open Agent Harness OS
+
+The core harness is distributed under the Apache License, Version 2.0.
+The core package intentionally has no third-party runtime dependencies.
+Optional model runtimes, model checkpoints, datasets, and downloaded
+artifacts are separate works and retain their own licenses and provenance
+obligations. In particular, Qwopus/Qwen model files and training sources must
+be reviewed independently before commercial redistribution.
+

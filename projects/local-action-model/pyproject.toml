@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "open-local-action-model"
+version = "0.1.0"
+description = "Protocol and evaluation foundations for small local agent action models"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+
+[project.optional-dependencies]
+transformers = ["torch>=2.2", "transformers>=4.37.0"]
+post-training = ["torch>=2.7", "transformers>=4.57", "datasets>=3", "peft>=0.15", "trl>=0.20"]
+
+[tool.unittest]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["action_ir*", "eval*", "runtime*", "model*", "data*", "train*", "experiments*"]

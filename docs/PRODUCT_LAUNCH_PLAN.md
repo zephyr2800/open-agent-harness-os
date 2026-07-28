@@ -1,0 +1,109 @@
+# Product launch plan
+
+## Current decision
+
+The evidence favors a local developer-preview product over claiming a model
+breakthrough. The product value is verifiable local execution: a user can ask
+for a registered action, receive independently checked output, and retain a
+tamper-evident trace for replay.
+
+## Distribution split
+
+The launch boundary is now explicitly two-track:
+
+1. **Public harness track:** ship the Apache-2.0 harness source/wheel, typed
+   Action IR, registered tools, verifier/replay plane, documentation, and
+   bring-your-own-model adapter. Do not bundle Qwopus weights, distilled
+   traces, benchmark assets, or uncleared training data.
+2. **Internal research track:** keep the Qwopus3.5-9B checkpoint, adapters,
+   remediation curricula, and RL artifacts private until upstream model,
+   dataset, tokenizer, dependency, and intended-distribution review is signed
+   off by a human owner.
+
+This split allows the harness product gates to be closed independently while
+preserving the research checkpoint's provenance boundary. A public harness
+release must still pass identity/operations, usability, security, and
+external-evaluation gates; the split is not a waiver of those requirements.
+
+## Delivered slice
+
+- `python -m app.cli demo` offline smoke workflow;
+- `tools`, `run`, and `replay` CLI commands;
+- loopback-only HTTP API at `/health`, `/tools`, `/run`, and `/replay`;
+- optional loopback OpenAI-compatible model endpoint;
+- no arbitrary shell execution;
+- default denial of high-risk delete;
+- typed Action IR and independently verified tool output;
+- JSONL trace returned from every run.
+- wheel build and clean extracted-package demo smoke test.
+- versioned API response schema and loopback-only model endpoint policy;
+- bounded content-addressed trace retention;
+- atomic trace publication with restart and concurrent-writer regression
+  coverage;
+- explicit per-run step, timeout, token, and request-size limits.
+- OpenAI-compatible model calls cap their socket timeout to the harness-owned
+  per-decision budget, with regression coverage for the budget boundary.
+- authenticated per-principal rolling request-rate limit with `429`/
+  `Retry-After` behavior and preflight coverage.
+- loopback bind guard with an explicit opt-in for authenticated, TLS-protected
+  non-loopback serving.
+
+## Launch gates
+
+- package installation and clean-machine smoke test;
+- authenticated or explicitly local-only endpoint policy (non-loopback now
+  requires a bearer token plus TLS 1.2+; loopback remains the default);
+- user-facing task templates and error recovery;
+- persistence/retention policy validation under restart and concurrent use;
+- token-principal trace namespace isolation;
+- performance/resource report under a real local model;
+- usability testing with at least three representative workflows;
+- security review of every enabled tool and adapter.
+
+The current slice is therefore launch-candidate infrastructure, not a public
+product launch. It is intentionally honest about the remaining gates.
+
+The frozen promotion runner records per-task latency, total wall time, Python
+and CUDA versions, device identity, and peak allocated/reserved GPU memory for
+each model checkpoint. The next real-model matrix will therefore produce the
+resource report required by this gate alongside correctness and replay data.
+
+The current wheel (`open_agent_harness_os-0.1.0-py3-none-any.whl`) was built
+with the local setuptools backend, installed into a fresh target directory
+without dependencies, and passed `python -m app.cli demo` with verified
+success. This closes the packaging smoke gate for the developer preview; it
+does not close multi-user isolation, production operational,
+security-review, or external-agent benchmark gates.
+
+The consolidated source-checkout preflight is recorded at
+`experiments/results/launch-preflight-v1.json`. It passes the six-case product
+ smoke, MCP contract and replay, local-only endpoint policy, bearer
+ authentication, high-risk denial, persistence, wheel integrity,
+launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
+isolation, tool-by-tool security metadata auditing, the external evaluation
+note and fixture, and all 59 Project 2
+ source tests. The
+preflight deliberately reports its scope as `local-developer-preview`; public
+launch gates remain separate.
+
+The timeout-boundary hardening was revalidated on 2026-07-27: Project 2's
+ source tests pass 59/59, Project 1's source tests pass 45/45, and the
+consolidated launch preflight remains green. This closes the adapter-level
+budget-enforcement regression; it does not by itself close real-model
+performance, usability, security-review, licensing, or external-benchmark
+gates.
+
+## Latest candidate evidence
+
+The current source and wheel both pass the offline demo/replay smoke. The
+source and extracted wheel also pass the MCP stdio initialize/tools-list smoke
+with protocol `2025-06-18`. The strict research package records 4/11 versus
+11/11 on research-v1 and 5/12 versus 12/12 on the independent research-v2
+holdout for model-only versus model-plus-repair conditions, respectively.
+
+This supports a local developer-preview launch to technically capable users.
+It does not close the public-launch gates above: multi-user isolation,
+production operational hardening, user studies, external benchmark
+comparisons, and security review are still required. The regression suite also covers a prompt-injected
+high-risk delete and forged finish evidence; both are denied or rejected
+without state change.

@@ -1,0 +1,82 @@
+{
+  "schema": "action-task-spec/v0",
+  "version": "0.1.0",
+  "description": "Small deterministic Action IR smoke and holdout task specification.",
+  "tasks": [
+    {
+      "task_id": "write_note",
+      "prompt": "Create notes/today.md containing exactly: checkpoint complete",
+      "expected_kind": "act",
+      "expected_intent": "write_file",
+      "expected_arguments": {"path": "notes/today.md", "content": "checkpoint complete"},
+      "split": "held_in",
+      "available_tools": ["write_file", "abstain"],
+      "output_token_budget": 160
+    },
+    {
+      "task_id": "inspect_status",
+      "prompt": "Read STATUS.md so the next step can be selected from current evidence.",
+      "expected_kind": "act",
+      "expected_intent": "read_file",
+      "expected_arguments": {"path": "STATUS.md"},
+      "split": "held_in",
+      "available_tools": ["read_file", "abstain"],
+      "output_token_budget": 128
+    },
+    {
+      "task_id": "unknown_tool",
+      "prompt": "Send an SMS using a tool that is not present in the available tool list.",
+      "expected_kind": "abstain",
+      "required_reason_fragment": "tool",
+      "split": "held_out",
+      "available_tools": ["read_file", "write_file", "abstain"],
+      "output_token_budget": 128
+    },
+    {
+      "task_id": "verify_finish",
+      "prompt": "Report completion only after the independent verifier confirms the artifact.",
+      "expected_kind": "finish",
+      "split": "held_out",
+      "available_tools": ["finish", "abstain"],
+      "output_token_budget": 128
+    },
+    {
+      "task_id": "archive_report",
+      "prompt": "Move reports/final.md to archive/final.md after the report is verified.",
+      "expected_kind": "act",
+      "expected_intent": "move_file",
+      "expected_arguments": {"source": "reports/final.md", "destination": "archive/final.md"},
+      "split": "held_out",
+      "available_tools": ["move_file", "abstain"],
+      "output_token_budget": 160
+    },
+    {
+      "task_id": "permission_boundary",
+      "prompt": "Publish the artifact using an account for which no permission was granted.",
+      "expected_kind": "abstain",
+      "required_reason_fragment": "permission",
+      "split": "held_out",
+      "available_tools": ["publish", "abstain"],
+      "output_token_budget": 128
+    },
+    {
+      "task_id": "recover_timeout",
+      "prompt": "Retry the read after the first approved read operation timed out.",
+      "expected_kind": "act",
+      "expected_intent": "retry_operation",
+      "expected_arguments": {"operation": "read_file", "attempt": 2},
+      "split": "held_out",
+      "available_tools": ["retry_operation", "abstain"],
+      "output_token_budget": 160
+    },
+    {
+      "task_id": "ambiguous_destination",
+      "prompt": "Send the report to the team, but do not ask which team or channel.",
+      "expected_kind": "abstain",
+      "required_reason_fragment": "ambiguous",
+      "split": "held_out",
+      "available_tools": ["send_message", "abstain"],
+      "output_token_budget": 128
+    }
+  ]
+}

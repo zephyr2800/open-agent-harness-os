@@ -1,0 +1,335 @@
+{
+  "provenance": {
+    "authoring": "deterministic payload-fidelity holdout generator",
+    "families": [
+      "exact_write"
+    ],
+    "purpose": "causal evaluation of exact-content SFT correction",
+    "task_count": 16,
+    "training_overlap": "none by construction; fresh paths and values"
+  },
+  "schema": "harness-task-spec/v0",
+  "tasks": [
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "contract=sealed-h0",
+        "path": "eval_contract_00.cfg"
+      },
+      "expected_files": {
+        "eval_contract_00.cfg": "contract=sealed-h0"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Write eval_contract_00.cfg with exactly this text: contract=sealed-h0",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-00"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "region=local-north-h1",
+        "path": "eval_region_01.cfg"
+      },
+      "expected_files": {
+        "eval_region_01.cfg": "region=local-north-h1"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "The complete content of eval_region_01.cfg must be region=local-north-h1; do not add anything else.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-01"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "policy=verify-h2",
+        "path": "eval_policy_02.cfg"
+      },
+      "expected_files": {
+        "eval_policy_02.cfg": "policy=verify-h2"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Use the registered write capability to put only policy=verify-h2 in eval_policy_02.cfg.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-02"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "queue=bounded-h3",
+        "path": "eval_queue_03.ini"
+      },
+      "expected_files": {
+        "eval_queue_03.ini": "queue=bounded-h3"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Follow the exact requested contract: save eval_queue_03.ini as the literal payload queue=bounded-h3.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-03"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "workers=6",
+        "path": "eval_workers_04.ini"
+      },
+      "expected_files": {
+        "eval_workers_04.ini": "workers=6"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Create eval_workers_04.ini with exactly this text: workers=6",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-04"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "handoff=approved-h5",
+        "path": "eval_handoff_05.txt"
+      },
+      "expected_files": {
+        "eval_handoff_05.txt": "handoff=approved-h5"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "The complete content of eval_handoff_05.txt must be handoff=approved-h5; do not add anything else.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-05"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "checkpoint=green-h6",
+        "path": "eval_checkpoint_06.txt"
+      },
+      "expected_files": {
+        "eval_checkpoint_06.txt": "checkpoint=green-h6"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Use the registered write capability to put only checkpoint=green-h6 in eval_checkpoint_06.txt.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-06"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "marker=launch-h7",
+        "path": "eval_marker_07.md"
+      },
+      "expected_files": {
+        "eval_marker_07.md": "marker=launch-h7"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Follow the exact requested contract: save eval_marker_07.md as the literal payload marker=launch-h7.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-07"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "operator=bounded-h8",
+        "path": "eval_operator_08.md"
+      },
+      "expected_files": {
+        "eval_operator_08.md": "operator=bounded-h8"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Create eval_operator_08.md with exactly this text: operator=bounded-h8",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-08"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "{\"status\":\"ready-h9\"}",
+        "path": "eval_status_09.json"
+      },
+      "expected_files": {
+        "eval_status_09.json": "{\"status\":\"ready-h9\"}"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "The complete content of eval_status_09.json must be {\"status\":\"ready-h9\"}; do not add anything else.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-09"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "{\"version\":10}",
+        "path": "eval_version_10.json"
+      },
+      "expected_files": {
+        "eval_version_10.json": "{\"version\":10}"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Use the registered write capability to put only {\"version\":10} in eval_version_10.json.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-10"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "profile = \"offline-h11\"",
+        "path": "eval_profile_11.toml"
+      },
+      "expected_files": {
+        "eval_profile_11.toml": "profile = \"offline-h11\""
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Follow the exact requested contract: save eval_profile_11.toml as the literal payload profile = \"offline-h11\".",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-11"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "release=local-h12",
+        "path": "eval_release_12.cfg"
+      },
+      "expected_files": {
+        "eval_release_12.cfg": "release=local-h12"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Write eval_release_12.cfg with exactly this text: release=local-h12",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-12"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "scope=sandbox-h13",
+        "path": "eval_scope_13.txt"
+      },
+      "expected_files": {
+        "eval_scope_13.txt": "scope=sandbox-h13"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "The complete content of eval_scope_13.txt must be scope=sandbox-h13; do not add anything else.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-13"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "state=clean-h14",
+        "path": "eval_state_14.ini"
+      },
+      "expected_files": {
+        "eval_state_14.ini": "state=clean-h14"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Use the registered write capability to put only state=clean-h14 in eval_state_14.ini.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-14"
+    },
+    {
+      "adversarial": false,
+      "available_tools": [
+        "write_file"
+      ],
+      "difficulty": "payload_fidelity",
+      "expected_arguments": {
+        "content": "build=launch-h15",
+        "path": "eval_build_15.cfg"
+      },
+      "expected_files": {
+        "eval_build_15.cfg": "build=launch-h15"
+      },
+      "expected_kind": "finish",
+      "expected_tool": "write_file",
+      "family": "exact_write",
+      "prompt": "Follow the exact requested contract: save eval_build_15.cfg as the literal payload build=launch-h15.",
+      "split": "independent_exact_payload_holdout_v1",
+      "task_id": "exact-holdout-15"
+    }
+  ],
+  "version": "exact-payload-holdout-v1-16-independent"
+}

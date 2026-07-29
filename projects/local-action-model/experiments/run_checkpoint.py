@@ -65,6 +65,7 @@ def run_checkpoint(tasks, *, model_id: str, revision: str, max_new_tokens: int, 
         "model_id": model_id,
         "revision": revision,
         "quantization": policy.quantization,
+        "quantization_compute_dtype": policy.quantization_compute_dtype,
         "load_ms": round(load_ms, 1),
         "metrics": {
             "task_count": total,

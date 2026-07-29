@@ -195,6 +195,7 @@ class TransformersActionPolicy:
         self.top_p = float(top_p)
         self.stop_on_complete_json = bool(stop_on_complete_json)
         self.quantization = normalize_quantization(quantization)
+        self.quantization_compute_dtype: str | None = None
         if tokenizer is None or model is None:
             try:
                 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -220,6 +221,7 @@ class TransformersActionPolicy:
                 compute_dtype = torch.float16
                 if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
                     compute_dtype = torch.bfloat16
+                self.quantization_compute_dtype = str(compute_dtype).split(".")[-1]
                 model_kwargs["quantization_config"] = BitsAndBytesConfig(
                     load_in_4bit=True,
                     bnb_4bit_quant_type="nf4",

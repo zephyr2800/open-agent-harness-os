@@ -76,7 +76,7 @@ The recorded synthetic SFT smoke used the following GPU command:
 After producing a specialized checkpoint, run:
 
 ```text
-.venv\Scripts\python.exe -m experiments.checkpoint_factorial --task-spec fixtures/tasks/task-spec-v0.json --generic-model-id Qwen/Qwen2.5-0.5B-Instruct --generic-revision 7ae557604adf67be50417f59c2c2f167def9a775 --specialized-model-id work/action-model-sft-5090-v0 --specialized-revision main --max-new-tokens 128 --output work/checkpoint-factorial-v0.json
+.venv\Scripts\python.exe -m experiments.checkpoint_factorial --task-spec fixtures/tasks/task-spec-v0.json --generic-model-id Qwen/Qwen2.5-0.5B-Instruct --generic-revision 7ae557604adf67be50417f59c2c2f167def9a775 --specialized-model-id work/action-model-sft-5090-v0 --specialized-revision main --max-new-tokens 128 --quantization 4bit --output work/checkpoint-factorial-v0.json
 ```
 
 The runner loads each model once, executes baseline and advanced harness cells,

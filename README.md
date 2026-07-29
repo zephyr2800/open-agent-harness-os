@@ -26,7 +26,7 @@ actually complete.
 The local developer-preview harness passes its documented product checks:
 
 - Project 2 tests: 66/66 (including scorecard and wheel-integrity checks)
-- Project 1 tests: 45/45
+- Project 1 tests: 47/47
 - Launch preflight: 15/15 (including extracted-wheel installation smoke)
 
 The associated Qwopus3.5-9B promotion matrix is being run privately under a

@@ -12,7 +12,7 @@ This checklist records the evidence attached to the first public repository snap
 - Launch preflight: 15/15 checks passing, including extracted-wheel install
   smoke and the companion suite.
 - Wheel build: `open_agent_harness_os-0.1.0-py3-none-any.whl`.
-- Wheel SHA-256: `54eed4eb158429abe9d89678889f5db14e371c32483307c5fc9f834b4af254f3`.
+- Wheel SHA-256: `55d7744ab920a56016ae5805991a4c32bf48380183b5d945503a54a79dcbc737`.
 - Public package audit: no credentials, model weights, generated result directories, or private local traces included.
 
 ## Interpretation boundary

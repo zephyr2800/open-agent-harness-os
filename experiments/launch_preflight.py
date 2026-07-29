@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import csv
 import hashlib
+import io
 import json
 import os
 import subprocess
@@ -399,14 +402,47 @@ def _wheel_check(wheel: Path) -> dict[str, Any]:
                 "experiments/launch_preflight.py",
             }
             required_metadata = {name for name in dist_info if name.endswith(("/METADATA", "/WHEEL", "/RECORD"))}
+            record_paths = [name for name in names if name.endswith("/.dist-info/RECORD") or name.endswith(".dist-info/RECORD")]
+            record_valid = len(record_paths) == 1 and len(names) == len(set(names))
+            record_entries = 0
+            if record_valid:
+                record_name = record_paths[0]
+                recorded_names: set[str] = set()
+                try:
+                    record_rows = csv.reader(io.StringIO(archive.read(record_name).decode("utf-8")))
+                    for row in record_rows:
+                        if len(row) != 3:
+                            record_valid = False
+                            continue
+                        entry_name, digest_field, size_field = row
+                        record_entries += 1
+                        if entry_name in recorded_names or entry_name not in names:
+                            record_valid = False
+                            continue
+                        recorded_names.add(entry_name)
+                        content = archive.read(entry_name)
+                        if digest_field:
+                            algorithm, encoded = digest_field.split("=", 1)
+                            digest = base64.urlsafe_b64encode(hashlib.new(algorithm, content).digest()).rstrip(b"=").decode("ascii")
+                            if digest != encoded:
+                                record_valid = False
+                        elif entry_name != record_name:
+                            record_valid = False
+                        if size_field and int(size_field) != len(content):
+                            record_valid = False
+                    record_valid = record_valid and recorded_names == set(names)
+                except (UnicodeDecodeError, ValueError, csv.Error, LookupError):
+                    record_valid = False
             detail.update({
                 "zipfile": True,
                 "entry_count": len(names),
                 "safe_paths": safe_names,
                 "required_modules_present": required.issubset(names),
                 "wheel_metadata_present": len(required_metadata) == 3,
+                "record_entries": record_entries,
+                "record_hashes_valid": record_valid,
             })
-            passed = bool(safe_names and required.issubset(names) and len(required_metadata) == 3)
+            passed = bool(safe_names and required.issubset(names) and len(required_metadata) == 3 and record_valid)
     except (OSError, zipfile.BadZipFile) as exc:
         detail.update({"zipfile": False, "reason": str(exc)})
         passed = False

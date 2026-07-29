@@ -209,7 +209,7 @@ a breakthrough claim.
   integrity, extracted-wheel install smoke, launch-document presence, and all
   66 source tests pass. It
   records the fresh hardened wheel SHA-256
-  `54eed4eb158429abe9d89678889f5db14e371c32483307c5fc9f834b4af254f3`.
+  `55d7744ab920a56016ae5805991a4c32bf48380183b5d945503a54a79dcbc737`.
 
 See `PRODUCT.md` and `docs/PRODUCT_LAUNCH_PLAN.md` for the developer-preview
 boundary and remaining public-launch gates.
@@ -431,7 +431,7 @@ available.
 - The current project test suite is 66/66 after evaluator hardening, atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.0-py3-none-any.whl`,
-  SHA-256 `54eed4eb158429abe9d89678889f5db14e371c32483307c5fc9f834b4af254f3`;
+  SHA-256 `55d7744ab920a56016ae5805991a4c32bf48380183b5d945503a54a79dcbc737`;
   it contains the explicit non-loopback authentication-plus-TLS gate.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout
   command `python -m experiments.launch_preflight --with-tests`; the artifact

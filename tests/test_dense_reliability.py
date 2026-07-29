@@ -49,6 +49,26 @@ class DenseReliabilityTests(unittest.TestCase):
         metrics = row_metrics(row)
         self.assertEqual(metrics["partial_utility"], 1.0)
 
+    def test_independent_success_overrides_stale_result_contract_field(self) -> None:
+        row = {
+            "task_id": "exact-write-0",
+            "family": "exact_write",
+            "expected_action_count": 1,
+            "protocol_valid": True,
+            "verified_success": False,
+            "independent": {
+                "independent_success": False,
+                "expected_result_ok": True,
+                "independent_verified_evidence": 1,
+            },
+            "trace_jsonl": _trace(
+                {"event_type": "tool_call", "payload": {"tool": "write_file", "status": "verified"}},
+            ),
+        }
+        metrics = row_metrics(row)
+        self.assertFalse(metrics["result_ok"])
+        self.assertEqual(metrics["partial_utility"], 0.75)
+
     def test_cross_seed_reports_pass_at_k_and_worst_seed(self) -> None:
         data = {
             "seeds": [0, 1],

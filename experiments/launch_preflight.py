@@ -22,6 +22,7 @@ from app.mcp import PROTOCOL_VERSION, dispatch
 from app.service import run_action
 from app.storage import TraceStore
 from experiments.product_smoke import run as run_product_smoke
+from experiments.scorecard import build_scorecard
 from traces.replay import load_jsonl
 from tools.memory_workspace import make_memory_registry
 
@@ -44,8 +45,13 @@ REQUIRED_DOCS = (
     "docs/EXTERNAL_BAR_UPDATE_2026-07-26.md",
     "docs/RESEARCH_LAUNCH_UPDATE_2026-07-27.md",
     "docs/CLAIMS_AND_EVIDENCE_MATRIX.md",
+    "docs/RESEARCH_LANDSCAPE_2026-07-29.md",
+    "docs/RESEARCH_BREAKTHROUGH_PROTOCOL_2026-07-29.md",
+    "docs/EXTERNAL_EVALUATION_RUNBOOK_2026-07-29.md",
+    "docs/PUBLIC_RELEASE_CHECKLIST.md",
     "docs/PROVENANCE_REVIEW.md",
     "benchmarks/fixtures/task-spec-external-bar-lite-v1.json",
+    "benchmarks/fixtures/task-spec-external-bar-lite-v2.json",
 )
 
 
@@ -382,6 +388,42 @@ def _wheel_check(wheel: Path) -> dict[str, Any]:
     )
 
 
+def _scorecard_check() -> dict[str, Any]:
+    """Ensure local and external claim boundaries cannot be conflated."""
+
+    local = build_scorecard(
+        [
+            {"task_id": "scorecard-a", "family": "stateful", "verified_success": True, "protocol_valid": True, "trace_valid": True, "runtime_replay_agreement": True},
+            {"task_id": "scorecard-b", "family": "security", "verified_success": False, "protocol_valid": True, "trace_valid": True, "runtime_replay_agreement": True, "false_completion": True},
+        ],
+        suite="preflight-fixture",
+        suite_kind="local_fixture",
+        model="preflight-model",
+        harness="preflight-harness",
+    )
+    external_rejected = False
+    try:
+        build_scorecard(
+            [{"task_id": "scorecard-external", "verified_success": True}],
+            suite="unidentified-external",
+            suite_kind="external_native",
+            model="preflight-model",
+            harness="preflight-harness",
+        )
+    except ValueError:
+        external_rejected = True
+    passed = local["macro_family_success_rate"] == 0.5 and external_rejected and "local" in local["claim_boundary"]
+    return _check(
+        "claim_safe_scorecard",
+        passed,
+        {
+            "local_micro_success_rate": local["verified_success_rate"],
+            "local_macro_family_success_rate": local["macro_family_success_rate"],
+            "external_without_provenance_rejected": external_rejected,
+        },
+    )
+
+
 def _test_check() -> dict[str, Any]:
     completed = subprocess.run(
         [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"],
@@ -398,6 +440,28 @@ def _test_check() -> dict[str, Any]:
     )
 
 
+def _companion_test_check() -> dict[str, Any]:
+    """Run Project 1 from its package root so same-name modules do not collide."""
+
+    companion_root = ROOT / "projects" / "local-action-model"
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    completed = subprocess.run(
+        [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"],
+        cwd=companion_root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    output = (completed.stdout + "\n" + completed.stderr).strip()
+    return _check(
+        "companion_unit_tests",
+        completed.returncode == 0,
+        {"returncode": completed.returncode, "output_tail": output[-4000:]},
+    )
+
+
 def run(*, wheel: Path = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str, Any]:
     checks = [
         _check("product_smoke", True, run_product_smoke()),
@@ -409,7 +473,9 @@ def run(*, wheel: Path = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str
         _rate_limit_check(),
         _tenant_isolation_check(),
         _non_loopback_cli_check(),
+        _scorecard_check(),
         _wheel_check(wheel),
+        _companion_test_check(),
         _check(
             "launch_docs",
             all((ROOT / relative).is_file() for relative in REQUIRED_DOCS),

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased - research and launch hardening (2026-07-29)
+
+- Added `agent-eval-scorecard/v1` with macro-family scoring, Wilson intervals,
+  replay/process integrity, safety, false-completion, and efficiency metrics.
+- Added a preflight guard that rejects external-native claims without the
+  external suite commit and native metric.
+- Added the current research landscape, preregistered breakthrough protocol,
+  and native external-evaluation runbook.
+- Added companion-project test isolation to the launch preflight.
+
 ## 0.1.0 — 2026-07-25
 
 - Added Action IR v0 and harness event contracts.

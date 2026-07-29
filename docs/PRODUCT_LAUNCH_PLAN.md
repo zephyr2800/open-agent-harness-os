@@ -107,3 +107,16 @@ production operational hardening, user studies, external benchmark
 comparisons, and security review are still required. The regression suite also covers a prompt-injected
 high-risk delete and forged finish evidence; both are denied or rejected
 without state change.
+
+## 2026-07-29 launch-candidate update
+
+The public branch now has 62/62 harness tests, 45/45 companion tests, and a
+14-check launch preflight. The preflight runs the companion suite from its own
+package root so same-name modules from the two projects cannot silently
+replace one another. It also checks the claim-safe scorecard, which rejects an
+external-native label without a suite commit and native metric.
+
+This closes a reproducibility and claim-control gap in the developer preview.
+It does not close production identity/operations, usability sessions,
+deployment-specific security review, licensing/provenance sign-off, or a
+native external benchmark run.

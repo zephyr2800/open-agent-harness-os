@@ -13,6 +13,7 @@ license = {text = "Apache-2.0"}
 harness-factorial = "experiments.factorial:main"
 harness-replay = "traces.replay:main"
 harness-preflight = "experiments.launch_preflight:main"
+harness-scorecard = "experiments.scorecard:main"
 harness-promotion-decision = "experiments.promotion_decision:main"
 harness = "app.cli:main"
 

@@ -9,11 +9,22 @@ quantization provenance.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import time
 from pathlib import Path
 from typing import Any
+
+
+def _sha256(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def run_smoke(*, project1_root: str | Path, checkpoint: str | Path, revision: str = "main", max_new_tokens: int = 128) -> dict[str, Any]:
@@ -29,6 +40,25 @@ def run_smoke(*, project1_root: str | Path, checkpoint: str | Path, revision: st
 
     from model.adapter import ModelRequest
     from model.transformers_backend import TransformersActionPolicy
+
+    try:
+        import transformers
+
+        transformers_version = transformers.__version__
+    except (ImportError, AttributeError):
+        transformers_version = None
+    try:
+        import bitsandbytes
+
+        bitsandbytes_version = getattr(bitsandbytes, "__version__", None)
+    except ImportError:
+        bitsandbytes_version = None
+    checkpoint_path = Path(checkpoint)
+    checkpoint_provenance = {
+        "config_sha256": _sha256(checkpoint_path / "config.json"),
+        "merge_manifest_sha256": _sha256(checkpoint_path / "merge_manifest.json"),
+        "model_safetensors_bytes": (checkpoint_path / "model.safetensors").stat().st_size if (checkpoint_path / "model.safetensors").is_file() else None,
+    }
 
     load_started = time.perf_counter()
     policy = TransformersActionPolicy(
@@ -54,6 +84,14 @@ def run_smoke(*, project1_root: str | Path, checkpoint: str | Path, revision: st
         "model_id": str(checkpoint),
         "revision": revision,
         "cuda_device": torch.cuda.get_device_name(0),
+        "runtime": {
+            "python": sys.version.split()[0],
+            "torch": torch.__version__,
+            "transformers": transformers_version,
+            "bitsandbytes": bitsandbytes_version,
+            "cuda": torch.version.cuda,
+        },
+        "checkpoint_provenance": checkpoint_provenance,
         "quantization": policy.quantization,
         "quantization_compute_dtype": policy.quantization_compute_dtype,
         "load_ms": round(load_ms, 1),

@@ -16,11 +16,16 @@ production-readiness claim.
 | bitsandbytes | 0.50.0 |
 | Quantization | `4bit-nf4` |
 | Compute dtype | `bfloat16` |
-| Load time | 11,595 ms |
-| Generation time | 34,529 ms |
+| Load time | 9,174 ms |
+| Generation time | 33,564 ms |
 | Input/output tokens | 469 / 108 |
 | Peak VRAM | 7,450.9 MiB |
 | Decision | valid `act` for `get_current_day` |
+
+The machine-readable report also records Python 3.12.13, CUDA 12.8,
+PyTorch 2.11.0+cu128, Transformers 5.14.1, bitsandbytes 0.50.0, the
+checkpoint config and merge-manifest SHA-256 values, and the model weight
+file size (17,907,663,008 bytes).
 
 The model produced a parseable Action IR decision with the expected tool
 intent. The run used greedy decoding, JSON-completion stopping, and a

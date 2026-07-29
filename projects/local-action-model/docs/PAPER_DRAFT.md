@@ -119,7 +119,9 @@ abstains on malformed output.
 - The bootstrap SFT data is synthetic and derived from the task oracle.
 - The current mid-training and preference fixtures are also synthetic and
   derived from the same frozen task specification.
-- No real edge-device energy measurement or quantized deployment result exists yet.
+- A local RTX 5090 smoke confirms one quantized 9B serving path (NF4 loading,
+  BF16 compute, valid Action IR), but no broad quantized benchmark or
+  edge-device energy measurement exists yet.
 - The current harness and verifier coverage is mostly in-memory file state.
 - The zero-shot and SFT results cover one checkpoint and one prompt protocol.
 - No positive specialization or model–harness interaction claim is made.
@@ -134,7 +136,7 @@ required.
 1. Add independently reviewed teacher trajectories, hard negatives, renamed tools, and paired abstention tasks.
 2. Run PEFT/LoRA and DPO on non-synthetic preference data, then conduct a short audited environment-grounded RL smoke run.
 3. Expand the held-out task suite and run generic and specialized checkpoints through H0-H3 at equal budgets and multiple seeds.
-4. Measure quantized deployment, edge-device latency/energy, and cost per verified success.
+4. Extend the quantized serving smoke into a broad deployment benchmark, then measure edge-device latency/energy and cost per verified success.
 5. Publish negative results and confidence intervals, including task-family interaction signs.
 
 ## 8. Paired-program update — 2026-07-26

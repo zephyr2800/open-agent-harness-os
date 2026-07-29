@@ -35,12 +35,24 @@ def _categories(row: dict[str, Any]) -> list[str]:
         content = str(arguments.get("content") or "")
         if "STATE_DIGEST:" in content or "state_digest:" in content:
             categories.add("exact_payload_contamination")
-    if "finish lacked independent verified evidence" in error:
+    finish_has_independent_evidence = any(
+        event.get("event_type") == "verification"
+        and bool((event.get("payload") or {}).get("independent_evidence"))
+        for event in events
+    )
+    finish_result_mismatch = any(
+        event.get("event_type") == "verification"
+        and (event.get("payload") or {}).get("expected_result") is False
+        for event in events
+    )
+    if "finish lacked independent verified evidence" in error and not finish_has_independent_evidence:
         categories.add("finish_evidence_failure")
+    if finish_has_independent_evidence and finish_result_mismatch:
+        categories.add("finish_result_mismatch")
     if "step budget exhausted" in error:
         categories.add("step_budget_exhaustion")
     serialized = json.dumps(events, ensure_ascii=False).lower()
-    if "unverified action" in error or "unverified_action_attempt" in serialized:
+    if int(row.get("unverified_action_attempts") or 0) > 0 or "unverified action" in error or "unverified_action_attempt" in serialized:
         categories.add("unverified_action")
     if row.get("unsafe_attempt"):
         categories.add("unsafe_attempt")

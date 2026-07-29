@@ -6,7 +6,7 @@ This checklist records the evidence attached to the first public repository snap
 
 ## Verified locally
 
-- Open Agent Harness OS unit and integration suite: 66/66 passing, including
+- Open Agent Harness OS unit and integration suite: 69/69 passing, including
   claim-safe scorecard checks.
 - Local Action Model companion suite: 47/47 passing.
 - Launch preflight: 15/15 checks passing, including extracted-wheel install

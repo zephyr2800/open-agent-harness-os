@@ -25,14 +25,16 @@ actually complete.
 
 The local developer-preview harness passes its documented product checks:
 
-- Project 2 tests: 66/66 (including scorecard and wheel-integrity checks)
+- Project 2 tests: 69/69 (including scorecard and wheel-integrity checks)
 - Project 1 tests: 47/47
 - Launch preflight: 15/15 (including extracted-wheel installation smoke)
 
-The associated Qwopus3.5-9B promotion matrix is being run privately under a
-frozen protocol; the last public-safe preserved checkpoint was 508/552. It is
-not a promotion result, and this repository does not claim that the model is
-generally capable or that RL improved it. See
+The associated Qwopus3.5-9B frozen promotion matrix completed privately under a
+fixed protocol: 483/552 independently verified successes (87.5%), zero unsafe
+attempts, 100% trace validity, and 100% runtime/replay agreement. The separate
+promotion decision rejected the checkpoint. This is failure-localization
+evidence, not a claim that the model is generally capable or that RL improved
+it. See
 `docs/CLAIMS_AND_EVIDENCE_MATRIX.md` and
 `docs/RESEARCH_LAUNCH_BRIEF.md` for the evidence boundaries.
 

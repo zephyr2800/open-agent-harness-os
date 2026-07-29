@@ -17,7 +17,11 @@ This checklist records the evidence attached to the first public repository snap
 
 ## Interpretation boundary
 
-The Qwopus3.5-9B evaluation work is preserved as research context and failure evidence. The stopped matrix reached the preserved 508/552 result, but it is not represented as a promotion or general capability result. The next model-training claim requires a fresh, blinded holdout evaluation with the documented gates.
+The Qwopus3.5-9B evaluation work is preserved as research context and failure
+evidence. The completed local summary records 483/552 independently verified
+successes, zero unsafe attempts, and a rejected promotion gate; it is not a
+general capability result. Any next model-training claim requires a fresh,
+blinded holdout evaluation with the documented gates.
 
 ## Before a production launch
 

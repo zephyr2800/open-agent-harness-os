@@ -12,11 +12,23 @@ class ScorecardTests(unittest.TestCase):
             {"task_id": "a-2", "family": "easy", "verified_success": True, "protocol_valid": True, "trace_valid": True, "runtime_replay_agreement": True},
             {"task_id": "b-1", "family": "hard", "verified_success": False, "protocol_valid": True, "trace_valid": True, "runtime_replay_agreement": True, "false_completion": True},
         ]
-        result = build_scorecard(rows, suite="fixture-v1", suite_kind="local_fixture", model="m", harness="h")
+        result = build_scorecard(
+            rows,
+            suite="fixture-v1",
+            suite_kind="local_fixture",
+            model="m",
+            harness="h",
+            task_spec_sha256="abc",
+            execution_budget={"max_steps": 6},
+            runtime={"device": "cpu"},
+        )
         self.assertEqual(result["verified_success_rate"], 2 / 3)
         self.assertEqual(result["macro_family_success_rate"], 0.5)
         self.assertEqual(result["by_family"]["hard"]["false_completion_rate"], 1.0)
         self.assertIn("do not describe as an external", result["claim_boundary"])
+        self.assertEqual(result["task_spec_sha256"], "abc")
+        self.assertEqual(result["execution_budget"]["max_steps"], 6)
+        self.assertEqual(result["runtime"]["device"], "cpu")
 
     def test_independent_trace_fields_are_promoted_from_nested_audit(self) -> None:
         result = build_scorecard(

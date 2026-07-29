@@ -91,6 +91,9 @@ def build_scorecard(
     suite_version: str | None = None,
     suite_commit: str | None = None,
     native_metric: str | None = None,
+    task_spec_sha256: str | None = None,
+    execution_budget: Mapping[str, Any] | None = None,
+    runtime: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a portable scorecard and reject ambiguous external claims."""
 
@@ -113,9 +116,12 @@ def build_scorecard(
         "suite_version": suite_version,
         "suite_commit": suite_commit,
         "native_metric": native_metric,
+        "task_spec_sha256": task_spec_sha256,
         "model": model,
         "harness": harness,
         "seed": seed,
+        "execution_budget": dict(execution_budget or {}),
+        "runtime": dict(runtime or {}),
         "task_runs": total,
         "verified_successes": sum(bool(row.get("verified_success")) for row in values),
         "verified_success_rate": _rate(values, "verified_success"),
@@ -165,6 +171,9 @@ def main() -> int:
         suite_version=args.suite_version,
         suite_commit=args.suite_commit,
         native_metric=args.native_metric,
+        task_spec_sha256=report.get("task_spec_sha256"),
+        execution_budget=report.get("execution_budget") or report.get("budget") or report.get("config"),
+        runtime=report.get("runtime") or report.get("resource"),
     )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

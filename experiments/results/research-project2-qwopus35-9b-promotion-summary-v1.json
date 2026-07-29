@@ -1,0 +1,55 @@
+{
+  "schema": "promotion-matrix-summary/v1",
+  "checkpoint": "local-derived-qwopus35-9b-qlora-v1-merged",
+  "source_report": {
+    "filename": "research-project2-qwopus35-9b-promotion-greedy-v1.json",
+    "sha256": "077f936ed932a939302e5974d251e28f649c95c832093ed89591dcdceed1277b"
+  },
+  "source_decision": {
+    "filename": "research-project2-qwopus35-9b-promotion-decision-v1.json",
+    "sha256": "dad70c92fb331c3eb1f1bb84329a129029464b748eb60c777739df9a643ed2e2"
+  },
+  "seeds": [0, 1, 2],
+  "runtime": {
+    "device": "NVIDIA GeForce RTX 5090",
+    "cuda": "12.8",
+    "torch": "2.11.0+cu128",
+    "python": "3.12.13",
+    "quantization": "not asserted for this frozen baseline"
+  },
+  "aggregate": {
+    "runs": 9,
+    "task_rows": 552,
+    "verified_successes": 483,
+    "verified_success_rate": 0.875,
+    "unsafe_attempts": 0,
+    "trace_valid_rate_min": 1.0,
+    "runtime_replay_agreement_min": 1.0,
+    "promotion_decision": "reject"
+  },
+  "slices": {
+    "research_v4": {
+      "task_rows": 360,
+      "verified_successes": 348,
+      "verified_success_rate": 0.9666666667,
+      "repeated_failure_mode": "exact-write finish lacked independent verified evidence"
+    },
+    "industry_proxy_v1": {
+      "task_rows": 144,
+      "verified_successes": 111,
+      "verified_success_rate": 0.7708333333,
+      "repeated_failure_mode": "long-horizon policy sequence exhausted the step budget"
+    },
+    "industry_proxy_v2": {
+      "task_rows": 48,
+      "verified_successes": 24,
+      "verified_success_rate": 0.5,
+      "repeated_failure_mode": "evidence-to-answer finish lacked independent verified evidence"
+    }
+  },
+  "limitations": [
+    "This is an aggregate of local execution and independent replay artifacts; raw traces are not bundled here.",
+    "The checkpoint is a local derived artifact and is not distributed by this repository.",
+    "The summary is not a native AgentDojo, TUA-Bench, OSWorld, or general computer-use score."
+  ]
+}

@@ -475,7 +475,8 @@ def _scorecard_check() -> dict[str, Any]:
             suite_commit="abcdef1234567",
             native_metric="utility",
             native_metric_value=0.0,
-            native_report_sha256="0" * 64,
+            native_report_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            native_report_path=Path(__file__),
             native_grader="preflight-grader",
             native_environment={"runner": "preflight", "runtime": "python", "platform": "local"},
         )

@@ -81,7 +81,7 @@ The consolidated source-checkout preflight is recorded at
  authentication, high-risk denial, persistence, wheel integrity,
 launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
 isolation, tool-by-tool security metadata auditing, the external evaluation
-note and fixture, and all 59 Project 2
+  note and fixture, and all 66 Project 2
  source tests. The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import unittest
+from pathlib import Path
 
 from experiments.scorecard import build_scorecard
 
@@ -66,6 +68,8 @@ class ScorecardTests(unittest.TestCase):
         self.assertEqual(result["safe_abstain_rate"], 1 / 3)
 
     def test_external_scorecard_requires_native_provenance(self) -> None:
+        report_path = Path(__file__)
+        report_sha256 = hashlib.sha256(report_path.read_bytes()).hexdigest()
         with self.assertRaisesRegex(ValueError, "hexadecimal suite_commit"):
             build_scorecard(
                 [{"task_id": "t", "verified_success": True}],
@@ -81,7 +85,8 @@ class ScorecardTests(unittest.TestCase):
             suite_commit="abcdef1234567",
             native_metric="utility",
             native_metric_value=0.75,
-            native_report_sha256="0" * 64,
+            native_report_sha256=report_sha256,
+            native_report_path=report_path,
             native_grader="agentdojo-native-grader",
             native_environment={"runner": "docker", "runtime": "python-3.12", "platform": "linux-x86_64"},
             model="m",
@@ -100,6 +105,7 @@ class ScorecardTests(unittest.TestCase):
             "native_metric": "utility",
             "native_metric_value": 0.75,
             "native_report_sha256": "0" * 64,
+            "native_report_path": Path(__file__),
             "native_grader": "grader",
             "native_environment": {"runner": "docker", "runtime": "python-3.12", "platform": "linux-x86_64"},
         }
@@ -107,6 +113,8 @@ class ScorecardTests(unittest.TestCase):
             build_scorecard([], **kwargs)
         with self.assertRaisesRegex(ValueError, "native_metric_value"):
             build_scorecard([{"task_id": "t", "verified_success": True}], **{**kwargs, "native_metric_value": None})
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            build_scorecard([{"task_id": "t", "verified_success": True}], **kwargs)
 
 
 if __name__ == "__main__":

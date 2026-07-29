@@ -59,7 +59,7 @@ model-release decisions remain gated.
   evidence-grounded completion, bounded recovery, and tamper-evident replay.
 - Loopback default, bearer-plus-TLS non-loopback gate, tenant trace isolation,
   authenticated rate limiting, security policy, Apache-2.0 package metadata,
-  clean-wheel smoke, and 12/12 preview preflight checks.
+  clean-wheel smoke, and the historical 12/12 preview preflight checks.
 
 ## The falsifiable breakthrough experiment
 

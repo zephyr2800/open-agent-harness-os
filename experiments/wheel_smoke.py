@@ -28,11 +28,14 @@ def run(wheel: Path, *, target: Path | None = None) -> dict[str, Any]:
     owned_target = target is None
     target = target or Path(tempfile.mkdtemp(prefix="open-agent-harness-wheel-smoke-"))
     target.mkdir(parents=True, exist_ok=True)
+    install_environment = os.environ.copy()
+    install_environment["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
     install = subprocess.run(
         [sys.executable, "-m", "pip", "install", "--no-deps", "--target", str(target), str(wheel)],
         capture_output=True,
         text=True,
         check=False,
+        env=install_environment,
     )
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(target)
@@ -70,10 +73,10 @@ def run(wheel: Path, *, target: Path | None = None) -> dict[str, Any]:
     return {
         "schema": "clean-wheel-smoke/v1",
         "passed": passed,
-        "wheel": str(wheel),
+        "wheel": wheel.name,
         "wheel_sha256": _sha256(wheel),
         "wheel_bytes": wheel.stat().st_size,
-        "target": str(target),
+        "target": "isolated-target" if owned_target else target.name,
         "target_created_by_runner": owned_target,
         "install_returncode": install.returncode,
         "demo_returncode": demo.returncode,
@@ -81,7 +84,11 @@ def run(wheel: Path, *, target: Path | None = None) -> dict[str, Any]:
         "imports_returncode": imports.returncode,
         "metadata_license": [line for line in metadata.splitlines() if line.startswith("License:")],
         "has_license_file": any("license" in name.lower() for name in names),
-        "stderr_tail": (install.stderr + demo.stderr + imports.stderr)[-2000:],
+        "stderr_tail": "\n".join(
+            line
+            for line in (install.stderr + demo.stderr + imports.stderr).splitlines()
+            if "[notice]" not in line and "To update" not in line
+        )[-2000:],
     }
 
 

@@ -91,15 +91,16 @@ def _validate_external_provenance(
     native_metric: str | None,
     native_metric_value: int | float | None,
     native_report_sha256: str | None,
+    native_report_path: str | Path | None,
     native_grader: str | None,
     native_environment: Mapping[str, Any] | None,
 ) -> None:
     """Require enough native evidence to make an external claim auditable.
 
-    The scorecard cannot authenticate an external runner by itself, but it can
-    reject the common failure mode of attaching an external label to an empty
-    or untraceable report.  The report hash, grader identity, environment, and
-    native numeric metric are the handoff boundary to the native runner.
+    The scorecard cannot authenticate an external runner's identity by itself,
+    but it does require a real local report file and verifies its SHA-256
+    before accepting the external label. The grader identity, environment,
+    and native numeric metric remain explicit handoff metadata.
     """
 
     if not values:
@@ -112,6 +113,14 @@ def _validate_external_provenance(
         raise ValueError("external_native scorecards require a finite numeric native_metric_value")
     if not native_report_sha256 or not _SHA256_RE.fullmatch(str(native_report_sha256)):
         raise ValueError("external_native scorecards require a SHA-256 native_report_sha256")
+    if not native_report_path:
+        raise ValueError("external_native scorecards require native_report_path")
+    report_path = Path(native_report_path)
+    if not report_path.is_file():
+        raise ValueError("external_native native_report_path does not exist")
+    actual_report_sha256 = hashlib.sha256(report_path.read_bytes()).hexdigest()
+    if actual_report_sha256 != str(native_report_sha256).lower():
+        raise ValueError("native_report_sha256 does not match native_report_path")
     if not native_grader:
         raise ValueError("external_native scorecards require native_grader")
     if not isinstance(native_environment, Mapping) or not all(native_environment.get(key) for key in ("runner", "runtime", "platform")):
@@ -131,6 +140,7 @@ def build_scorecard(
     native_metric: str | None = None,
     native_metric_value: int | float | None = None,
     native_report_sha256: str | None = None,
+    native_report_path: str | Path | None = None,
     native_grader: str | None = None,
     native_environment: Mapping[str, Any] | None = None,
     task_spec_sha256: str | None = None,
@@ -153,6 +163,7 @@ def build_scorecard(
             native_metric=native_metric,
             native_metric_value=native_metric_value,
             native_report_sha256=native_report_sha256,
+            native_report_path=native_report_path,
             native_grader=native_grader,
             native_environment=native_environment,
         )
@@ -256,6 +267,7 @@ def main() -> int:
         native_metric=args.native_metric,
         native_metric_value=args.native_metric_value,
         native_report_sha256=native_report_sha256,
+        native_report_path=args.native_report,
         native_grader=args.native_grader,
         native_environment=native_environment,
         task_spec_sha256=report.get("task_spec_sha256"),

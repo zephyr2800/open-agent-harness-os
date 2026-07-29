@@ -178,13 +178,13 @@
     },
     {
       "detail": {
-        "bytes": 109818,
+        "bytes": 110036,
         "entry_count": 69,
         "exists": true,
         "path": "open_agent_harness_os-0.1.0-py3-none-any.whl",
         "required_modules_present": true,
         "safe_paths": true,
-        "sha256": "6edd0349a368a1a3c6c811dbd9d2603447ea1fa3dfe9601c179eff213aab4b3f",
+        "sha256": "54eed4eb158429abe9d89678889f5db14e371c32483307c5fc9f834b4af254f3",
         "wheel_metadata_present": true,
         "zipfile": true
       },
@@ -198,14 +198,14 @@
         "imports_returncode": 0,
         "install_returncode": 0,
         "path": "open_agent_harness_os-0.1.0-py3-none-any.whl",
-        "sha256": "6edd0349a368a1a3c6c811dbd9d2603447ea1fa3dfe9601c179eff213aab4b3f"
+        "sha256": "54eed4eb158429abe9d89678889f5db14e371c32483307c5fc9f834b4af254f3"
       },
       "id": "wheel_install_smoke",
       "passed": true
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 45 tests in 0.007s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 45 tests in 0.008s\n\nOK",
         "returncode": 0
       },
       "id": "companion_unit_tests",
@@ -244,14 +244,14 @@
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 66 tests in 1.939s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 66 tests in 1.976s\n\nOK",
         "returncode": 0
       },
       "id": "unit_tests",
       "passed": true
     }
   ],
-  "created_at": "2026-07-29T15:35:50.800313+00:00",
+  "created_at": "2026-07-29T15:46:50.448832+00:00",
   "limitations": [
     "This preflight does not establish public multi-user, operational, or external-benchmark readiness.",
     "The MCP check is in-process; the separate stdio subprocess artifact remains the protocol evidence."

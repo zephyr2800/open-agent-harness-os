@@ -82,7 +82,7 @@ operational telemetry only and does not alter evaluator semantics.
 On 2026-07-27, `experiments/promotion_decision.py` was hardened to require an
 explicit seed declaration, the exact frozen run count, every required seed in
 every task-family slice, `complete=true`, and a full row set before promotion.
-The regression suite now has 59 tests, including an incomplete-matrix
+The regression suite now has 66 tests, including an incomplete-matrix
 rejection case.
 
 The gated 9B post-training path is `work/watch_qwopus35_9b_post_rl.ps1`. It
@@ -164,7 +164,7 @@ $py = 'python'
 & $py -m compileall -q .
 ```
 
-Current result: 59 Project 2 tests pass. The latest delta includes the
+Current result: 66 Project 2 tests pass. The latest delta includes the
 external-adapter and evidence/replay regressions.
 
 ## Independent research fixture
@@ -207,9 +207,9 @@ a breakthrough claim.
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  62 source tests pass. It
+  66 source tests pass. It
   records the fresh hardened wheel SHA-256
-  `6edd0349a368a1a3c6c811dbd9d2603447ea1fa3dfe9601c179eff213aab4b3f`.
+  `54eed4eb158429abe9d89678889f5db14e371c32483307c5fc9f834b4af254f3`.
 
 See `PRODUCT.md` and `docs/PRODUCT_LAUNCH_PLAN.md` for the developer-preview
 boundary and remaining public-launch gates.
@@ -430,8 +430,8 @@ available.
   keeping runtime and independent success semantics aligned.
 - The current project test suite is 66/66 after evaluator hardening, atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
-- Current wheel/preflight artifact: `work/package-dist-v4/open_agent_harness_os-0.1.0-py3-none-any.whl`,
-  SHA-256 `6edd0349a368a1a3c6c811dbd9d2603447ea1fa3dfe9601c179eff213aab4b3f`;
+- Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.0-py3-none-any.whl`,
+  SHA-256 `54eed4eb158429abe9d89678889f5db14e371c32483307c5fc9f834b4af254f3`;
   it contains the explicit non-loopback authentication-plus-TLS gate.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout
   command `python -m experiments.launch_preflight --with-tests`; the artifact

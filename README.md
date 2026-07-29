@@ -1,5 +1,7 @@
 # Open Agent Harness OS
 
+[![CI](https://github.com/zephyr2800/open-agent-harness-os/actions/workflows/ci.yml/badge.svg)](https://github.com/zephyr2800/open-agent-harness-os/actions/workflows/ci.yml)
+
 Open-source, local-first infrastructure for verifiable tool-use agents.
 
 The project separates a probabilistic action policy from the deterministic

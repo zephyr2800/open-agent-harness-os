@@ -7,6 +7,7 @@ from model.transformers_backend import (
     DEFAULT_REVISION,
     TransformersActionPolicy,
     build_messages,
+    normalize_quantization,
 )
 
 
@@ -28,4 +29,12 @@ class TransformersBackendTests(unittest.TestCase):
             tokenizer=object(),
             model=object(),
         )
-        self.assertEqual(policy.quantization, "4bit")
+        self.assertEqual(policy.quantization, "4bit-nf4")
+
+    def test_quantization_aliases_are_canonicalized(self):
+        self.assertEqual(normalize_quantization("4bit"), "4bit-nf4")
+        self.assertEqual(normalize_quantization("int4"), "4bit-nf4")
+        self.assertEqual(normalize_quantization("nf4"), "4bit-nf4")
+        self.assertIsNone(normalize_quantization(None))
+        with self.assertRaises(ValueError):
+            normalize_quantization("8bit")

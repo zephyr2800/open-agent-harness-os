@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
 
 [project.optional-dependencies]
-transformers = ["torch>=2.2", "transformers>=4.37.0"]
+transformers = ["torch>=2.2", "transformers>=4.37.0", "bitsandbytes>=0.43.0"]
 post-training = ["torch>=2.7", "transformers>=4.57", "datasets>=3", "peft>=0.15", "trl>=0.20"]
 
 [tool.unittest]

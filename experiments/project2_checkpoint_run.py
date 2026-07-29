@@ -15,6 +15,7 @@ from typing import Any
 
 from adapters.project1_transformers import Project1TransformersAdapter
 from benchmarks.tasks import load_tasks
+from experiments.project1_transformers_run import _runtime_manifest
 from runtime.orchestrator import Harness, HarnessConfig, TaskRequest
 from tools.memory_workspace import make_memory_registry
 
@@ -99,6 +100,7 @@ def run(project1_root: str | Path, task_spec: str | Path, checkpoint: str | Path
         "enable_repair": enable_repair,
         "quantization": getattr(adapter.policy, "quantization", quantization),
         "quantization_compute_dtype": getattr(adapter.policy, "quantization_compute_dtype", None),
+        "runtime": _runtime_manifest(),
         "expose_contract_hints": expose_contract_hints,
         "task_count": total,
         "protocol_valid_rate": sum(bool(row["protocol_valid"]) for row in rows) / total if total else 0.0,

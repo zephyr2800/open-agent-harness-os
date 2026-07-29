@@ -178,8 +178,8 @@ def run_checkpoint_factorial(
         "runtime": runtime or {},
         "generation": {"do_sample": False, "max_new_tokens": max_new_tokens, "seed": 0, "quantization": quantization},
         "models": {
-            "generic": {"model_id": generic_model_id, "revision": generic_revision, "load_ms": models["generic"].load_ms, "quantization": models["generic"].backend.quantization, "quantization_compute_dtype": models["generic"].backend.quantization_compute_dtype},
-            "specialized": {"model_id": specialized_model_id, "revision": specialized_revision, "load_ms": models["specialized"].load_ms, "quantization": models["specialized"].backend.quantization, "quantization_compute_dtype": models["specialized"].backend.quantization_compute_dtype},
+            "generic": {"model_id": generic_model_id, "revision": generic_revision, "load_ms": models["generic"].load_ms, "quantization": getattr(models["generic"].backend, "quantization", quantization), "quantization_compute_dtype": getattr(models["generic"].backend, "quantization_compute_dtype", None)},
+            "specialized": {"model_id": specialized_model_id, "revision": specialized_revision, "load_ms": models["specialized"].load_ms, "quantization": getattr(models["specialized"].backend, "quantization", quantization), "quantization_compute_dtype": getattr(models["specialized"].backend, "quantization_compute_dtype", None)},
         },
         "cells": cells,
         "interaction": {
@@ -215,6 +215,12 @@ def main() -> int:
         runtime.update({"torch": torch.__version__, "transformers": transformers.__version__, "cuda": torch.version.cuda, "cuda_available": bool(torch.cuda.is_available())})
         if torch.cuda.is_available():
             runtime.update({"device": torch.cuda.get_device_name(0), "compute_capability": list(torch.cuda.get_device_capability(0)), "bf16_supported": bool(torch.cuda.is_bf16_supported())})
+        try:
+            import bitsandbytes
+
+            runtime["bitsandbytes"] = getattr(bitsandbytes, "__version__", None)
+        except ImportError:
+            runtime["bitsandbytes"] = None
     except ImportError:
         runtime["optional_backend"] = "unavailable"
     result = run_checkpoint_factorial(

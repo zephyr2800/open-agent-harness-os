@@ -48,6 +48,18 @@ path expects a CUDA-capable PyTorch installation supported by bitsandbytes;
 the backend selects BF16 compute when the device supports it and otherwise
 uses FP16 compute.
 
+For a real one-request GPU smoke test, run the opt-in diagnostic with a local
+checkpoint:
+
+```powershell
+& $py -m experiments.quantized_smoke --project1-root ..\local-action-model --checkpoint C:\path\to\checkpoint --output experiments/results/quantized-serving-smoke-v1.json
+```
+
+The smoke report records the device, canonical quantization mode, selected
+compute dtype, load/generation timing, peak VRAM, and whether the expected
+Action IR tool decision was produced. It is evidence of serving viability, not
+a benchmark or promotion result.
+
 That command records the model id, revision, protocol failures, verified
 successes, metrics, and raw replayable traces. It is intentionally not run by
 the dependency-free fixture test suite.

@@ -29,10 +29,11 @@ The local developer-preview harness passes its documented product checks:
 - Project 1 tests: 45/45
 - Launch preflight: 15/15 (including extracted-wheel installation smoke)
 
-The associated Qwopus3.5-9B promotion matrix was intentionally stopped at a
-preserved 508/552 partial checkpoint. It is not a promotion result, and this
-repository does not claim that the model is generally capable or that RL
-improved it. See `docs/CLAIMS_AND_EVIDENCE_MATRIX.md` and
+The associated Qwopus3.5-9B promotion matrix is being run privately under a
+frozen protocol; the last public-safe preserved checkpoint was 508/552. It is
+not a promotion result, and this repository does not claim that the model is
+generally capable or that RL improved it. See
+`docs/CLAIMS_AND_EVIDENCE_MATRIX.md` and
 `docs/RESEARCH_LAUNCH_BRIEF.md` for the evidence boundaries.
 
 ## Quick start

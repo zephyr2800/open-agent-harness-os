@@ -35,8 +35,11 @@ def _verified_action_count(row: dict[str, Any]) -> int:
 
 def _result_ok(row: dict[str, Any]) -> bool:
     independent = row.get("independent") or {}
-    if isinstance(independent, dict) and "expected_result_ok" in independent:
-        return bool(independent["expected_result_ok"])
+    if isinstance(independent, dict):
+        if "independent_success" in independent:
+            return bool(independent["independent_success"])
+        if "expected_result_ok" in independent:
+            return bool(independent["expected_result_ok"])
     return bool(row.get("verified_success"))
 
 

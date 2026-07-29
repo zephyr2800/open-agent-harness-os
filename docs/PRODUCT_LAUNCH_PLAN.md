@@ -63,10 +63,11 @@ external-evaluation gates; the split is not a waiver of those requirements.
 The current slice is therefore launch-candidate infrastructure, not a public
 product launch. It is intentionally honest about the remaining gates.
 
-The frozen promotion runner records per-task latency, total wall time, Python
-and CUDA versions, device identity, and peak allocated/reserved GPU memory for
-each model checkpoint. The next real-model matrix will therefore produce the
-resource report required by this gate alongside correctness and replay data.
+The completed 9B frozen matrix records per-task latency, total wall time,
+Python and CUDA versions, device identity, and peak allocated/reserved GPU
+memory alongside correctness and replay data. The quantized-serving smoke adds
+an RTX 5090 memory/timing baseline. Broader deployment-cost measurement across
+the external suite and representative workflows remains open.
 
 The current wheel (`open_agent_harness_os-0.1.0-py3-none-any.whl`) was built
 with the local setuptools backend, installed into a fresh target directory

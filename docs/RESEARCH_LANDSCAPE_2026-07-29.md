@@ -6,6 +6,12 @@ is not a model score in isolation: it is a model-harness-environment
 configuration with observable actions, state, evidence, safety outcomes, and
 cost.
 
+The current local result is summarized in
+[`RESEARCH_MATRIX_9B_2026-07-29.md`](RESEARCH_MATRIX_9B_2026-07-29.md): the
+9B frozen matrix is complete and replay-valid but correctly rejected for
+promotion because its failures concentrate in long-horizon control and
+evidence-grounded finalization.
+
 ## Papers and evaluation systems that set the bar
 
 - [Harness-Bench](https://arxiv.org/abs/2605.27922) evaluates 106 sandboxed
@@ -70,6 +76,20 @@ cost.
   complexity. The local analogue is a reproducible verifier environment and
   explicit rollout/reward manifests; an RL result without those artifacts is
   not reproducible research.
+- [Thinking Machines Inkling](https://thinkingmachines.ai/news/introducing-inkling/)
+  is the current open-weights/customization launch signal: sparse scaling,
+  controllable effort, multimodality, and a self-fine-tuning demonstration.
+  It strengthens the case for separating a customizable policy from an
+  independent control/evidence plane.
+- [Moonshot's Kimi K3 technical report](https://arxiv.org/abs/2607.24653)
+  and [official repository](https://github.com/MoonshotAI/Kimi-K3) provide a
+  current open-weight frontier reference. Its scale and architecture are a
+  market signal, not a fair single-5090 baseline; compare local systems on
+  verified utility, latency, and cost instead.
+- [Pi mono](https://github.com/earendil-works/pi-mono) is a useful current
+  reference for a minimal, stateful, provider-neutral agent runtime. It is
+  adjacent infrastructure, not evidence for model capability; our research
+  contribution is the verifier/evidence/promotion layer around the policy.
 - [Hugging Face agent evaluation guidance](https://huggingface.co/blog/is-it-agentic-enough)
   and [Community Evals](https://huggingface.co/blog/eee-community-evals)
   emphasize running real tools, repeated trials, trajectory evidence, and
@@ -93,8 +113,9 @@ prompt injection, false completion, and budget exhaustion.
 
 ## Required next evidence
 
-1. Finish the 9B frozen matrix and publish the complete, independently
-   replayed scorecard with all three seeds and all frozen slices.
+1. Publish the complete 9B frozen scorecard and failure taxonomy: all three
+   seeds are now present, replay-valid, and zero-unsafe, but the promotion gate
+   rejects the failed long-horizon and evidence-grounded slices.
 2. Run a disjoint author-held-out suite with macro-family scoring, Wilson
    intervals, unsafe-attempt rate, false-completion rate, trace validity,
    replay agreement, latency, and output-token cost.

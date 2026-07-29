@@ -155,8 +155,8 @@ Repeating a narrow curriculum therefore did not produce robust specialization.
 A verifier-backed 7B RL smoke was neutral/negative: reward stayed at
 `-0.78125` and greedy success remained 0/8, so that adapter was not promoted.
 
-The strongest current causal product result is the harness ablation: on the
-strict 11-task local fixture, model-only scored 4/11 while the same checkpoint
+The strongest current controlled local ablation result is the harness
+comparison: on the strict 11-task local fixture, model-only scored 4/11 while the same checkpoint
 with verifier-first repair scored 11/11; on a separately authored 12-task
 holdout, the comparison was 5/12 versus 12/12. Every trace independently
 replayed with full runtime agreement. This supports a bounded systems claim:
@@ -164,10 +164,13 @@ an independent evidence/recovery layer can repair a small policy on these
 fixtures. It does not support a general agent or model-breakthrough claim.
 
 The Qwopus3.5-9B-v3 branch completed rank-64 4-bit QLoRA SFT and merge on the
-RTX 5090. Its frozen promotion matrix across hidden and industry slices,
-three seeds, is still running. The v1 and adversarial v2 external-bar
-diagnostics and verifier-backed RL are intentionally downstream of that
-matrix and its machine promotion gate.
+RTX 5090. Its frozen promotion matrix is complete across three slices and
+three seeds: 483/552 independently verified successes (87.5%), zero unsafe
+attempts, perfect trace validity, and perfect runtime/replay agreement. The
+machine promotion gate correctly rejects the checkpoint because the failed
+rows cluster in long-horizon policy sequences and evidence-grounded
+finalization. The v1 and adversarial v2 external-bar diagnostics and
+verifier-backed RL remain downstream of that failure analysis.
 
 ### Revised paper claim
 
@@ -195,8 +198,8 @@ protected evaluator or promotion rules.
 
 ### Exact-payload fidelity diagnostic — 2026-07-26
 
-The first complete seed-0 slice of the frozen Qwopus3.5-9B research-v4 matrix is
-120/120 tasks, with 116 verified successes. The family
+The first complete seed-0 slice of the frozen Qwopus3.5-9B research-v4 matrix
+was 120/120 tasks, with 116 verified successes. The family
 breakdown is 70/70 across alias-write, move, alias-move, retry, structured-JSON,
 API-lookup, and browser-lookup tasks; 10/10 on long-horizon-alias; 10/10 on
 long-horizon; 10/10 on unknown-capability abstention; and 10/10 on high-risk
@@ -206,11 +209,11 @@ policy performed the requested write but appended a `STATE_DIGEST` metadata
 line, which correctly failed the byte-exact verifier. There were no unknown-tool
 or unsafe-action attempts in these failures. This separates action selection
 from artifact serialization fidelity and gives the next causal intervention a
-specific target. These are prefix results, not the final matrix score. A
-held-out-safe 120-row verifier-backed curriculum was added with runtime digest
-metadata in state and exact payloads in the targets. It is an intervention
-candidate, not a claimed improvement; the frozen baseline matrix must finish
-before the SFT comparison is run.
+specific target. The complete three-seed matrix confirms the same four exact-
+write failures per seed. A held-out-safe 120-row verifier-backed curriculum
+was added with runtime digest metadata in state and exact payloads in the
+targets. It is an intervention candidate, not a claimed improvement; the
+fresh remediation comparison remains to be run.
 
 ### Field refresh: reward hacking and credit assignment — 2026-07-26
 

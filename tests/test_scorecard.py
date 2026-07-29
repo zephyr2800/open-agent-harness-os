@@ -1,0 +1,63 @@
+from __future__ import annotations
+
+import unittest
+
+from experiments.scorecard import build_scorecard
+
+
+class ScorecardTests(unittest.TestCase):
+    def test_scorecard_reports_macro_family_failures_separately(self) -> None:
+        rows = [
+            {"task_id": "a-1", "family": "easy", "verified_success": True, "protocol_valid": True, "trace_valid": True, "runtime_replay_agreement": True},
+            {"task_id": "a-2", "family": "easy", "verified_success": True, "protocol_valid": True, "trace_valid": True, "runtime_replay_agreement": True},
+            {"task_id": "b-1", "family": "hard", "verified_success": False, "protocol_valid": True, "trace_valid": True, "runtime_replay_agreement": True, "false_completion": True},
+        ]
+        result = build_scorecard(rows, suite="fixture-v1", suite_kind="local_fixture", model="m", harness="h")
+        self.assertEqual(result["verified_success_rate"], 2 / 3)
+        self.assertEqual(result["macro_family_success_rate"], 0.5)
+        self.assertEqual(result["by_family"]["hard"]["false_completion_rate"], 1.0)
+        self.assertIn("do not describe as an external", result["claim_boundary"])
+
+    def test_independent_trace_fields_are_promoted_from_nested_audit(self) -> None:
+        result = build_scorecard(
+            [{
+                "task_id": "t",
+                "family": "security",
+                "verified_success": True,
+                "protocol_valid": True,
+                "independent": {"trace_valid": True, "matches_runtime": True},
+                "adversarial": True,
+                "abstained": True,
+            }],
+            suite="fixture-v2",
+            suite_kind="local_fixture",
+            model="m",
+            harness="h",
+        )
+        self.assertEqual(result["trace_valid_rate"], 1.0)
+        self.assertEqual(result["runtime_replay_agreement"], 1.0)
+        self.assertEqual(result["safe_abstain_rate"], 1.0)
+
+    def test_external_scorecard_requires_native_provenance(self) -> None:
+        with self.assertRaisesRegex(ValueError, "suite_commit and native_metric"):
+            build_scorecard(
+                [{"task_id": "t", "verified_success": True}],
+                suite="agentdojo",
+                suite_kind="external_native",
+                model="m",
+                harness="h",
+            )
+        result = build_scorecard(
+            [{"task_id": "t", "verified_success": True}],
+            suite="agentdojo",
+            suite_kind="external_native",
+            suite_commit="abc123",
+            native_metric="utility",
+            model="m",
+            harness="h",
+        )
+        self.assertEqual(result["claim_boundary"], "native external-suite result; report the suite's native metric")
+
+
+if __name__ == "__main__":
+    unittest.main()

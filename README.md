@@ -15,15 +15,17 @@ actually complete.
 - Bounded recovery and tamper-evident trace lineage
 - Local CLI, HTTP, and MCP surfaces
 - Reproducible benchmark generators, task fixtures, tests, and research docs
+- Claim-safe model-harness scorecards with macro-family, safety, replay, and
+  efficiency metrics
 - The companion local-action-model source under `projects/local-action-model/`
 
 ## Current evidence
 
 The local developer-preview harness passes its documented product checks:
 
-- Project 2 tests: 59/59
+- Project 2 tests: 62/62 (including the claim-safe scorecard checks)
 - Project 1 tests: 45/45
-- Launch preflight: 12/12
+- Launch preflight: 14/14 (including the companion suite)
 
 The associated Qwopus3.5-9B promotion matrix was intentionally stopped at a
 preserved 508/552 partial checkpoint. It is not a promotion result, and this
@@ -42,6 +44,20 @@ python -m pip wheel . --no-deps --wheel-dir work/package-dist
 python -m experiments.launch_preflight --with-tests
 ```
 
+The companion project uses intentionally local package names such as
+`runtime` and `experiments`; run its suite from its own root:
+
+```powershell
+Push-Location projects/local-action-model
+python -m unittest discover -s tests -v
+Pop-Location
+```
+
+To score a completed run without confusing a local proxy with an external
+benchmark, use `harness-scorecard` (or `python -m experiments.scorecard`). An
+`external_native` scorecard requires the external suite commit and its native
+metric.
+
 ## Research direction
 
 The central hypothesis is that compact policy specialization becomes more
@@ -49,7 +65,8 @@ useful when training and promotion are driven by independently verified
 outcomes rather than plausible prose or unverified tool claims. The research
 materials cover Action IR specialization, verifier-backed post-training,
 failure-family analysis, replayable evidence, and current external benchmark
-bar-setting.
+bar-setting. Start with `docs/RESEARCH_LANDSCAPE_2026-07-29.md` and the
+preregistered `docs/RESEARCH_BREAKTHROUGH_PROTOCOL_2026-07-29.md`.
 
 ## Public boundary
 

@@ -5,6 +5,10 @@ claim is publishable only when the evidence in the right column exists and its
 scope matches the wording. Local proxy results must not be described as
 external benchmark results.
 
+The public scorecard enforces this boundary: local fixtures and proxies are
+marked `local_fixture`, while `external_native` requires the external suite
+commit and native metric.
+
 | Claim | Status | Authoritative evidence | Allowed wording now |
 |---|---|---|---|
 | A local developer preview exists | Supported | `experiments/results/launch-preflight-v1.json` | “The local developer preview passes its documented smoke, safety, auth/TLS, isolation, replay, packaging, security-metadata, and test gates.” |
@@ -36,4 +40,3 @@ final-answer evidence checks; safety results; replay agreement; and an
 external-suite run reported with the external suite's native metric. Until
 those artifacts exist, the strongest defensible result is a local systems
 ablation and developer-preview infrastructure result.
-

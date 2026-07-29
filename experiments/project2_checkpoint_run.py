@@ -15,11 +15,12 @@ from typing import Any
 
 from adapters.project1_transformers import Project1TransformersAdapter
 from benchmarks.tasks import load_tasks
+from experiments.project1_transformers_run import _runtime_manifest
 from runtime.orchestrator import Harness, HarnessConfig, TaskRequest
 from tools.memory_workspace import make_memory_registry
 
 
-def run(project1_root: str | Path, task_spec: str | Path, checkpoint: str | Path, *, variant: str = "H3", seed: int = 0, do_sample: bool = False, enable_repair: bool = True, expose_contract_hints: bool = True, splits: tuple[str, ...] = ()) -> dict[str, Any]:
+def run(project1_root: str | Path, task_spec: str | Path, checkpoint: str | Path, *, variant: str = "H3", seed: int = 0, do_sample: bool = False, enable_repair: bool = True, expose_contract_hints: bool = True, splits: tuple[str, ...] = (), quantization: str | None = None) -> dict[str, Any]:
     project1_root = Path(project1_root)
     task_spec = Path(task_spec)
     tasks = tuple(task for task in load_tasks(task_spec) if not splits or task.split in splits)
@@ -30,6 +31,7 @@ def run(project1_root: str | Path, task_spec: str | Path, checkpoint: str | Path
         seed=seed,
         do_sample=do_sample,
         enable_repair=enable_repair,
+        quantization=quantization,
     )
     rows: list[dict[str, Any]] = []
     for task in tasks:
@@ -96,6 +98,9 @@ def run(project1_root: str | Path, task_spec: str | Path, checkpoint: str | Path
         "seed": seed,
         "do_sample": do_sample,
         "enable_repair": enable_repair,
+        "quantization": getattr(adapter.policy, "quantization", quantization),
+        "quantization_compute_dtype": getattr(adapter.policy, "quantization_compute_dtype", None),
+        "runtime": _runtime_manifest(),
         "expose_contract_hints": expose_contract_hints,
         "task_count": total,
         "protocol_valid_rate": sum(bool(row["protocol_valid"]) for row in rows) / total if total else 0.0,
@@ -114,6 +119,7 @@ def main() -> int:
     parser.add_argument("--do-sample", action="store_true")
     parser.add_argument("--no-repair", action="store_true")
     parser.add_argument("--hide-contract-hints", action="store_true", help="do not expose evaluator expected-tool hints to the model")
+    parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"))
     parser.add_argument("--splits", default="", help="comma-separated task splits")
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
@@ -128,6 +134,7 @@ def main() -> int:
         enable_repair=not args.no_repair,
         expose_contract_hints=not args.hide_contract_hints,
         splits=splits,
+        quantization=args.quantization,
     )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

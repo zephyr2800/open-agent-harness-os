@@ -86,18 +86,17 @@ than one aggregate success number.
 | 7B v7 external-gap revision | 39/48; policy sequence 3/12 | Not promoted; repeated narrow data caused regression |
 | 7B verifier-backed RL smoke | neutral reward before/after | Undirected RL is not a valid improvement strategy |
 | Project 2 test suite | 66/66 passing | Harness/evaluator regression control |
-| Qwopus3.5-9B rank-64 QLoRA | SFT and merge complete on RTX 5090 | Controlled scale comparison; the live partial artifact currently reports zero unsafe attempts; incomplete result only |
+| Qwopus3.5-9B rank-64 QLoRA | SFT, merge, and 9-run frozen matrix complete on RTX 5090 | 483/552 independently verified (87.5%), zero unsafe attempts, perfect trace/replay checks; promotion rejected because failed slices remain |
 
 The Qwopus-compatible verifier-backed REINFORCE path also passes a local
 dry-run on the disjoint 24-task Action IR specification after sharing the same
 thinking-disabled chat serializer as SFT and inference. This validates the RL
-entry point, not an RL improvement claim; the trained RL ablation remains
-conditional on the 9B SFT checkpoint and held-out evaluation. The rank-64
-adapter and merged checkpoint now exist; no 9B promotion or RL claim is made
-until the frozen matrix and independent replay report are complete.
+entry point, not an RL improvement claim. The rank-64 adapter and merged
+checkpoint now exist; the frozen matrix is complete but rejected, so RL waits
+for a failure-targeted remediation ablation and fresh external evidence.
 
-The promotion runner now records per-task latency and peak CUDA allocation for
-each frozen checkpoint matrix, so the 9B comparison will include a real
+The promotion runner records per-task latency and peak CUDA allocation for
+each frozen checkpoint matrix. The 9B report therefore includes a real local
 deployment-cost measurement rather than pass rate alone.
 
 Promotion is now a separate machine-readable gate in

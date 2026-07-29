@@ -17,7 +17,7 @@ metadata.
 | The local policy learned the Action IR task family | Supported only on local fixtures | completed 7B v6/v6 proxy reports and independent replay reports | “Protocol specialization improves these frozen local tasks.” |
 | The system is generally capable on terminal or computer-use work | Not supported | TUA-Bench/OSWorld 2.0 run is still absent | Do not make this claim. |
 | The system beats frontier agents | Not supported | no native external benchmark comparison | Do not make this claim. |
-| Qwopus3.5-9B is a better action policy than the promoted 7B | Pending | frozen 9B matrix plus independent replay and resource report | Do not make this claim until the matrix passes. |
+| Qwopus3.5-9B is a better action policy than the promoted 7B | Not supported | frozen 9B matrix is complete but promotion decision is reject | Do not make this claim; use the 483/552 failure-localization result instead. |
 | Qwopus3.5-9B SFT completed | Supported | adapter manifest and merged checkpoint manifest | “The 9B scale branch completed QLoRA SFT and merge.” |
 | Verifier-backed RL improves the policy | Not supported | prior 7B RL was neutral/negative; 9B RL has not run | Do not make this claim. |
 | The harness prevents all unsafe actions | Not supported | only registered-tool and local-scope safety evidence exists | Say “configured high-risk actions are denied by the tested policy boundary.” |

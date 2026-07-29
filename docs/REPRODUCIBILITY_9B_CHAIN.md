@@ -41,7 +41,7 @@ try {
     --task-spec benchmarks\fixtures\task-spec-research-v4.json `
     --task-spec benchmarks\fixtures\task-spec-industry-proxy-v1.json `
     --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
-    --seeds 0,1,2 --max-new-tokens 256
+    --seeds 0,1,2 --max-new-tokens 256 --quantization 4bit
 } finally { Pop-Location }
 ```
 

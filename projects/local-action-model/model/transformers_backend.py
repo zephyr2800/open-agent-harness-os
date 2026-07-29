@@ -16,10 +16,22 @@ from .adapter import ModelRequest, parse_decision
 
 DEFAULT_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
 DEFAULT_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
+_QUANTIZATION_ALIASES = {"4bit": "4bit-nf4", "int4": "4bit-nf4", "nf4": "4bit-nf4"}
 
 
 class TransformersBackendUnavailable(RuntimeError):
     """Raised when the optional local inference dependencies are not installed."""
+
+
+def normalize_quantization(value: str | None) -> str | None:
+    """Normalize the public 4-bit aliases to the concrete NF4 configuration."""
+
+    if value is None:
+        return None
+    normalized = _QUANTIZATION_ALIASES.get(str(value).strip().lower())
+    if normalized is None:
+        raise ValueError("quantization must be 4bit, int4, or nf4")
+    return normalized
 
 
 def load_tokenizer(auto_tokenizer: Any, model_id: str, revision: str) -> Any:
@@ -170,6 +182,7 @@ class TransformersActionPolicy:
         temperature: float = 0.7,
         top_p: float = 0.9,
         stop_on_complete_json: bool = False,
+        quantization: str | None = None,
         tokenizer: Any = None,
         model: Any = None,
     ) -> None:
@@ -181,6 +194,8 @@ class TransformersActionPolicy:
         self.temperature = float(temperature)
         self.top_p = float(top_p)
         self.stop_on_complete_json = bool(stop_on_complete_json)
+        self.quantization = normalize_quantization(quantization)
+        self.quantization_compute_dtype: str | None = None
         if tokenizer is None or model is None:
             try:
                 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -189,12 +204,31 @@ class TransformersActionPolicy:
                     "Install the optional backend with: pip install -e '.[transformers]'"
                 ) from exc
             tokenizer = load_tokenizer(AutoTokenizer, model_id, revision)
-            model = AutoModelForCausalLM.from_pretrained(
-                model_id,
-                revision=revision,
-                dtype="auto",
-                device_map=device_map,
-            )
+            model_kwargs: dict[str, Any] = {
+                "revision": revision,
+                "dtype": "auto",
+                "device_map": device_map,
+            }
+            if self.quantization is not None:
+                try:
+                    import torch
+                    from transformers import BitsAndBytesConfig
+                    import bitsandbytes  # noqa: F401
+                except ImportError as exc:
+                    raise TransformersBackendUnavailable(
+                        "4-bit quantization requires torch, transformers, and bitsandbytes"
+                    ) from exc
+                compute_dtype = torch.float16
+                if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
+                    compute_dtype = torch.bfloat16
+                self.quantization_compute_dtype = str(compute_dtype).split(".")[-1]
+                model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=compute_dtype,
+                    bnb_4bit_use_double_quant=True,
+                )
+            model = AutoModelForCausalLM.from_pretrained(model_id, **model_kwargs)
         self.tokenizer = tokenizer
         self.model = model
         self.last_raw_text: str | None = None

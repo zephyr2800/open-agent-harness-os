@@ -11,6 +11,7 @@ import argparse
 import gc
 import hashlib
 import json
+import os
 import platform
 import time
 from collections import defaultdict
@@ -45,6 +46,12 @@ def _runtime_manifest() -> dict[str, Any]:
                 "max_memory_allocated_bytes": int(torch.cuda.max_memory_allocated(0)),
                 "max_memory_reserved_bytes": int(torch.cuda.max_memory_reserved(0)),
             })
+        try:
+            import bitsandbytes
+
+            manifest["bitsandbytes"] = getattr(bitsandbytes, "__version__", None)
+        except ImportError:
+            manifest["bitsandbytes"] = None
     except ImportError:
         manifest["torch"] = None
     return manifest
@@ -101,6 +108,7 @@ def _run_report(
         "seed": seed,
         "do_sample": do_sample,
         "enable_repair": enable_repair,
+        "quantization": os.environ.get("ACTION_MODEL_QUANTIZATION"),
         "complete": complete,
         "task_count": total,
         "verified_successes": runtime_success,
@@ -273,6 +281,7 @@ def main() -> int:
     parser.add_argument("--do-sample", action="store_true")
     parser.add_argument("--repair", action="store_true")
     parser.add_argument("--max-new-tokens", type=int, default=256)
+    parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"))
     parser.add_argument("--checkpoint-every-tasks", type=int, default=5)
     args = parser.parse_args()
     if args.checkpoint_every_tasks < 1:
@@ -296,6 +305,7 @@ def main() -> int:
                 and bool(saved.get("enable_repair")) == bool(args.repair)
                 and int(saved.get("max_new_tokens", 256)) == args.max_new_tokens
                 and int(saved.get("checkpoint_every_tasks", 5)) == args.checkpoint_every_tasks
+                and saved.get("quantization") == args.quantization
             )
             if compatible:
                 runs = list(saved.get("runs", []))
@@ -323,11 +333,14 @@ def main() -> int:
             "enable_repair": args.repair,
             "max_new_tokens": args.max_new_tokens,
             "checkpoint_every_tasks": args.checkpoint_every_tasks,
+            "quantization": args.quantization,
             "completed_runs": sum(bool(item.get("complete", True)) for item in runs),
             "runs": runs,
         })
 
     adapter: Project1TransformersAdapter | None = None
+    if args.quantization is not None:
+        os.environ["ACTION_MODEL_QUANTIZATION"] = args.quantization
     for seed in seeds:
         # Release the previous seed's model before constructing the next one.
         # Without this boundary, CUDA's reserved allocator blocks can make
@@ -352,6 +365,7 @@ def main() -> int:
             do_sample=args.do_sample,
             enable_repair=args.repair,
             max_new_tokens=args.max_new_tokens,
+            quantization=args.quantization,
         )
         for task_spec in task_specs:
             key = (seed, str(task_spec))

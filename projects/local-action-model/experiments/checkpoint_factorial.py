@@ -27,7 +27,7 @@ from .factorial import AdvancedHarness, BaselineHarness, Harness
 class CheckpointPolicy:
     """Expose a real Transformers policy through the factorial model interface."""
 
-    def __init__(self, model_id: str, revision: str, *, max_new_tokens: int) -> None:
+    def __init__(self, model_id: str, revision: str, *, max_new_tokens: int, quantization: str | None = None) -> None:
         self.model_id = model_id
         self.revision = revision
         load_start = time.perf_counter()
@@ -35,6 +35,7 @@ class CheckpointPolicy:
             model_id=model_id,
             revision=revision,
             max_new_tokens=max_new_tokens,
+            quantization=quantization,
         )
         self.load_ms = (time.perf_counter() - load_start) * 1000
 
@@ -153,13 +154,14 @@ def run_checkpoint_factorial(
     specialized_model_id: str,
     specialized_revision: str,
     max_new_tokens: int,
+    quantization: str | None = None,
     task_spec_path: str | None = None,
     task_spec_digest: str | None = None,
     runtime: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     models = {
-        "generic": CheckpointPolicy(generic_model_id, generic_revision, max_new_tokens=max_new_tokens),
-        "specialized": CheckpointPolicy(specialized_model_id, specialized_revision, max_new_tokens=max_new_tokens),
+        "generic": CheckpointPolicy(generic_model_id, generic_revision, max_new_tokens=max_new_tokens, quantization=quantization),
+        "specialized": CheckpointPolicy(specialized_model_id, specialized_revision, max_new_tokens=max_new_tokens, quantization=quantization),
     }
     harnesses = {"baseline": BaselineHarness(), "advanced": AdvancedHarness()}
     cells: dict[str, Any] = {}
@@ -174,10 +176,10 @@ def run_checkpoint_factorial(
         "task_spec_sha256": task_spec_digest,
         "task_count": len(tasks),
         "runtime": runtime or {},
-        "generation": {"do_sample": False, "max_new_tokens": max_new_tokens, "seed": 0},
+        "generation": {"do_sample": False, "max_new_tokens": max_new_tokens, "seed": 0, "quantization": quantization},
         "models": {
-            "generic": {"model_id": generic_model_id, "revision": generic_revision, "load_ms": models["generic"].load_ms},
-            "specialized": {"model_id": specialized_model_id, "revision": specialized_revision, "load_ms": models["specialized"].load_ms},
+            "generic": {"model_id": generic_model_id, "revision": generic_revision, "load_ms": models["generic"].load_ms, "quantization": getattr(models["generic"].backend, "quantization", quantization), "quantization_compute_dtype": getattr(models["generic"].backend, "quantization_compute_dtype", None)},
+            "specialized": {"model_id": specialized_model_id, "revision": specialized_revision, "load_ms": models["specialized"].load_ms, "quantization": getattr(models["specialized"].backend, "quantization", quantization), "quantization_compute_dtype": getattr(models["specialized"].backend, "quantization_compute_dtype", None)},
         },
         "cells": cells,
         "interaction": {
@@ -201,6 +203,7 @@ def main() -> int:
     parser.add_argument("--specialized-model-id", required=True)
     parser.add_argument("--specialized-revision", default="main")
     parser.add_argument("--max-new-tokens", type=int, default=128)
+    parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"))
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     task_spec_digest = hashlib.sha256(Path(args.task_spec).read_bytes()).hexdigest()
@@ -212,6 +215,12 @@ def main() -> int:
         runtime.update({"torch": torch.__version__, "transformers": transformers.__version__, "cuda": torch.version.cuda, "cuda_available": bool(torch.cuda.is_available())})
         if torch.cuda.is_available():
             runtime.update({"device": torch.cuda.get_device_name(0), "compute_capability": list(torch.cuda.get_device_capability(0)), "bf16_supported": bool(torch.cuda.is_bf16_supported())})
+        try:
+            import bitsandbytes
+
+            runtime["bitsandbytes"] = getattr(bitsandbytes, "__version__", None)
+        except ImportError:
+            runtime["bitsandbytes"] = None
     except ImportError:
         runtime["optional_backend"] = "unavailable"
     result = run_checkpoint_factorial(
@@ -221,6 +230,7 @@ def main() -> int:
         specialized_model_id=args.specialized_model_id,
         specialized_revision=args.specialized_revision,
         max_new_tokens=args.max_new_tokens,
+        quantization=args.quantization,
         task_spec_path=args.task_spec,
         task_spec_digest=task_spec_digest,
         runtime=runtime,

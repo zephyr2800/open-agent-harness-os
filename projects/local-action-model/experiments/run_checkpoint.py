@@ -14,9 +14,9 @@ from model.adapter import ModelOutputError, ModelRequest
 from model.transformers_backend import TransformersActionPolicy
 
 
-def run_checkpoint(tasks, *, model_id: str, revision: str, max_new_tokens: int) -> dict[str, Any]:
+def run_checkpoint(tasks, *, model_id: str, revision: str, max_new_tokens: int, quantization: str | None = None) -> dict[str, Any]:
     load_start = time.perf_counter()
-    policy = TransformersActionPolicy(model_id=model_id, revision=revision, max_new_tokens=max_new_tokens)
+    policy = TransformersActionPolicy(model_id=model_id, revision=revision, max_new_tokens=max_new_tokens, quantization=quantization)
     load_ms = (time.perf_counter() - load_start) * 1000
     rows = []
     for task in tasks:
@@ -64,6 +64,8 @@ def run_checkpoint(tasks, *, model_id: str, revision: str, max_new_tokens: int) 
         "schema": "checkpoint-evaluation/v0",
         "model_id": model_id,
         "revision": revision,
+        "quantization": policy.quantization,
+        "quantization_compute_dtype": policy.quantization_compute_dtype,
         "load_ms": round(load_ms, 1),
         "metrics": {
             "task_count": total,
@@ -85,9 +87,10 @@ def main() -> int:
     parser.add_argument("--model-id", default="Qwen/Qwen2.5-0.5B-Instruct")
     parser.add_argument("--revision", required=True)
     parser.add_argument("--max-new-tokens", type=int, default=128)
+    parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"))
     parser.add_argument("--output")
     args = parser.parse_args()
-    result = run_checkpoint(load_tasks(args.task_spec), model_id=args.model_id, revision=args.revision, max_new_tokens=args.max_new_tokens)
+    result = run_checkpoint(load_tasks(args.task_spec), model_id=args.model_id, revision=args.revision, max_new_tokens=args.max_new_tokens, quantization=args.quantization)
     serialized = json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True)
     if args.output:
         Path(args.output).write_text(serialized + "\n", encoding="utf-8")

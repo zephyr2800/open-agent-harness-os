@@ -46,11 +46,12 @@ the bar:
 
 ### Live evidence snapshot — 2026-07-27
 
-The 9B matrix is still in progress at 507/552 task-runs: 450 verified
-successes, 28 false completions, zero unsafe attempts, and 100% trace validity
-and runtime/replay agreement. The current diagnostic finding is a replicated
-termination-control failure, not a promotion claim; downstream RL and public
-model-release decisions remain gated.
+The 9B matrix is complete at 483/552 independently verified successes
+(87.5%), 36 false completions, zero unsafe attempts, and 100% trace validity
+and runtime/replay agreement. The promotion gate rejected the checkpoint. The
+replicated diagnostic finding is a concentrated termination/evidence and
+long-horizon control failure, not a promotion claim; downstream remediation,
+external evaluation, and public model-release decisions remain gated.
 
 ### Product system
 
@@ -91,12 +92,13 @@ Do not say yet:
 - “RL improved the model.”
 - “Production-ready autonomous agent.”
 
-Those claims remain gated on the frozen 9B result, adversarial diagnostics,
-external benchmark evidence, and production security/provenance review.
+Those claims remain gated on the rejected 9B result being improved by a fresh
+held-out experiment, adversarial diagnostics, external benchmark evidence, and
+production security/provenance review.
 
 ## Near-term launch sequence
 
-1. Finish and audit the 9B matrix.
+1. Publish the audited 9B failure taxonomy and sanitized aggregate.
 2. Run v1 and adversarial v2 diagnostics; publish family-level intervals and
    resource/replay metrics.
 3. Run the machine pre-RL gate; only then attempt verifier-backed RL with a

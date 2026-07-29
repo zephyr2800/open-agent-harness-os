@@ -63,10 +63,11 @@ external-evaluation gates; the split is not a waiver of those requirements.
 The current slice is therefore launch-candidate infrastructure, not a public
 product launch. It is intentionally honest about the remaining gates.
 
-The frozen promotion runner records per-task latency, total wall time, Python
-and CUDA versions, device identity, and peak allocated/reserved GPU memory for
-each model checkpoint. The next real-model matrix will therefore produce the
-resource report required by this gate alongside correctness and replay data.
+The completed 9B frozen matrix records per-task latency, total wall time,
+Python and CUDA versions, device identity, and peak allocated/reserved GPU
+memory alongside correctness and replay data. The quantized-serving smoke adds
+an RTX 5090 memory/timing baseline. Broader deployment-cost measurement across
+the external suite and representative workflows remains open.
 
 The current wheel (`open_agent_harness_os-0.1.0-py3-none-any.whl`) was built
 with the local setuptools backend, installed into a fresh target directory
@@ -87,7 +88,7 @@ preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
 The timeout-boundary hardening was revalidated on 2026-07-27: Project 2's
- source tests pass 66/66, Project 1's source tests pass 45/45, and the
+ source tests pass 66/66, Project 1's source tests pass 47/47, and the
 consolidated launch preflight remains green. This closes the adapter-level
 budget-enforcement regression; it does not by itself close real-model
 performance, usability, security-review, licensing, or external-benchmark
@@ -110,7 +111,7 @@ without state change.
 
 ## 2026-07-29 launch-candidate update
 
-The public branch now has 66/66 harness tests, 45/45 companion tests, and a
+The public branch now has 66/66 harness tests, 47/47 companion tests, and a
 15-check launch preflight. The preflight runs the companion suite from its own
 package root so same-name modules from the two projects cannot silently
 replace one another. It also validates the extracted wheel install and checks

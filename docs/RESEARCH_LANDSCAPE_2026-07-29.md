@@ -52,6 +52,21 @@ evidence-grounded finalization.
   reference for multi-turn tool-use RL. It reinforces that environment
   throughput, rollout validity, and reward design are part of the research
   result rather than implementation detail.
+- [AgentV-RL](https://arxiv.org/abs/2604.16004) makes the verifier itself
+  agentic and bidirectional, which is a useful warning for our design: a
+  verifier can become a second reasoning system with its own error modes. Our
+  first RL gate should therefore keep deterministic state/evidence checks as
+  the reward authority and treat any learned judge as advisory.
+- [COVERT](https://arxiv.org/abs/2604.09813) uses oracle-preserving tool-use
+  augmentation with distractors, ambiguous requests, and noisy tool outputs.
+  This directly motivates the next remediation data audit: vary the surface
+  form and tool noise while preserving the verified action/result contract.
+- [Long-Horizon-Terminal-Bench](https://arxiv.org/abs/2607.08964),
+  [AutomationBench](https://github.com/zapier/AutomationBench), and
+  [ClawBench](https://github.com/openclaw/shellbench) all make partial progress,
+  trace quality, and repeated-run reliability first-class. The repository now
+  implements a compatible non-promoting dense diagnostic in
+  `experiments/analyze_dense_reliability.py`.
 
 ## Product launches and open infrastructure signals
 
@@ -118,7 +133,9 @@ prompt injection, false completion, and budget exhaustion.
    rejects the failed long-horizon and evidence-grounded slices.
 2. Run a disjoint author-held-out suite with macro-family scoring, Wilson
    intervals, unsafe-attempt rate, false-completion rate, trace validity,
-   replay agreement, latency, and output-token cost.
+   replay agreement, latency, output-token cost, partial utility, and
+   pass-at-k/worst-seed reliability. Use
+   `docs/DENSE_RELIABILITY_PROTOCOL.md` for the frozen diagnostic definition.
 3. Run at least one native external suite, starting with AgentDojo or
    TUA-Bench, and report its native metric, commit, environment, and harness
    configuration. A local proxy remains explicitly labeled local.

@@ -5,6 +5,11 @@ summary of the thesis, evidence tiers, external benchmark bar, and developer
 preview versus public-launch gates. It intentionally distinguishes completed
 local evidence from pending generalization claims.
 
+`docs/DENSE_RELIABILITY_PROTOCOL.md` defines the non-promoting partial-credit,
+pass-at-k, and worst-seed diagnostics. The implementation is
+`experiments/analyze_dense_reliability.py`; these metrics explain progress and
+variance without weakening the strict promotion gate.
+
 `docs/READING_LIST.md` is the current 90-minute technical cram list, including
 Lilian Wengâ€™s harness/self-improvement posts, action-model papers, security and
 stateful-agent benchmarks, and current model/harness launches.

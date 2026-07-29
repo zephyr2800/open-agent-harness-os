@@ -39,15 +39,14 @@ model provenance is not silently conflated with the Apache-licensed harness.
 audit and hash for that public-track boundary; the wheel contains no Qwopus
 weights, model binaries, or training fixtures.
 
-`docs/RESEARCH_REPORT.md` now includes the dated live 9B frozen-matrix
-checkpoint and explicitly separates its partial results from promotion,
-external-benchmark, RL, and generalized-capability claims.
-
-`experiments/results/research-project2-qwopus35-9b-summary-live-v1.partial.json`
-and its Markdown companion are generated from the atomic live checkpoint. The
-summary is intentionally refreshable while the long-running matrix is active;
-it reports only the committed prefix, runtime/replay agreement, unsafe attempts,
-and protocol failure counts. It remains partial and is not a promotion result.
+`docs/RESEARCH_REPORT.md` and `docs/RESEARCH_MATRIX_9B_2026-07-29.md` record the
+completed 9B frozen-matrix result and explicitly separate it from promotion,
+external-benchmark, RL, and generalized-capability claims. The committed
+sanitized result is
+`experiments/results/research-project2-qwopus35-9b-promotion-summary-v1.json`.
+Raw replay traces, the merged checkpoint, and the machine-readable promotion
+decision remain private research artifacts and are not bundled in this public
+repository.
 
 The 2026-07-27 literature refresh adds StructAgent, WeaveBench,
 WildClawBench, SWE-Marathon, General AgentBench, Toolathlon,
@@ -69,81 +68,10 @@ failure coverage; none are treated as local benchmark results.
 `docs/RESEARCH_ABLATION_SPEC_V2.md` freezes the five-cell causal comparison,
 metrics, held-out protocol, and promotion rules for that differentiator.
 
-`work/watch_qwopus35_9b_native_agentdojo.ps1` is the queued native-runtime
-diagnostic. It waits for the exact-payload holdout, selects the latest eligible
-checkpoint, and runs five clean plus five direct-injection AgentDojo workspace
-cases against the pinned v1.2.2 environment without competing with the active
-training/evaluation process.
-
-`work/watch_qwopus35_9b_matrix_heartbeat.ps1` records active task IDs, row
-counts, task age, and partial-report age while the long 9B matrix runs. It is
-operational telemetry only and does not alter evaluator semantics.
-
-On 2026-07-27, `experiments/promotion_decision.py` was hardened to require an
-explicit seed declaration, the exact frozen run count, every required seed in
-every task-family slice, `complete=true`, and a full row set before promotion.
-The regression suite now has 66 tests, including an incomplete-matrix
-rejection case.
-
-The gated 9B post-training path is `work/watch_qwopus35_9b_post_rl.ps1`. It
-waits for `verified-rl-gate-v2.json`, runs actual verifier-backed on-policy
-REINFORCE from the merged Qwopus checkpoint, merges the adapter, and evaluates
-before/after on the disjoint `research-v2` holdout. The v2 gate separates
-capability promotion from research authorization: a rejected-but-safe baseline
-may enter RL after the frozen matrix and disjoint diagnostics are complete,
-without becoming promoted. It writes
-`experiments/results/verified-rl-result-v1.json` and can only report
-`decision=promote` when verified success improves with zero unsafe attempts,
-100% trace validity, and 100% replay agreement. The exact-payload watcher now
-waits for this result and falls back to the baseline only when RL is held.
-The RL trainer uses the disjoint 24-task fixture
-`../local-action-model/fixtures/tasks/task-spec-qwopus35-9b-rl-v1.json`, which
-targets exact writes, evidence-grounded finishes, stateful reads/moves, and
-safe abstention rather than the eight-task smoke mix.
-As of 2026-07-27, the RL fixtureâ€™s finish rows carry explicit verifier-issued
-receipt IDs through `Task.verified_evidence`; the reward verifier requires those
-exact IDs and rejects invented `check:` strings. This is still a synthetic
-training fixture, not evidence of native external-suite capability.
-
-The first observed 9B failures are recorded directly in the resumable matrix.
-At the current 508-row live snapshot, the taxonomy contains 12 exact-payload
-contamination labels, 28 finish-evidence-failure labels, 32
-repeated-verified-action labels, and 30 step-budget-exhaustion labels.
-Categories may overlap within a row and the active matrix can change these
-counts; they are diagnostic labels, not causal proof. This is not hidden by the evaluator. The live taxonomy is
-`experiments/results/research-project2-qwopus35-9b-failure-taxonomy-live-v1.partial.json`.
-The queued remediation curriculum is now built by
-`train/prepare_qwopus35_remediation.py` into
-`fixtures/training/action-qwopus35-9b-remediation-v2.jsonl`, combining 336
-finish-convergence examples, 120 exact-payload examples, and 80 targeted
-policy-recovery examples, with no frozen-holdout task IDs.
-The 536-row artifact was regenerated after a provenance audit; all rows now
-declare the complete exclusion list, use the expected `action-sft/v0` schema,
-and have zero overlap with the 248 checked frozen task IDs.
-The regenerated exact-payload source hash is
-`700864f319856e624883205ea8f992500ea9720cf64d7349c92d135291a8e75f`, and
-the combined remediation hash is
-`178da98fe961fac4b3cd8a6993d9b143976da769b9c34043ec46919a2d2a1051`.
-`work/watch_qwopus35_9b_finish_remediation.ps1` trains/merges it and reruns
-the full frozen matrix. Its result is only allowed to promote when the
-separate promotion decision says `promote`.
-The bounded follow-on loop is
-`work/watch_qwopus35_9b_iterative_remediation.ps1`: after that first result it
-selects only provenance-tagged strata matching observed failure families,
-trains at most two additional candidates, and requires a fresh full-matrix
-decision for each. It cannot edit the evaluator or task specifications, and a
-held iteration remains a hold rather than a capability claim.
-
-`work/watch_qwopus35_9b_native_agentdojo_summary.ps1` is a queued report
-postprocessor that extracts native AgentDojo utility, security, and joint
-success rates from the suite's result files instead of reporting raw paths
-only. It is a pinned diagnostic, not a leaderboard claim.
-
-`experiments/analyze_failure_taxonomy.py` produces the diagnostic
-`experiments/results/research-project2-qwopus35-9b-failure-taxonomy-v1*.json`.
-It deliberately ignores ordinary state-digest context unless the digest
-appears inside actual artifact content; the active matrix task may change the
-counts before the report is finalized.
+The public repository includes the diagnostic fixture and analysis code, but
+not private watcher scripts, partial outputs, model checkpoints, raw traces, or
+RL results. Those artifacts are intentionally excluded from the public release
+until provenance, licensing, and reproducibility review are complete.
 
 `docs/CLAIMS_AND_EVIDENCE_MATRIX.md` is the claim-control sheet: it maps every
 investor/research statement to authoritative artifacts and labels pending or
@@ -154,7 +82,9 @@ The disjoint 20-task bridge fixture is
 the task loader and has SHA-256
 `8d1d852b4cd181079effd7023df13655406de73ddfd6a65329ec6597adf6cae3`.
 
-An outside reviewer can reproduce the current state from the project root.
+An outside reviewer can reproduce the public harness checks and fixture-level
+evaluations from the project root. The private 9B checkpoint result is
+summarized here but cannot be independently rerun from this repository alone.
 
 ## Core audit
 
@@ -164,7 +94,7 @@ $py = 'python'
 & $py -m compileall -q .
 ```
 
-Current result: 66 Project 2 tests pass. The latest delta includes the
+Current result: 69 Project 2 tests pass. The latest delta includes the
 external-adapter and evidence/replay regressions.
 
 ## Independent research fixture
@@ -179,18 +109,16 @@ and fixture-only H3/H4 interaction `+0.090909`.
 
 ## Real-model evidence
 
-- `experiments/results/research-qwen-multiseed-v1.json`: Qwen base, seeds 0â€“2,
-  H1/H3, 33 observations per cell, all protocol-invalid.
-- `experiments/results/research-hidden-two-model-current-v2.json`: current-code
-  Qwen base and local Project 1 SFT checkpoint on the three hidden-holdout
-  tasks, seeds 0â€“2, H1/H3; interaction `0.0` at each seed.
-- `experiments/results/research-real-two-model-factorial-v1.json`: both real
-  checkpoints across all H0-H4 cells; 110/110 protocol-invalid.
-- `experiments/results/research-real-two-model-independent-v1.json`: separate
-  replay audit; 110/110 traces valid.
+- `experiments/results/research-project2-qwopus35-9b-promotion-summary-v1.json`:
+  sanitized aggregate of the completed 9B frozen matrix: 483/552 verified,
+  zero unsafe attempts, and rejected promotion.
+- `docs/QUANTIZED_SERVING_SMOKE_2026-07-29.md`: one-request RTX 5090
+  4-bit-serving diagnostic with measured memory and timing.
 
-These results are negative compatibility/training evidence and do not support
-a breakthrough claim.
+The raw checkpoint, replay traces, and private decision artifacts are not
+distributed here. The public evidence supports a developer-preview harness and
+failure localization, not a breakthrough, external benchmark, or production
+model claim.
 
 ## Product evidence
 
@@ -207,7 +135,8 @@ a breakthrough claim.
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  66 source tests pass. It
+  the source suite passed at artifact creation; the current source suite is
+  69 tests. It
   records the fresh hardened wheel SHA-256
   `55d7744ab920a56016ae5805991a4c32bf48380183b5d945503a54a79dcbc737`.
 
@@ -428,7 +357,7 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 66/66 after evaluator hardening, atomic concurrent
+- The current project test suite is 69/69 after evaluator hardening, atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.0-py3-none-any.whl`,
   SHA-256 `55d7744ab920a56016ae5805991a4c32bf48380183b5d945503a54a79dcbc737`;

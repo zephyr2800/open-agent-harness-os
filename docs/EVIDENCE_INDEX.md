@@ -135,15 +135,14 @@ model claim.
 - `experiments/results/product-smoke-v0.json` covers six workflows with 1.0
   protocol validity, 0.833333 verified-success rate, and a deliberate safety
   denial for high-risk delete.
-- `experiments/results/launch-preflight-v2.json` is a fresh local developer-
+- `experiments/results/launch-preflight-v3.json` is a fresh local developer-
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
   the source suite passed at artifact creation; the current source suite is
-  73 tests. It
-  records the fresh hardened wheel SHA-256
-  `7ed949e89762f171c45adbb5cf867cd18a60b59d1ac92a13fa17603c1b1863af`.
+  73 tests. It records the 0.1.3 wheel SHA-256
+  `e38cbdbefedf544441cd828304e95417049fab5cbd5c083e431c1a588b77f5a0`.
 
 See `PRODUCT.md` and `docs/PRODUCT_LAUNCH_PLAN.md` for the developer-preview
 boundary and remaining public-launch gates.
@@ -365,8 +364,8 @@ available.
 - The current project test suite is 73/73 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
-- Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.0-py3-none-any.whl`,
-  SHA-256 `7ed949e89762f171c45adbb5cf867cd18a60b59d1ac92a13fa17603c1b1863af`;
+- Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.3-py3-none-any.whl`,
+  SHA-256 `e38cbdbefedf544441cd828304e95417049fab5cbd5c083e431c1a588b77f5a0`;
   it contains the explicit non-loopback authentication-plus-TLS gate.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout
   command `python -m experiments.launch_preflight --with-tests`; the artifact

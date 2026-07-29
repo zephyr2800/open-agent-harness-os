@@ -1,6 +1,6 @@
 # Public Release Checklist
 
-Status: public release snapshot with research/launch update, 2026-07-29
+Status: 0.1.3 developer-preview release candidate with research/launch update, 2026-07-29
 
 This checklist records the evidence attached to the first public repository snapshot. It is deliberately separate from model-quality claims: the repository is a reproducible harness and research package, not a claim that a checkpoint has been promoted.
 
@@ -9,11 +9,13 @@ This checklist records the evidence attached to the first public repository snap
 - Open Agent Harness OS unit and integration suite: 73/73 passing, including
   dense-reliability and claim-safe scorecard checks.
 - Local Action Model companion suite: 47/47 passing.
-- Launch preflight v2: 15/15 checks passing, including extracted-wheel install
+- Launch preflight v3: 15/15 checks passing, including extracted-wheel install
   smoke and the companion suite; the artifact records the current 73-test
   source suite.
-- Wheel build: `open_agent_harness_os-0.1.0-py3-none-any.whl`.
-- Wheel SHA-256: `7ed949e89762f171c45adbb5cf867cd18a60b59d1ac92a13fa17603c1b1863af`.
+- Wheel build: `open_agent_harness_os-0.1.3-py3-none-any.whl`.
+- Wheel SHA-256: `e38cbdbefedf544441cd828304e95417049fab5cbd5c083e431c1a588b77f5a0`.
+- Source distribution: `open_agent_harness_os-0.1.3.tar.gz`.
+- Source distribution SHA-256: `e40a5c24259924da7744d497ddc76dc103f2e271cdd70fbdd70fec9fc8e66ef8`.
 - Public package audit: no credentials, model weights, generated result directories, or private local traces included.
 
 ## Interpretation boundary

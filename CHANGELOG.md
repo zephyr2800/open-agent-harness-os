@@ -16,6 +16,13 @@
   and native external-evaluation runbook.
 - Added companion-project test isolation to the launch preflight.
 
+## 0.1.3 — 2026-07-29
+
+- Aligned the package and MCP server version with the next developer-preview
+  release so built artifacts, runtime metadata, and release tags agree.
+- Added reproducible wheel and source-distribution release artifacts to the
+  packaging checklist.
+
 ## 0.1.0 — 2026-07-25
 
 - Added Action IR v0 and harness event contracts.

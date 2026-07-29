@@ -206,9 +206,10 @@ a breakthrough claim.
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
-  integrity, launch-document presence, and all 59 source tests pass. It
+  integrity, extracted-wheel install smoke, launch-document presence, and all
+  62 source tests pass. It
   records the fresh hardened wheel SHA-256
-  `2f2503e24fb7ccc2d8831882ccb6dc73e0342a53eae7f8f869c7cd237bce47ac`.
+  `6edd0349a368a1a3c6c811dbd9d2603447ea1fa3dfe9601c179eff213aab4b3f`.
 
 See `PRODUCT.md` and `docs/PRODUCT_LAUNCH_PLAN.md` for the developer-preview
 boundary and remaining public-launch gates.
@@ -427,10 +428,10 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The project test suite is 59/59 after evaluator hardening, atomic concurrent
+- The current project test suite is 66/66 after evaluator hardening, atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist-v4/open_agent_harness_os-0.1.0-py3-none-any.whl`,
-  SHA-256 `2f2503e24fb7ccc2d8831882ccb6dc73e0342a53eae7f8f869c7cd237bce47ac`;
+  SHA-256 `6edd0349a368a1a3c6c811dbd9d2603447ea1fa3dfe9601c179eff213aab4b3f`;
   it contains the explicit non-loopback authentication-plus-TLS gate.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout
   command `python -m experiments.launch_preflight --with-tests`; the artifact

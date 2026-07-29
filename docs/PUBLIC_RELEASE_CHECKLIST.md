@@ -6,12 +6,13 @@ This checklist records the evidence attached to the first public repository snap
 
 ## Verified locally
 
-- Open Agent Harness OS unit and integration suite: 62/62 passing, including
+- Open Agent Harness OS unit and integration suite: 66/66 passing, including
   claim-safe scorecard checks.
 - Local Action Model companion suite: 45/45 passing.
-- Launch preflight: 14/14 checks passing, including the companion suite.
+- Launch preflight: 15/15 checks passing, including extracted-wheel install
+  smoke and the companion suite.
 - Wheel build: `open_agent_harness_os-0.1.0-py3-none-any.whl`.
-- Wheel SHA-256: `3ee233610176eb17c19f9bbd8e7578960d6e9aa08071e6443083d5726e935210`.
+- Wheel SHA-256: `6edd0349a368a1a3c6c811dbd9d2603447ea1fa3dfe9601c179eff213aab4b3f`.
 - Public package audit: no credentials, model weights, generated result directories, or private local traces included.
 
 ## Interpretation boundary

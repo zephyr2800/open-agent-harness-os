@@ -6,8 +6,9 @@ scope matches the wording. Local proxy results must not be described as
 external benchmark results.
 
 The public scorecard enforces this boundary: local fixtures and proxies are
-marked `local_fixture`, while `external_native` requires the external suite
-commit and native metric.
+marked `local_fixture`, while `external_native` requires a validated native
+suite commit, metric/value, report hash, grader identity, and environment
+metadata.
 
 | Claim | Status | Authoritative evidence | Allowed wording now |
 |---|---|---|---|

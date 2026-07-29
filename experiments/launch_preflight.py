@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from http.client import HTTPConnection
@@ -23,12 +24,14 @@ from app.service import run_action
 from app.storage import TraceStore
 from experiments.product_smoke import run as run_product_smoke
 from experiments.scorecard import build_scorecard
+from experiments.wheel_smoke import run as run_wheel_smoke
 from traces.replay import load_jsonl
 from tools.memory_workspace import make_memory_registry
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_WHEEL = ROOT / "work" / "package-dist" / "open_agent_harness_os-0.1.0-py3-none-any.whl"
+SOURCE_CHECKOUT = (ROOT / "pyproject.toml").is_file()
 REQUIRED_DOCS = (
     "README.md",
     "LICENSE",
@@ -379,13 +382,62 @@ def _non_loopback_cli_check() -> dict[str, Any]:
 
 def _wheel_check(wheel: Path) -> dict[str, Any]:
     if not wheel.is_file():
-        return _check("wheel_integrity", False, {"path": str(wheel), "exists": False})
+        return _check("wheel_integrity", False, {"path": wheel.name, "exists": False})
     digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
+    detail: dict[str, Any] = {"path": wheel.name, "exists": True, "bytes": wheel.stat().st_size, "sha256": digest}
+    if not zipfile.is_zipfile(wheel):
+        detail.update({"zipfile": False, "reason": "wheel is not a ZIP archive"})
+        return _check("wheel_integrity", False, detail)
+    try:
+        with zipfile.ZipFile(wheel) as archive:
+            names = archive.namelist()
+            safe_names = all(not Path(name).is_absolute() and ".." not in Path(name).parts for name in names)
+            dist_info = {name for name in names if ".dist-info/" in name}
+            required = {
+                "app/__init__.py",
+                "app/cli.py",
+                "experiments/launch_preflight.py",
+            }
+            required_metadata = {name for name in dist_info if name.endswith(("/METADATA", "/WHEEL", "/RECORD"))}
+            detail.update({
+                "zipfile": True,
+                "entry_count": len(names),
+                "safe_paths": safe_names,
+                "required_modules_present": required.issubset(names),
+                "wheel_metadata_present": len(required_metadata) == 3,
+            })
+            passed = bool(safe_names and required.issubset(names) and len(required_metadata) == 3)
+    except (OSError, zipfile.BadZipFile) as exc:
+        detail.update({"zipfile": False, "reason": str(exc)})
+        passed = False
     return _check(
         "wheel_integrity",
-        wheel.stat().st_size > 0,
-        {"path": str(wheel), "exists": True, "bytes": wheel.stat().st_size, "sha256": digest},
+        passed,
+        detail,
     )
+
+
+def _wheel_smoke_check(wheel: Path) -> dict[str, Any]:
+    """Install the wheel into an isolated target and run package-only smoke."""
+
+    if not wheel.is_file():
+        return _check("wheel_install_smoke", False, {"path": wheel.name, "exists": False})
+    try:
+        with tempfile.TemporaryDirectory(prefix="open-agent-harness-wheel-preflight-") as target:
+            report = run_wheel_smoke(wheel, target=Path(target))
+        detail = {
+            "path": wheel.name,
+            "sha256": report.get("wheel_sha256"),
+            "install_returncode": report.get("install_returncode"),
+            "demo_returncode": report.get("demo_returncode"),
+            "demo_verified_success": report.get("demo_verified_success"),
+            "imports_returncode": report.get("imports_returncode"),
+        }
+        passed = bool(report.get("passed"))
+    except (OSError, ValueError, zipfile.BadZipFile) as exc:
+        detail = {"path": wheel.name, "error": str(exc)}
+        passed = False
+    return _check("wheel_install_smoke", passed, detail)
 
 
 def _scorecard_check() -> dict[str, Any]:
@@ -412,7 +464,24 @@ def _scorecard_check() -> dict[str, Any]:
         )
     except ValueError:
         external_rejected = True
-    passed = local["macro_family_success_rate"] == 0.5 and external_rejected and "local" in local["claim_boundary"]
+    external_accepted = True
+    try:
+        build_scorecard(
+            [{"task_id": "scorecard-external", "verified_success": True}],
+            suite="identified-external",
+            suite_kind="external_native",
+            model="preflight-model",
+            harness="preflight-harness",
+            suite_commit="abcdef1234567",
+            native_metric="utility",
+            native_metric_value=0.0,
+            native_report_sha256="0" * 64,
+            native_grader="preflight-grader",
+            native_environment={"runner": "preflight", "runtime": "python", "platform": "local"},
+        )
+    except ValueError:
+        external_accepted = False
+    passed = local["macro_family_success_rate"] == 0.5 and external_rejected and external_accepted and "local" in local["claim_boundary"]
     return _check(
         "claim_safe_scorecard",
         passed,
@@ -420,11 +489,14 @@ def _scorecard_check() -> dict[str, Any]:
             "local_micro_success_rate": local["verified_success_rate"],
             "local_macro_family_success_rate": local["macro_family_success_rate"],
             "external_without_provenance_rejected": external_rejected,
+            "external_complete_provenance_accepted": external_accepted,
         },
     )
 
 
 def _test_check() -> dict[str, Any]:
+    if not (ROOT / "tests").is_dir():
+        return _check("unit_tests", True, {"not_applicable": True, "scope": "source-checkout-only"})
     completed = subprocess.run(
         [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"],
         cwd=ROOT,
@@ -444,6 +516,8 @@ def _companion_test_check() -> dict[str, Any]:
     """Run Project 1 from its package root so same-name modules do not collide."""
 
     companion_root = ROOT / "projects" / "local-action-model"
+    if not companion_root.is_dir():
+        return _check("companion_unit_tests", True, {"not_applicable": True, "scope": "source-checkout-only"})
     environment = os.environ.copy()
     environment.pop("PYTHONPATH", None)
     completed = subprocess.run(
@@ -474,14 +548,20 @@ def run(*, wheel: Path = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str
         _tenant_isolation_check(),
         _non_loopback_cli_check(),
         _scorecard_check(),
-        _wheel_check(wheel),
-        _companion_test_check(),
-        _check(
-            "launch_docs",
-            all((ROOT / relative).is_file() for relative in REQUIRED_DOCS),
-            {"required": list(REQUIRED_DOCS), "missing": [relative for relative in REQUIRED_DOCS if not (ROOT / relative).is_file()]},
-        ),
     ]
+    if SOURCE_CHECKOUT:
+        checks.extend([
+            _wheel_check(wheel),
+            _wheel_smoke_check(wheel),
+            _companion_test_check(),
+            _check(
+                "launch_docs",
+                all((ROOT / relative).is_file() for relative in REQUIRED_DOCS),
+                {"required": list(REQUIRED_DOCS), "missing": [relative for relative in REQUIRED_DOCS if not (ROOT / relative).is_file()]},
+            ),
+        ])
+    else:
+        checks.append(_check("package_scope", True, {"scope": "installed-wheel", "source_checkout_checks": "not_applicable"}))
     product = checks[0]["detail"]
     checks[0]["passed"] = (
         product["case_count"] >= 6
@@ -493,7 +573,7 @@ def run(*, wheel: Path = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str
     return {
         "schema": "launch-preflight/v1",
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "scope": "local-developer-preview",
+        "scope": "local-developer-preview" if SOURCE_CHECKOUT else "installed-wheel-package",
         "checks": checks,
         "passed": all(item["passed"] for item in checks),
         "limitations": [

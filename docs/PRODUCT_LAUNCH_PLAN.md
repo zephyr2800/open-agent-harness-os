@@ -87,7 +87,7 @@ preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
 The timeout-boundary hardening was revalidated on 2026-07-27: Project 2's
- source tests pass 59/59, Project 1's source tests pass 45/45, and the
+ source tests pass 66/66, Project 1's source tests pass 45/45, and the
 consolidated launch preflight remains green. This closes the adapter-level
 budget-enforcement regression; it does not by itself close real-model
 performance, usability, security-review, licensing, or external-benchmark
@@ -110,11 +110,12 @@ without state change.
 
 ## 2026-07-29 launch-candidate update
 
-The public branch now has 62/62 harness tests, 45/45 companion tests, and a
-14-check launch preflight. The preflight runs the companion suite from its own
+The public branch now has 66/66 harness tests, 45/45 companion tests, and a
+15-check launch preflight. The preflight runs the companion suite from its own
 package root so same-name modules from the two projects cannot silently
-replace one another. It also checks the claim-safe scorecard, which rejects an
-external-native label without a suite commit and native metric.
+replace one another. It also validates the extracted wheel install and checks
+the claim-safe scorecard, which rejects an external-native label without
+complete native provenance.
 
 This closes a reproducibility and claim-control gap in the developer preview.
 It does not close production identity/operations, usability sessions,

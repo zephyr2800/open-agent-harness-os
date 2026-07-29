@@ -271,9 +271,10 @@ The local developer-preview surface now has a consolidated
 `launch-preflight/v1` artifact. It passes the six-case product smoke, MCP
 contract and replay, local-only endpoint policy, bearer authentication,
 non-loopback TLS gating, high-risk denial, 12-way concurrent trace writes
-with restart recovery, token-principal trace isolation, wheel integrity,
-documentation presence, and 59/59
-source tests. Trace publication is atomic. This supports a technically
+with restart recovery, token-principal trace isolation, validated wheel
+integrity plus extracted-wheel install smoke, documentation presence, and an
+earlier 59/59 source-test run. The current suite is 66/66 and trace
+publication is atomic. This supports a technically
 capable local preview; it does not close multi-user isolation,
 operational hardening, usability,
 security-review, licensing/provenance, or external-benchmark gates.

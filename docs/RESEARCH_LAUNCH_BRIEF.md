@@ -85,7 +85,7 @@ than one aggregate success number.
 | 7B v6 industry proxy v1 | 48/48 verified, zero unsafe attempts | Stronger state/injection proxy result; still offline |
 | 7B v7 external-gap revision | 39/48; policy sequence 3/12 | Not promoted; repeated narrow data caused regression |
 | 7B verifier-backed RL smoke | neutral reward before/after | Undirected RL is not a valid improvement strategy |
-| Project 2 test suite | 59/59 passing | Harness/evaluator regression control |
+| Project 2 test suite | 66/66 passing | Harness/evaluator regression control |
 | Qwopus3.5-9B rank-64 QLoRA | SFT and merge complete on RTX 5090 | Controlled scale comparison; the live partial artifact currently reports zero unsafe attempts; incomplete result only |
 
 The Qwopus-compatible verifier-backed REINFORCE path also passes a local

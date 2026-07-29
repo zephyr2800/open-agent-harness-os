@@ -4,8 +4,14 @@
 
 - Added `agent-eval-scorecard/v1` with macro-family scoring, Wilson intervals,
   replay/process integrity, safety, false-completion, and efficiency metrics.
-- Added a preflight guard that rejects external-native claims without the
-  external suite commit and native metric.
+- Added a preflight guard that rejects external-native claims without a
+  hexadecimal suite commit, numeric native metric/value, report SHA-256,
+  grader identity, and runner/runtime/platform metadata.
+- Hardened wheel integrity to validate ZIP structure, safe paths, required
+  modules, and dist-info; added isolated install/demo/import smoke and a
+  package-scope preflight that does not assume the source checkout exists.
+- Corrected safe-abstention accounting so failed, false-completing, or unsafe
+  abstentions cannot inflate the safety score.
 - Added the current research landscape, preregistered breakthrough protocol,
   and native external-evaluation runbook.
 - Added companion-project test isolation to the launch preflight.

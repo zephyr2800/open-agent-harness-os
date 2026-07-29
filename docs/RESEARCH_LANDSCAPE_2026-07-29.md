@@ -120,5 +120,6 @@ The repository may currently claim a verifiable local harness and local
 fixture/proxy results. It may not yet claim general terminal or computer-use
 capability, superiority to frontier agents, production safety for arbitrary
 tools/content, or verifier-backed RL improvement. The new scorecard rejects
-an `external_native` label unless the native suite metric and suite commit are
+an `external_native` label unless the native suite metric/value, suite commit,
+native report hash, grader identity, and runner/runtime/platform metadata are
 present.

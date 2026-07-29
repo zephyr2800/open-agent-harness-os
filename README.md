@@ -23,9 +23,9 @@ actually complete.
 
 The local developer-preview harness passes its documented product checks:
 
-- Project 2 tests: 62/62 (including the claim-safe scorecard checks)
+- Project 2 tests: 66/66 (including scorecard and wheel-integrity checks)
 - Project 1 tests: 45/45
-- Launch preflight: 14/14 (including the companion suite)
+- Launch preflight: 15/15 (including extracted-wheel installation smoke)
 
 The associated Qwopus3.5-9B promotion matrix was intentionally stopped at a
 preserved 508/552 partial checkpoint. It is not a promotion result, and this
@@ -55,8 +55,9 @@ Pop-Location
 
 To score a completed run without confusing a local proxy with an external
 benchmark, use `harness-scorecard` (or `python -m experiments.scorecard`). An
-`external_native` scorecard requires the external suite commit and its native
-metric.
+`external_native` scorecard requires a hexadecimal suite commit, native metric
+and value, native report SHA-256, grader identity, and runner/runtime/platform
+metadata.
 
 ## Research direction
 

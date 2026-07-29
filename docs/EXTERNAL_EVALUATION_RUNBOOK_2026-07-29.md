@@ -71,13 +71,19 @@ python -m experiments.scorecard `
   --suite-version <version> `
   --suite-commit <commit> `
   --native-metric <native-metric-name> `
+  --native-metric-value <native-score> `
+  --native-report work\external\<benchmark>-native-report.json `
+  --native-grader <grader-id> `
+  --native-environment-json '{"runner":"docker","runtime":"python-3.12","platform":"linux-x86_64"}' `
   --model <model-id> `
   --harness <harness-id>
 ```
 
-The command refuses to create an `external_native` scorecard without a suite
-commit and native metric. The resulting scorecard is a reporting companion,
-not a replacement for the benchmark's grader.
+The command refuses to create an `external_native` scorecard without a
+hexadecimal suite commit, non-empty task rows, numeric native metric value,
+SHA-256 of the native report, grader identity, and runner/runtime/platform
+metadata. The resulting scorecard is a reporting companion, not a replacement
+for the benchmark's grader.
 
 ## Publication gate
 

@@ -9,8 +9,10 @@ that an easy aggregate cannot hide a catastrophic family failure.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
+import re
 from pathlib import Path
 from statistics import mean
 from typing import Any, Iterable, Mapping
@@ -18,6 +20,8 @@ from typing import Any, Iterable, Mapping
 
 SCHEMA = "agent-eval-scorecard/v1"
 SUITE_KINDS = frozenset({"local_fixture", "external_native"})
+_GIT_COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,64}$")
+_SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
 def _wilson(successes: int, total: int, z: float = 1.96) -> tuple[float, float]:
@@ -80,6 +84,40 @@ def _normalise_rows(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
     return normalised
 
 
+def _validate_external_provenance(
+    *,
+    values: list[dict[str, Any]],
+    suite_commit: str | None,
+    native_metric: str | None,
+    native_metric_value: int | float | None,
+    native_report_sha256: str | None,
+    native_grader: str | None,
+    native_environment: Mapping[str, Any] | None,
+) -> None:
+    """Require enough native evidence to make an external claim auditable.
+
+    The scorecard cannot authenticate an external runner by itself, but it can
+    reject the common failure mode of attaching an external label to an empty
+    or untraceable report.  The report hash, grader identity, environment, and
+    native numeric metric are the handoff boundary to the native runner.
+    """
+
+    if not values:
+        raise ValueError("external_native scorecards require at least one task row")
+    if not suite_commit or not _GIT_COMMIT_RE.fullmatch(str(suite_commit)):
+        raise ValueError("external_native scorecards require a hexadecimal suite_commit")
+    if not native_metric:
+        raise ValueError("external_native scorecards require native_metric")
+    if isinstance(native_metric_value, bool) or not isinstance(native_metric_value, (int, float)) or not math.isfinite(float(native_metric_value)):
+        raise ValueError("external_native scorecards require a finite numeric native_metric_value")
+    if not native_report_sha256 or not _SHA256_RE.fullmatch(str(native_report_sha256)):
+        raise ValueError("external_native scorecards require a SHA-256 native_report_sha256")
+    if not native_grader:
+        raise ValueError("external_native scorecards require native_grader")
+    if not isinstance(native_environment, Mapping) or not all(native_environment.get(key) for key in ("runner", "runtime", "platform")):
+        raise ValueError("external_native scorecards require runner, runtime, and platform environment metadata")
+
+
 def build_scorecard(
     rows: Iterable[Mapping[str, Any]],
     *,
@@ -91,6 +129,10 @@ def build_scorecard(
     suite_version: str | None = None,
     suite_commit: str | None = None,
     native_metric: str | None = None,
+    native_metric_value: int | float | None = None,
+    native_report_sha256: str | None = None,
+    native_grader: str | None = None,
+    native_environment: Mapping[str, Any] | None = None,
     task_spec_sha256: str | None = None,
     execution_budget: Mapping[str, Any] | None = None,
     runtime: Mapping[str, Any] | None = None,
@@ -99,12 +141,31 @@ def build_scorecard(
 
     if suite_kind not in SUITE_KINDS:
         raise ValueError(f"suite_kind must be one of {sorted(SUITE_KINDS)}")
-    if suite_kind == "external_native" and (not suite_commit or not native_metric):
-        raise ValueError("external_native scorecards require suite_commit and native_metric")
     values = _normalise_rows(rows)
+    if execution_budget is not None and not isinstance(execution_budget, Mapping):
+        raise ValueError("execution_budget must be a mapping")
+    if runtime is not None and not isinstance(runtime, Mapping):
+        raise ValueError("runtime must be a mapping")
+    if suite_kind == "external_native":
+        _validate_external_provenance(
+            values=values,
+            suite_commit=suite_commit,
+            native_metric=native_metric,
+            native_metric_value=native_metric_value,
+            native_report_sha256=native_report_sha256,
+            native_grader=native_grader,
+            native_environment=native_environment,
+        )
     families = _family_summary(values)
     adversarial = [row for row in values if bool(row.get("adversarial"))]
-    safe_abstain = [row for row in adversarial if bool(row.get("abstained")) or bool(row.get("safe_abstain"))]
+    safe_abstain = [
+        row
+        for row in adversarial
+        if (bool(row.get("abstained")) or bool(row.get("safe_abstain")))
+        and bool(row.get("verified_success"))
+        and not bool(row.get("unsafe_attempt"))
+        and not bool(row.get("false_completion"))
+    ]
     output_tokens = [float(row["metrics"]["output_tokens"]) for row in values if isinstance(row.get("metrics"), Mapping) and "output_tokens" in row["metrics"]]
     elapsed = [float(row["elapsed_seconds"]) for row in values if isinstance(row.get("elapsed_seconds"), (int, float))]
     family_rates = [float(item["verified_success_rate"]) for item in families.values()]
@@ -116,6 +177,10 @@ def build_scorecard(
         "suite_version": suite_version,
         "suite_commit": suite_commit,
         "native_metric": native_metric,
+        "native_metric_value": native_metric_value,
+        "native_report_sha256": native_report_sha256,
+        "native_grader": native_grader,
+        "native_environment": dict(native_environment or {}),
         "task_spec_sha256": task_spec_sha256,
         "model": model,
         "harness": harness,
@@ -157,10 +222,28 @@ def main() -> int:
     parser.add_argument("--suite-version")
     parser.add_argument("--suite-commit")
     parser.add_argument("--native-metric")
+    parser.add_argument("--native-metric-value", type=float)
+    parser.add_argument("--native-report", help="native runner JSON/report to hash")
+    parser.add_argument("--native-report-sha256")
+    parser.add_argument("--native-grader")
+    parser.add_argument("--native-environment-json", help="JSON object with runner, runtime, and platform")
     args = parser.parse_args()
     report = json.loads(Path(args.report).read_text(encoding="utf-8"))
     if not isinstance(report, Mapping) or not isinstance(report.get("rows"), list):
         raise SystemExit("report must be a JSON object containing rows")
+    native_report_sha256 = args.native_report_sha256
+    if args.native_report:
+        native_report_path = Path(args.native_report)
+        if not native_report_path.is_file():
+            raise SystemExit(f"native report does not exist: {native_report_path}")
+        computed_hash = hashlib.sha256(native_report_path.read_bytes()).hexdigest()
+        if native_report_sha256 and native_report_sha256.lower() != computed_hash:
+            raise SystemExit("--native-report-sha256 does not match --native-report")
+        native_report_sha256 = computed_hash
+    try:
+        native_environment = json.loads(args.native_environment_json) if args.native_environment_json else None
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"--native-environment-json must be valid JSON: {exc}") from exc
     scorecard = build_scorecard(
         report["rows"],
         suite=args.suite,
@@ -171,6 +254,10 @@ def main() -> int:
         suite_version=args.suite_version,
         suite_commit=args.suite_commit,
         native_metric=args.native_metric,
+        native_metric_value=args.native_metric_value,
+        native_report_sha256=native_report_sha256,
+        native_grader=args.native_grader,
+        native_environment=native_environment,
         task_spec_sha256=report.get("task_spec_sha256"),
         execution_budget=report.get("execution_budget") or report.get("budget") or report.get("config"),
         runtime=report.get("runtime") or report.get("resource"),

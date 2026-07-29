@@ -77,18 +77,18 @@ does not close multi-user isolation, production operational,
 security-review, or external-agent benchmark gates.
 
 The consolidated source-checkout preflight is recorded at
-`experiments/results/launch-preflight-v1.json`. It passes the six-case product
+`experiments/results/launch-preflight-v2.json`. It passes the six-case product
  smoke, MCP contract and replay, local-only endpoint policy, bearer
  authentication, high-risk denial, persistence, wheel integrity,
 launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
 isolation, tool-by-tool security metadata auditing, the external evaluation
-  note and fixture. The current Project 2 source suite has 69 tests; the
- recorded preflight artifact contains the earlier 66-test subcheck. The
+  note and fixture. The current Project 2 source suite has 73 tests; the
+ recorded v2 preflight artifact contains the current 73-test subcheck. The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
 The timeout-boundary hardening was revalidated on 2026-07-27: Project 2's
-  source tests pass 69/69, Project 1's source tests pass 47/47, and the
+  source tests pass 73/73, Project 1's source tests pass 47/47, and the
 consolidated launch preflight remains green. This closes the adapter-level
 budget-enforcement regression; it does not by itself close real-model
 performance, usability, security-review, licensing, or external-benchmark
@@ -111,7 +111,7 @@ without state change.
 
 ## 2026-07-29 launch-candidate update
 
-The public branch now has 69/69 harness tests, 47/47 companion tests, and a
+The public branch now has 73/73 harness tests, 47/47 companion tests, and a
 15-check launch preflight. The preflight runs the companion suite from its own
 package root so same-name modules from the two projects cannot silently
 replace one another. It also validates the extracted wheel install and checks

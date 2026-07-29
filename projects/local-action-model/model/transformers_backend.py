@@ -170,6 +170,7 @@ class TransformersActionPolicy:
         temperature: float = 0.7,
         top_p: float = 0.9,
         stop_on_complete_json: bool = False,
+        quantization: str | None = None,
         tokenizer: Any = None,
         model: Any = None,
     ) -> None:
@@ -181,6 +182,7 @@ class TransformersActionPolicy:
         self.temperature = float(temperature)
         self.top_p = float(top_p)
         self.stop_on_complete_json = bool(stop_on_complete_json)
+        self.quantization = quantization
         if tokenizer is None or model is None:
             try:
                 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -189,12 +191,28 @@ class TransformersActionPolicy:
                     "Install the optional backend with: pip install -e '.[transformers]'"
                 ) from exc
             tokenizer = load_tokenizer(AutoTokenizer, model_id, revision)
-            model = AutoModelForCausalLM.from_pretrained(
-                model_id,
-                revision=revision,
-                dtype="auto",
-                device_map=device_map,
-            )
+            model_kwargs: dict[str, Any] = {
+                "revision": revision,
+                "dtype": "auto",
+                "device_map": device_map,
+            }
+            if quantization is not None:
+                if str(quantization).lower() not in {"4bit", "int4", "nf4"}:
+                    raise ValueError("quantization must be 4bit, int4, or nf4")
+                try:
+                    import torch
+                    from transformers import BitsAndBytesConfig
+                except ImportError as exc:
+                    raise TransformersBackendUnavailable(
+                        "4-bit quantization requires torch, transformers, and bitsandbytes"
+                    ) from exc
+                model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                    bnb_4bit_use_double_quant=True,
+                )
+            model = AutoModelForCausalLM.from_pretrained(model_id, **model_kwargs)
         self.tokenizer = tokenizer
         self.model = model
         self.last_raw_text: str | None = None

@@ -68,7 +68,7 @@ def dispatch(message: Mapping[str, Any]) -> dict[str, Any] | None:
     if method == "notifications/initialized":
         return None
     if method == "initialize":
-        return _result(request_id, {"protocolVersion": PROTOCOL_VERSION, "capabilities": {"tools": {"listChanged": False}}, "serverInfo": {"name": "open-agent-harness-os", "version": "0.1.3"}})
+        return _result(request_id, {"protocolVersion": PROTOCOL_VERSION, "capabilities": {"tools": {"listChanged": False}}, "serverInfo": {"name": "open-agent-harness-os", "version": "0.1.4"}})
     if method == "ping":
         return _result(request_id, {})
     if method == "tools/list":

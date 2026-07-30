@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 — 2026-07-29
+
+- Pointed release-readiness and preflight defaults at the current versioned
+  evidence artifacts instead of stale 0.1.0/v1 files.
+- Added fresh 0.1.4 wheel, source-distribution, preflight, and isolated wheel
+  smoke evidence for the developer-preview patch release.
+
 ## Unreleased - research and launch hardening (2026-07-29)
 
 - Added `agent-eval-scorecard/v1` with macro-family scoring, Wilson intervals,

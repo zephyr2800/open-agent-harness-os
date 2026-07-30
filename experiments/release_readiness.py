@@ -32,12 +32,12 @@ def _artifact(path: Path) -> dict[str, Any]:
 
 def build_readiness(root: Path) -> dict[str, Any]:
     results = root / "experiments" / "results"
-    preflight_path = results / "launch-preflight-v1.json"
+    preflight_path = results / "launch-preflight-v4.json"
     matrix_path = results / "research-project2-qwopus35-9b-promotion-greedy-v1.json"
     decision_path = results / "research-project2-qwopus35-9b-promotion-decision-v1.json"
     external_path = results / "research-project2-qwopus35-9b-external-bar-lite-v1.json"
     rl_gate_path = results / "verified-rl-gate-v2.json"
-    wheel_smoke_path = results / "clean-wheel-smoke-v1.json"
+    wheel_smoke_path = results / "clean-wheel-smoke-v2.json"
     preflight = _load(preflight_path)
     decision = _load(decision_path)
     rl_gate = _load(rl_gate_path)

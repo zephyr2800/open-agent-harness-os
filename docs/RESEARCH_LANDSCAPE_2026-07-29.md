@@ -18,6 +18,17 @@ evidence-grounded finalization.
   tasks across 5,194 trajectories and reports completion, process quality,
   efficiency, and failure behavior at the model-harness level. This directly
   supports the project's configuration-level hypothesis.
+- [Rethinking the Evaluation of Harness Evolution for Agents](https://arxiv.org/abs/2607.12227)
+  finds that harness-search methods can overfit when optimization and final
+  evaluation share a benchmark, and that gains do not consistently generalize
+  beyond the search tasks. This is a direct methodological constraint on the
+  project's self-recursive harness thesis: every evolution step needs a
+  frozen, disjoint holdout and a separate replay audit.
+- [Do Agent Optimizers Compound?](https://arxiv.org/abs/2607.14004) tests
+  harness optimizers under a two-phase continual-learning evaluation on hard
+  Terminal-Bench tasks. Its design is a useful template for our next phase:
+  measure first-task improvement separately from transfer to newly revealed
+  tasks, while holding budgets and environments fixed.
 - [TUA-Bench](https://arxiv.org/abs/2606.28480) contains 120 real terminal
   tasks across five families, including document, email, web, scientific, and
   engineering workflows. It reports native execution-based grading, not a

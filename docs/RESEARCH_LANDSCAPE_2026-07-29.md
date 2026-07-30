@@ -20,15 +20,17 @@ evidence-grounded finalization.
   supports the project's configuration-level hypothesis.
 - [Rethinking the Evaluation of Harness Evolution for Agents](https://arxiv.org/abs/2607.12227)
   finds that harness-search methods can overfit when optimization and final
-  evaluation share a benchmark, and that gains do not consistently generalize
-  beyond the search tasks. This is a direct methodological constraint on the
-  project's self-recursive harness thesis: every evolution step needs a
-  frozen, disjoint holdout and a separate replay audit.
+  evaluation overlap on task instances, and that gains do not consistently
+  generalize beyond the search tasks. Our implication for the self-recursive
+  harness thesis is that every evolution step needs a frozen, disjoint holdout
+  and a separate replay audit, as specified in the project's
+  [research protocol](RESEARCH_PROTOCOL.md).
 - [Do Agent Optimizers Compound?](https://arxiv.org/abs/2607.14004) tests
   harness optimizers under a two-phase continual-learning evaluation on hard
-  Terminal-Bench tasks. Its design is a useful template for our next phase:
-  measure first-task improvement separately from transfer to newly revealed
-  tasks, while holding budgets and environments fixed.
+  Terminal-Bench 2.0 tasks. Its design is a useful template for our next
+  phase: report Phase-1/static performance separately from transfer to newly
+  revealed tasks, using comparable per-phase rollout budgets while making the
+  task and timeout changes explicit.
 - [TUA-Bench](https://arxiv.org/abs/2606.28480) contains 120 real terminal
   tasks across five families, including document, email, web, scientific, and
   engineering workflows. It reports native execution-based grading, not a

@@ -52,8 +52,9 @@ started. It is a positioning and protocol update, not a new capability claim.
    completed historical frozen promotion matrix is summarized as 483/552
    independently verified with promotion rejected, but its source-corpus split
    is not auditably recorded. A later targeted curriculum was found to overlap
-   with frozen proxy contracts, so that live matrix is diagnostic only. Neither
-   result can be promoted from local proxy scores alone.
+   with frozen proxy contracts, so its matrix was stopped at a saved 441-row
+   partial and remains diagnostic only. Neither result can be promoted from
+   local proxy scores alone.
 2. The policy-sequence, finish-DPO, and retry-repair interventions are the
    correct next causal test because the observed failures are repeated actions,
    premature completion, and missing evidence—not ordinary tool selection.

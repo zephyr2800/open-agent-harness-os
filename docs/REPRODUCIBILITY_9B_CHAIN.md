@@ -35,12 +35,20 @@ be described as held-out:
   --task-spec benchmarks\fixtures\task-spec-research-v4.json `
   --task-spec benchmarks\fixtures\task-spec-industry-proxy-v1.json `
   --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
+  --task-spec benchmarks\fixtures\task-spec-exact-payload-holdout-v1.json `
+  --task-spec benchmarks\fixtures\task-spec-external-bar-lite-v1.json `
+  --task-spec benchmarks\fixtures\task-spec-external-bar-lite-v2.json `
   --manifest experiments\results\candidate-train-holdout-audit.json `
-  --fail-on-overlap
+  --fail-on-overlap --require-required-fixtures
 ```
 
 See [train/holdout integrity](TRAIN_HOLDOUT_INTEGRITY.md) for the exact
 contract markers and interpretation.
+
+The qualifying SFT and merge commands record the training-corpus SHA-256 and
+row count in `training_manifest.json`, then copy that manifest into the merged
+checkpoint. The matrix rejects a checkpoint unless those source fingerprints
+match the supplied audit manifest.
 
 ## Frozen promotion matrix
 
@@ -59,6 +67,7 @@ try {
     --project1-root $project1 `
     --checkpoint (Join-Path $root 'work\action-model-project2-qwopus35-9b-qlora-v1-merged') `
     --output experiments\results\research-project2-qwopus35-9b-promotion-greedy-v1.json `
+    --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
     --task-spec benchmarks\fixtures\task-spec-research-v4.json `
     --task-spec benchmarks\fixtures\task-spec-industry-proxy-v1.json `
     --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
@@ -79,6 +88,7 @@ The promotion rule is machine-checked by:
 ```powershell
 & $py -m experiments.promotion_decision `
   --matrix experiments\results\research-project2-qwopus35-9b-promotion-greedy-v1.json `
+  --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
   --output experiments\results\research-project2-qwopus35-9b-promotion-decision-v1.json
 ```
 
@@ -123,6 +133,7 @@ Before any RL command, authorize the run with the machine gate:
 ```powershell
 & $py -m experiments.verified_rl_gate `
   --decision experiments\results\research-project2-qwopus35-9b-promotion-decision-v1.json `
+  --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
   --external-bar-v1 experiments\results\research-project2-qwopus35-9b-external-bar-lite-v1.json `
   --external-bar-v2 experiments\results\research-project2-qwopus35-9b-external-bar-lite-v2.json `
   --checkpoint (Join-Path $root 'work\action-model-project2-qwopus35-9b-qlora-v1-merged') `

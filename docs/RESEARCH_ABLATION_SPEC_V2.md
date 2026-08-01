@@ -43,8 +43,11 @@ held-out before/after comparison pass.
   plus a separately reported `do_sample=true` stochastic audit at the same
   seeds.
 - Mandatory data-isolation gate: an auditable source manifest plus a passing
-  `experiments.data_split_audit` result against every frozen fixture before any
-  score may be described as held-out.
+  `experiments.data_split_audit` result against the six pinned fixture hashes
+  (three promotion slices, exact-payload holdout, and external-bar-lite v1/v2)
+  before any score may be described as held-out. The same manifest digest is
+  required by the matrix, promotion, and RL gates, and its training-data
+  fingerprints must match the merged checkpoint's copied training manifest.
 - Disjoint diagnostics: external-bar-lite and the exact-payload holdout.
 - Native reality check: pinned AgentDojo workspace cases, with clean and
   direct-injection cases reported separately.

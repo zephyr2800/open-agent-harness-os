@@ -85,14 +85,15 @@ than one aggregate success number.
 | 7B v6 industry proxy v1 | 48/48 verified, zero unsafe attempts | Stronger state/injection proxy result; still offline |
 | 7B v7 external-gap revision | 39/48; policy sequence 3/12 | Not promoted; repeated narrow data caused regression |
 | 7B verifier-backed RL smoke | neutral reward before/after | Undirected RL is not a valid improvement strategy |
-| Project 2 test suite | 83/83 passing | Harness/evaluator regression control |
-| Qwopus3.5-9B rank-64 QLoRA | SFT, merge, and 9-run frozen matrix complete on RTX 5090 | 483/552 independently verified (87.5%), zero unsafe attempts, perfect trace/replay checks; promotion rejected because failed slices remain |
+| Project 2 test suite | 95/95 passing | Harness/evaluator regression control |
+| Qwopus3.5-9B rank-64 QLoRA | Historical SFT, merge, and 9-run matrix complete on RTX 5090 | 483/552 independently verified (87.5%), zero unsafe attempts, perfect trace/replay checks; context only because source-corpus isolation was not recorded |
 
 Data-isolation addendum: the later targeted 9B curriculum was found to overlap
-with frozen proxy contracts, so its live matrix is diagnostic only. The older
-483/552 matrix remains context-only as well: its original SFT manifest does
-not record an auditable source-corpus split. Neither result supports a
-held-out-performance, causal, breakthrough, or promotion claim.
+with frozen proxy contracts and its matrix was stopped at a 441-row saved
+partial, so it is diagnostic only. The older 483/552 matrix remains context-
+only as well: its original SFT manifest does not record an auditable source-
+corpus split. Neither result supports a held-out-performance, causal,
+breakthrough, or promotion claim.
 
 The Qwopus-compatible verifier-backed REINFORCE path also passes a local
 dry-run on the disjoint 24-task Action IR specification after sharing the same
@@ -155,7 +156,7 @@ replays. ([model card](https://huggingface.co/Jackrong/Qwopus3.5-9B-v3),
 
 The local product surface has a CLI, loopback HTTP API, MCP stdio server,
 typed Action IR, allowlisted tools, default high-risk denial, independent
-verification, bounded budgets, and replayable JSONL traces. The 73-test suite,
+verification, bounded budgets, and replayable JSONL traces. The 95-test suite,
 offline demo, replay smoke, explicit concurrent-retention preflight, and
 bearer-authentication plus tenant-isolation checks support a technically
 capable local preview.

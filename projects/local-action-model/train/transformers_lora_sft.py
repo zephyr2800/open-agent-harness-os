@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
 import time
 from pathlib import Path
 from typing import Any
 
+from model.transformers_backend import load_tokenizer
 from train.transformers_sft import _pad_batch, load_examples, tokenized_examples
 
 
@@ -61,6 +63,7 @@ def run_training(
     dry_run: bool = False,
     max_steps: int | None = None,
     progress_every: int = 50,
+    training_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     try:
         import torch
@@ -77,7 +80,7 @@ def run_training(
         raise ValueError("gradient_accumulation_steps must be positive")
     random.seed(seed)
     torch.manual_seed(seed)
-    tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
+    tokenizer = load_tokenizer(AutoTokenizer, model_id, revision)
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
     rows = tokenized_examples(tokenizer, examples, max_length)
@@ -101,6 +104,7 @@ def run_training(
         "dry_run": dry_run,
         "max_steps": max_steps,
         "progress_every": progress_every,
+        "training_data": training_data,
     }
     if dry_run:
         return report
@@ -249,8 +253,15 @@ def main() -> int:
     parser.add_argument("--max-steps", type=int, default=None)
     parser.add_argument("--progress-every", type=int, default=50, help="write a sidecar progress manifest every N optimizer steps; 0 disables it")
     args = parser.parse_args()
+    train_path = Path(args.train_jsonl)
+    examples = load_examples(train_path)
+    training_data = {
+        "path": str(train_path.resolve()),
+        "sha256": hashlib.sha256(train_path.read_bytes()).hexdigest(),
+        "rows": len(examples),
+    }
     report = run_training(
-        load_examples(args.train_jsonl),
+        examples,
         model_id=args.model_id,
         revision=args.revision,
         output_dir=args.output_dir,
@@ -270,6 +281,7 @@ def main() -> int:
         dry_run=args.dry_run,
         max_steps=args.max_steps,
         progress_every=args.progress_every,
+        training_data=training_data,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0

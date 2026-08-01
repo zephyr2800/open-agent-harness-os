@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-agent-harness-os"
-version = "0.1.6"
+version = "0.1.7"
 description = "A local-first, model-agnostic harness for verifiable agent execution"
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
@@ -20,3 +20,6 @@ harness = "app.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*", "protocol*", "runtime*", "tools*", "memory*", "traces*", "adapters*", "search*", "improve*", "benchmarks*", "experiments*"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["*.pyc", "__pycache__/*"]

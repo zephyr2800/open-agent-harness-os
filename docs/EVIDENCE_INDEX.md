@@ -141,7 +141,7 @@ model claim.
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
   the source suite passed at artifact creation; the current source suite is
-  81 tests. It records the 0.1.6 wheel and source-distribution hashes in
+  81 tests. It records the 0.1.7 wheel and source-distribution hashes in
   `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 
 See `PRODUCT.md` and `docs/PRODUCT_LAUNCH_PLAN.md` for the developer-preview
@@ -364,7 +364,7 @@ available.
 - The current project test suite is 81/81 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
-- Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.6-py3-none-any.whl`,
+- Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.7-py3-none-any.whl`,
   SHA-256 is recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`;
   it contains the explicit non-loopback authentication-plus-TLS gate.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout

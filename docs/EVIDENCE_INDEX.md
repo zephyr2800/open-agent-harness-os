@@ -144,7 +144,7 @@ model claim.
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 107-test source suite passed at artifact creation. It builds from a
+  the 109-test source suite passed at artifact creation. It builds from a
   source distribution, binds the complete wheel archive, modules, and console
   scripts to a fresh source-derived reference, and rejects Python bytecode
   caches. It
@@ -309,9 +309,9 @@ available.
   clean/injection outcomes, raw trace paths, and next promotion gate.
 - `../work/external/agentdojo_adapter_server.py`: local OpenAI-compatible
   Action IR bridge; it retains raw model decisions and labels tool results as
-  untrusted evidence.
+  untrusted context, never verified harness evidence.
 - The v5 clean external task scored 0/1 utility because the policy skipped
-  required information retrieval. The v6 evidence-first guard raised the
+  required information retrieval. The v6 lookup-first guard raised the
   corresponding write task to 1/1, but the v6 model-only clean Q&A task still
   scored 0/1 and the direct-injection composite scored 0/1 utility while not
   carrying out the injection. These are ablations, not an external-suite
@@ -368,7 +368,7 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 107/107 after evaluator hardening, dense-reliability,
+- The current project test suite is 109/109 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,

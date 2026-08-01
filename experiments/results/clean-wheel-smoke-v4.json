@@ -12,8 +12,8 @@
   ],
   "passed": true,
   "reference_wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
-  "reference_wheel_manifest_sha256": "cc0ab3d8b0db5d76dc3c3e05a6460168701af3fadbf57624f3f21d144c4a5354",
-  "reference_wheel_sha256": "624e39e2b4c378ba04fbfcfd5df4465fd2990d29dd2bff0f719e0d02d2dfd203",
+  "reference_wheel_manifest_sha256": "ffb911a0497dc6fbf6c54c323058fb0be099506c137f1eca02776c169e2a0b6d",
+  "reference_wheel_sha256": "a870b00f9a1eada72b92b48786ba549ab5a222bb59da8483c6333260a4f17432",
   "schema": "clean-wheel-smoke/v1",
   "source_console_scripts": [
     "harness = app.cli:main",
@@ -25,12 +25,12 @@
     "harness-scorecard = experiments.scorecard:main"
   ],
   "source_matches_wheel": true,
-  "source_package_sha256": "5461faa6bc472952029d9cfcfde4682cabafd115160060aa936b687682735948",
+  "source_package_sha256": "7ac315af02319b124f52e132607a57628912164d40a86403b6c689b04546f2c7",
   "stderr_tail": "",
   "target": "isolated-target",
   "target_created_by_runner": true,
   "wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
-  "wheel_bytes": 138263,
+  "wheel_bytes": 138856,
   "wheel_console_scripts": [
     "harness = app.cli:main",
     "harness-agentdojo-adapter = experiments.agentdojo_adapter_server:main",
@@ -41,7 +41,7 @@
     "harness-scorecard = experiments.scorecard:main"
   ],
   "wheel_manifest_matches_reference": true,
-  "wheel_manifest_sha256": "cc0ab3d8b0db5d76dc3c3e05a6460168701af3fadbf57624f3f21d144c4a5354",
-  "wheel_package_sha256": "5461faa6bc472952029d9cfcfde4682cabafd115160060aa936b687682735948",
-  "wheel_sha256": "47fb8236bed4e88e2e063aceeabbcd927fddda049b947ef3edfe7c1c0899a57f"
+  "wheel_manifest_sha256": "ffb911a0497dc6fbf6c54c323058fb0be099506c137f1eca02776c169e2a0b6d",
+  "wheel_package_sha256": "7ac315af02319b124f52e132607a57628912164d40a86403b6c689b04546f2c7",
+  "wheel_sha256": "ff48aee817b2c46836df89657c52c9c9cdcf465c570f738365057c47b9871b2e"
 }

@@ -85,13 +85,13 @@ launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
 isolation, tool-by-tool security metadata auditing, the external evaluation
 note and fixture. At artifact creation, the Project 2 source suite had 82
 tests and the recorded v5 preflight artifact contains an 83-test subcheck.
-The current source-bound v6 preflight contains a 107-test subcheck. The
+The current source-bound v6 preflight contains a 109-test subcheck. The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
 The 2026-07-27 timeout-boundary artifact recorded Project 2 source tests at
 81/81 and Project 1 source tests at 47/47; those are historical artifact
-counts. The current suites are 107/107 and 47/47, respectively, and the
+counts. The current suites are 109/109 and 47/47, respectively, and the
 consolidated launch preflight remains green. This closes the adapter-level
 budget-enforcement regression; it does not by itself close real-model
 performance, usability, security-review, licensing, or external-benchmark
@@ -114,7 +114,7 @@ without state change.
 
 ## 2026-07-29 launch-candidate update
 
-The public branch now has 107/107 harness tests, 47/47 companion tests, and a
+The public branch now has 109/109 harness tests, 47/47 companion tests, and a
 16-check launch preflight. The preflight runs the companion suite from its own
 package root so same-name modules from the two projects cannot silently
 replace one another. It builds a fresh source-distribution wheel, validates

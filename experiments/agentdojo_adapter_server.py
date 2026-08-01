@@ -3,7 +3,7 @@
 AgentDojo speaks OpenAI Chat Completions with native function calls while the
 local policy emits Action IR.  This adapter preserves that boundary without
 claiming that a translated run is a model-only result: every local record
-contains the harness variant, repair setting, and evidence-first setting.
+contains the harness variant, repair setting, and lookup-first setting.
 
 The module deliberately has no AgentDojo dependency.  Install and pin the
 official benchmark separately, then point it at this local endpoint.  That
@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import time
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -143,22 +144,18 @@ def _history(
     messages: list[dict[str, Any]],
     *,
     compact_context: bool,
-    issued_tool_calls: Mapping[str, str] | None = None,
 ) -> tuple[list[str], list[dict[str, Any]], list[str], dict[str, str]]:
     """Convert caller history to untrusted context without fabricating evidence.
 
     AgentDojo owns native tool execution and its messages arrive from the
     caller. The bridge has no independent verifier for those payloads, so it
-    never turns them into ``verified_evidence``. A prior call contributes to
-    execution state only when its ID and tool name were issued by this adapter
-    process.
+    never turns them into ``verified_evidence`` or trusted execution state.
     """
 
     executed: list[str] = []
     evidence: list[dict[str, Any]] = []
     untrusted: list[str] = []
     call_names: dict[str, str] = {}
-    issued = dict(issued_tool_calls or {})
     result_index = 0
     limit = 3_000 if compact_context else 12_000
     for message in messages:
@@ -172,8 +169,6 @@ def _history(
                 name = function.get("name")
                 if isinstance(name, str) and name:
                     call_names[call_id] = name
-                    if issued.get(call_id) == name:
-                        executed.append(name)
         elif role == "tool":
             call_id = str(message.get("tool_call_id") or f"tool-result-{result_index}")
             result_index += 1
@@ -220,6 +215,25 @@ def _request_id(messages: list[dict[str, Any]]) -> str:
     return "agentdojo-" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
 
 
+def _guard_task_instance_id(payload: Mapping[str, Any]) -> str | None:
+    """Read the caller-provided, per-attempt identifier required by the guard.
+
+    OpenAI chat history has no universally reliable conversation-instance ID.
+    The optional lookup-first ablation therefore never reuses an
+    acknowledgement unless the caller supplies a unique task-attempt ID in
+    ``metadata.adapter_task_instance_id``.
+    """
+
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return None
+    value = metadata.get("adapter_task_instance_id")
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized if 1 <= len(normalized) <= 256 else None
+
+
 def _query_from_email_goal(goal: str) -> str:
     patterns = (
         r"\b(?:about|regarding)\s+(?:the\s+)?([a-z][a-z0-9 -]{2,48}?)(?=\s+(?:with|based|from|on|and)\b|[.,]|$)",
@@ -239,18 +253,18 @@ def _evidence_first_guard(
     decision: Mapping[str, Any] | None,
     task_id: str,
     step: int,
-    prior_adapter_issued_email_lookup: bool,
+    acknowledged_adapter_email_lookup: bool,
 ) -> dict[str, Any] | None:
     """Narrow, opt-in guard for email-derived consequential actions.
 
     It is intentionally a harness ablation, never a hidden default.  It only
     chooses the registered `search_emails` lookup when a task explicitly asks
-    for an action based on email evidence and the adapter has not already
-    issued that lookup in this process.
+    for an action based on email evidence and has not received a task-bound,
+    one-time acknowledgement of a lookup it issued.
     """
 
     lower = user_goal.lower()
-    if prior_adapter_issued_email_lookup or "email" not in lower or "search_emails" not in tool_names:
+    if acknowledged_adapter_email_lookup or "email" not in lower or "search_emails" not in tool_names:
         return None
     dependent = any(
         phrase in lower
@@ -279,7 +293,7 @@ def _evidence_first_guard(
         "task_id": task_id,
         "step_id": f"step-{step}",
         "kind": "act",
-        "uncertainty": {"confidence": 0.93, "basis": "evidence-first dependency guard"},
+        "uncertainty": {"confidence": 0.93, "basis": "lookup-first dependency guard"},
         "state_update": {"facts": [], "assumptions": [], "open_questions": [], "resolved_questions": []},
         "action": {
             "intent": "search_emails",
@@ -307,13 +321,47 @@ class AdapterRuntime:
         self.request_counter = 0
         self.log_lock = Lock()
         self.state_lock = Lock()
-        self.issued_tool_calls: dict[str, str] = {}
+        self.pending_tool_calls: dict[str, tuple[str, str]] = {}
+        self.acknowledged_email_lookups: dict[str, None] = {}
 
     def _write_log(self, record: Mapping[str, Any]) -> None:
         self.config.log_path.parent.mkdir(parents=True, exist_ok=True)
         with self.log_lock:
             with self.config.log_path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(record, ensure_ascii=False, default=repr) + "\n")
+
+    def _acknowledged_adapter_email_lookup(
+        self,
+        messages: list[dict[str, Any]],
+        task_instance_id: str | None,
+    ) -> bool:
+        """Consume only task-bound, random adapter call IDs from tool-result turns.
+
+        This establishes ordering for the opt-in lookup-first ablation. It does
+        not verify the external tool payload and never upgrades it into
+        harness evidence.
+        """
+
+        if not task_instance_id:
+            return False
+        tool_result_ids = {
+            str(message.get("tool_call_id"))
+            for message in messages
+            if message.get("role") == "tool" and message.get("tool_call_id")
+        }
+        with self.state_lock:
+            for call_id in tool_result_ids:
+                issued = self.pending_tool_calls.get(call_id)
+                if issued is None or issued[0] != task_instance_id:
+                    continue
+                _, tool_name = issued
+                del self.pending_tool_calls[call_id]
+                if tool_name == "search_emails":
+                    self.acknowledged_email_lookups[task_instance_id] = None
+                    if len(self.acknowledged_email_lookups) > 256:
+                        oldest_task_id = next(iter(self.acknowledged_email_lookups))
+                        del self.acknowledged_email_lookups[oldest_task_id]
+            return task_instance_id in self.acknowledged_email_lookups
 
     def _policy(self) -> Any:
         if self.policy is None:
@@ -340,14 +388,14 @@ class AdapterRuntime:
         messages = [_message_dict(item) for item in raw_messages]
         tool_names, catalog = _tool_catalog(payload.get("tools", []), compact=self.config.compact_tool_catalog)
         task_id = _request_id(messages)
+        guard_task_instance_id = _guard_task_instance_id(payload)
         with self.state_lock:
-            issued_tool_calls = dict(self.issued_tool_calls)
             self.request_counter += 1
             request_index = self.request_counter
+        acknowledged_adapter_email_lookup = self._acknowledged_adapter_email_lookup(messages, guard_task_instance_id)
         executed, evidence, untrusted, _ = _history(
             messages,
             compact_context=self.config.compact_context,
-            issued_tool_calls=issued_tool_calls,
         )
         user_goal = _user_goal(messages)
         context = _goal(messages, catalog)
@@ -387,7 +435,7 @@ class AdapterRuntime:
                 if not self.config.enable_evidence_first_guard:
                     raise
                 guard_decision = _evidence_first_guard(
-                    user_goal, tool_names, None, task_id, len(executed), "search_emails" in executed
+                    user_goal, tool_names, None, task_id, len(executed), acknowledged_adapter_email_lookup
                 )
                 if guard_decision is None:
                     raise
@@ -395,7 +443,7 @@ class AdapterRuntime:
             else:
                 if self.config.enable_evidence_first_guard:
                     guard_decision = _evidence_first_guard(
-                        user_goal, tool_names, decision, task_id, len(executed), "search_emails" in executed
+                        user_goal, tool_names, decision, task_id, len(executed), acknowledged_adapter_email_lookup
                     )
                     if guard_decision is not None:
                         decision = guard_decision
@@ -407,7 +455,9 @@ class AdapterRuntime:
                     "task_id": task_id,
                     "request": dict(payload),
                     "action_ir": decision,
-                    "adapter_guard": "evidence_first_dependency_guard" if guard_decision else None,
+                    "adapter_guard": "lookup_first_dependency_guard" if guard_decision else None,
+                    "acknowledged_adapter_email_lookup": acknowledged_adapter_email_lookup,
+                    "lookup_guard_task_instance_configured": bool(guard_task_instance_id),
                     "elapsed_ms": elapsed_ms,
                     "model_checkpoint": self.config.model_checkpoint,
                     "model_revision": self.config.model_revision,
@@ -439,18 +489,20 @@ class AdapterRuntime:
             intent = action.get("intent") if isinstance(action, Mapping) else None
             arguments = action.get("arguments") if isinstance(action, Mapping) else None
             if isinstance(intent, str) and intent in tool_names and isinstance(arguments, Mapping):
+                call_id = f"call-local-{secrets.token_urlsafe(18)}"
                 message["tool_calls"] = [
                     {
-                        "id": f"call-local-{request_index}",
+                        "id": call_id,
                         "type": "function",
                         "function": {"name": intent, "arguments": json.dumps(dict(arguments), ensure_ascii=False)},
                     }
                 ]
                 with self.state_lock:
-                    self.issued_tool_calls[f"call-local-{request_index}"] = intent
-                    if len(self.issued_tool_calls) > 256:
-                        oldest_call_id = next(iter(self.issued_tool_calls))
-                        del self.issued_tool_calls[oldest_call_id]
+                    if guard_task_instance_id:
+                        self.pending_tool_calls[call_id] = (guard_task_instance_id, intent)
+                        if len(self.pending_tool_calls) > 256:
+                            oldest_call_id = next(iter(self.pending_tool_calls))
+                            del self.pending_tool_calls[oldest_call_id]
                 finish_reason = "tool_calls"
             else:
                 message["content"] = json.dumps({"action_ir": decision}, ensure_ascii=False)
@@ -540,7 +592,12 @@ def build_config(argv: list[str] | None = None) -> AdapterConfig:
     parser.add_argument("--compact-tool-catalog", action=argparse.BooleanOptionalAction, default=_env_flag("ACTION_MODEL_COMPACT_TOOL_CATALOG"))
     parser.add_argument("--compact-context", action=argparse.BooleanOptionalAction, default=_env_flag("ACTION_MODEL_COMPACT_CONTEXT"))
     parser.add_argument("--enable-repair", action=argparse.BooleanOptionalAction, default=_env_flag("ACTION_MODEL_ENABLE_REPAIR"))
-    parser.add_argument("--enable-evidence-first-guard", action=argparse.BooleanOptionalAction, default=_env_flag("ACTION_MODEL_ENABLE_EVIDENCE_FIRST_GUARD"))
+    parser.add_argument(
+        "--enable-evidence-first-guard",
+        action=argparse.BooleanOptionalAction,
+        default=_env_flag("ACTION_MODEL_ENABLE_EVIDENCE_FIRST_GUARD"),
+        help="legacy flag name for the opt-in lookup-first ordering ablation; tool payloads remain unverified",
+    )
     parser.add_argument("--harness-variant", default=os.environ.get("AGENTDOJO_HARNESS_VARIANT", "H3-agentdojo-openai-compat"))
     args = parser.parse_args(argv)
     if args.host not in {"127.0.0.1", "::1", "localhost"}:

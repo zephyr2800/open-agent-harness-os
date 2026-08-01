@@ -217,7 +217,7 @@ the earlier false-positive path where a correct tool call followed by a
 generic final answer received credit.
 
 The exploratory AgentDojo integration remains deliberately small. One typed
-evidence-first harness guard repaired a calendar state-dependency failure, but
+lookup-first harness guard repaired a calendar state-dependency failure, but
 the clean user-task and direct-injection composites still expose model-only
 native-schema and final-answer-grounding gaps. The result is an ablation, not
 an external benchmark score. A credible paper claim still requires at least
@@ -270,7 +270,7 @@ contract and replay, local-only endpoint policy, bearer authentication,
 non-loopback TLS gating, high-risk denial, 12-way concurrent trace writes
 with restart recovery, token-principal trace isolation, validated wheel
 integrity plus extracted-wheel install smoke, documentation presence, and an
-earlier 59/59 source-test run. The current suite is 107/107 and trace
+earlier 59/59 source-test run. The current suite is 109/109 and trace
 publication is atomic. This supports a technically
 capable local preview; it does not close multi-user isolation,
 operational hardening, usability,

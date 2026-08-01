@@ -39,26 +39,40 @@ under its own pinned revision, then configure its OpenAI client to use
 and a distinct log path:
 
 ```powershell
-# Model-only baseline: no repair and no evidence-first intervention.
+# Model-only baseline: no repair and no lookup-first intervention.
 python -m experiments.agentdojo_adapter_server `
   --model-checkpoint <immutable-merged-checkpoint> `
   --log work\external\agentdojo-model-only.jsonl `
   --harness-variant H3-agentdojo-model-only
 
-# Registered-schema repair and evidence-first are separate harness ablations.
+# Registered-schema repair and lookup-first are separate harness ablations.
 python -m experiments.agentdojo_adapter_server `
   --model-checkpoint <immutable-merged-checkpoint> `
   --enable-repair `
   --enable-evidence-first-guard `
-  --log work\external\agentdojo-evidence-first.jsonl `
-  --harness-variant H3-agentdojo-evidence-first
+  --log work\external\agentdojo-lookup-first.jsonl `
+  --harness-variant H3-agentdojo-lookup-first
 ```
+
+For the guarded ablation, configure the benchmark client or its OpenAI wrapper
+to include a unique value for each task attempt:
+
+```json
+{"metadata": {"adapter_task_instance_id": "<unique-benchmark-attempt-id>"}}
+```
+
+Do not reuse this ID across retries or tasks. A client that cannot send it can
+run model-only or repair ablations, but the adapter will conservatively refuse
+to reuse a lookup acknowledgement for the guarded variant.
 
 The adapter labels every native tool result as `UNTRUSTED_TOOL_OUTPUT`, keeps
 it out of verified harness evidence, retains the native function schema,
 records the selected intervention, and binds the local model
-checkpoint/revision to each decision record. Keep these local logs out of the
-source tree when they contain benchmark data or task content.
+checkpoint/revision to each decision record. The legacy-named guard uses only
+a task-bound, one-time acknowledgement of an adapter-issued lookup for action
+ordering; it does not authenticate native execution or tool content. Keep
+these local logs out of the source tree when they contain benchmark data or
+task content.
 
 Report separately:
 

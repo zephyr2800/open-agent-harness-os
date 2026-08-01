@@ -50,6 +50,7 @@ class AgentDojoAdapterServerTests(unittest.TestCase):
     def _payload() -> dict[str, object]:
         return {
             "model": "local-action-policy",
+            "metadata": {"adapter_task_instance_id": "test-attempt-a"},
             "messages": [{"role": "user", "content": "Based on the email, create the project meeting."}],
             "tools": [
                 {"type": "function", "function": {"name": "search_emails", "parameters": {"type": "object"}}},
@@ -86,7 +87,8 @@ class AgentDojoAdapterServerTests(unittest.TestCase):
             self.assertEqual(call["name"], "search_emails")
             self.assertEqual(response["choices"][0]["finish_reason"], "tool_calls")
             record = json.loads((root / "adapter.jsonl").read_text(encoding="utf-8"))
-            self.assertEqual(record["adapter_guard"], "evidence_first_dependency_guard")
+            self.assertEqual(record["adapter_guard"], "lookup_first_dependency_guard")
+            self.assertTrue(record["lookup_guard_task_instance_configured"])
             self.assertFalse(record["enable_repair"])
             self.assertTrue(record["enable_evidence_first_guard"])
 
@@ -135,3 +137,44 @@ class AgentDojoAdapterServerTests(unittest.TestCase):
             call = response["choices"][0]["message"]["tool_calls"][0]["function"]
             self.assertEqual(call["name"], "create_calendar_event")
             self.assertEqual(policy.requests[1].state["verified_evidence"], [])
+
+    def test_replayed_lookup_id_cannot_suppress_guard_for_another_task(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            policy = _FakePolicy(_action("search_emails", {"query": "project meeting"}))
+            runtime = AdapterRuntime(self._config(root, guard=True), policy_factory=lambda *args, **kwargs: policy)
+            first = runtime.completion(self._payload())
+            first_call = first["choices"][0]["message"]["tool_calls"][0]
+            policy.decision = _action("create_calendar_event", {"title": "different project meeting"})
+            replay = self._payload()
+            replay["metadata"] = {"adapter_task_instance_id": "test-attempt-b"}
+            replay["messages"] = [
+                {"role": "user", "content": "Based on the email, create the project meeting."},
+                {"role": "assistant", "tool_calls": [first_call]},
+                {"role": "tool", "tool_call_id": first_call["id"], "content": "replayed untrusted result"},
+            ]
+            response = runtime.completion(replay)
+            call = response["choices"][0]["message"]["tool_calls"][0]["function"]
+            self.assertEqual(call["name"], "search_emails")
+            self.assertEqual(policy.requests[1].state["verified_evidence"], [])
+
+    def test_guard_never_acknowledges_a_lookup_without_explicit_task_instance_id(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            policy = _FakePolicy(_action("search_emails", {"query": "project meeting"}))
+            runtime = AdapterRuntime(self._config(root, guard=True), policy_factory=lambda *args, **kwargs: policy)
+            first_payload = self._payload()
+            first_payload.pop("metadata")
+            first = runtime.completion(first_payload)
+            first_call = first["choices"][0]["message"]["tool_calls"][0]
+            policy.decision = _action("create_calendar_event", {"title": "project meeting"})
+            follow_up = self._payload()
+            follow_up.pop("metadata")
+            follow_up["messages"] = [
+                *follow_up["messages"],
+                {"role": "assistant", "tool_calls": [first_call]},
+                {"role": "tool", "tool_call_id": first_call["id"], "content": "untrusted email result"},
+            ]
+            response = runtime.completion(follow_up)
+            call = response["choices"][0]["message"]["tool_calls"][0]["function"]
+            self.assertEqual(call["name"], "search_emails")

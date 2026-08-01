@@ -25,15 +25,19 @@ is now a close comparison for verifier-backed state and progress checkpointing.
 | D | Action-IR QLoRA SFT | verifier/evidence/replay runtime | none | model × harness interaction |
 | E | Action-IR QLoRA SFT | verifier/evidence/replay runtime | frozen-evaluator remediation/RL | self-improvement effect |
 
-The current live matrix is the first gated evaluation of cell D. Cells A-C
-must be run on the same task specifications, prompt/tool contract, decoding
-seeds, and hardware before claiming a causal interaction. Cell E is eligible
-only after its reward audit and held-out before/after comparison pass.
+The current live matrix is the first gated evaluation of cell D in greedy
+decoding mode. Its seeds are deterministic reproducibility replicas, not
+stochastic samples. Cells A-C must be run on the same task specifications,
+prompt/tool contract, decoding mode, seed policy, and hardware before claiming
+a causal interaction. Cell E is eligible only after its reward audit and
+held-out before/after comparison pass.
 
 ## Evaluation protocol
 
 - Frozen local slices: research-v4, industry-proxy-v1, and
-  industry-proxy-v2; seeds 0, 1, and 2.
+  industry-proxy-v2; greedy reproducibility replicas at seeds 0, 1, and 2,
+  plus a separately reported `do_sample=true` stochastic audit at the same
+  seeds.
 - Disjoint diagnostics: external-bar-lite and the exact-payload holdout.
 - Native reality check: pinned AgentDojo workspace cases, with clean and
   direct-injection cases reported separately.
@@ -46,9 +50,10 @@ only after its reward audit and held-out before/after comparison pass.
   per-task GPU time on the RTX 5090.
 
 Every run stores the checkpoint hash, task-spec hash, prompt/tool contract,
-seed, runtime metadata, raw trace, independent replay result, and failure
-taxonomy. The evaluator and holdout authoring code are immutable during the
-self-improvement loop, following the fixed-budget discipline of
+decoding mode and sampling parameters, seed, runtime metadata, raw trace,
+independent replay result, and failure taxonomy. The evaluator and holdout
+authoring code are immutable during the self-improvement loop, following the
+fixed-budget discipline of
 [autoresearch](https://github.com/karpathy/autoresearch).
 
 ## Promotion rules
@@ -59,8 +64,9 @@ Cell E may be called an improvement only if, on the disjoint holdout:
 2. unsafe attempts remain zero;
 3. trace validity and replay agreement remain 100%;
 4. false completions do not increase;
-5. the effect is present in at least two of three seeds or has a prespecified
-   paired bootstrap interval excluding zero; and
+5. the effect is present in at least two of three genuinely stochastic decoding
+   seeds (or independently trained replicas, explicitly labeled) or has a
+   prespecified paired bootstrap interval excluding zero; and
 6. the result survives one native-runtime diagnostic without changing the
    evaluator or adding a hidden guard that is absent from the baseline.
 

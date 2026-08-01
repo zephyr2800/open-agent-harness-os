@@ -144,9 +144,10 @@ model claim.
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 104-test source suite passed at artifact creation. It builds from a
-  source distribution, binds extracted wheel modules and console scripts to the
-  current package-source fingerprint, and rejects Python bytecode caches. It
+  the 107-test source suite passed at artifact creation. It builds from a
+  source distribution, binds the complete wheel archive, modules, and console
+  scripts to a fresh source-derived reference, and rejects Python bytecode
+  caches. It
   records the 0.1.8 wheel and source-distribution hashes in
   `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 
@@ -367,7 +368,7 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 104/104 after evaluator hardening, dense-reliability,
+- The current project test suite is 107/107 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,

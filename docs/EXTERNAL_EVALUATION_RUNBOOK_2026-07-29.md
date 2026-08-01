@@ -54,10 +54,11 @@ python -m experiments.agentdojo_adapter_server `
   --harness-variant H3-agentdojo-evidence-first
 ```
 
-The adapter labels every native tool result as `UNTRUSTED_TOOL_OUTPUT`, retains
-the native function schema, records the selected intervention, and binds the
-local model checkpoint/revision to each decision record. Keep these local logs
-out of the source tree when they contain benchmark data or task content.
+The adapter labels every native tool result as `UNTRUSTED_TOOL_OUTPUT`, keeps
+it out of verified harness evidence, retains the native function schema,
+records the selected intervention, and binds the local model
+checkpoint/revision to each decision record. Keep these local logs out of the
+source tree when they contain benchmark data or task content.
 
 Report separately:
 

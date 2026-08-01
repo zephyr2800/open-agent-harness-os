@@ -245,6 +245,9 @@ class ExperimentTests(unittest.TestCase):
                         "wheel_package_sha256": fingerprint,
                         "source_matches_wheel": True,
                         "console_scripts_match": True,
+                        "wheel_manifest_sha256": fingerprint,
+                        "reference_wheel_manifest_sha256": fingerprint,
+                        "wheel_manifest_matches_reference": True,
                     },
                 },
             ],
@@ -253,6 +256,9 @@ class ExperimentTests(unittest.TestCase):
         preflight["checks"][1]["detail"]["wheel_package_sha256"] = "b" * 64
         self.assertFalse(_preflight_is_current(preflight, fingerprint))
         preflight["checks"][1]["detail"]["wheel_package_sha256"] = fingerprint
+        preflight["checks"][1]["detail"]["wheel_manifest_matches_reference"] = False
+        self.assertFalse(_preflight_is_current(preflight, fingerprint))
+        preflight["checks"][1]["detail"]["wheel_manifest_matches_reference"] = True
         preflight["checks"] = preflight["checks"][1:]
         self.assertFalse(_preflight_is_current(preflight, fingerprint))
 

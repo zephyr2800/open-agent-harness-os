@@ -178,6 +178,8 @@
     },
     {
       "detail": {
+        "candidate_is_fresh_reference": true,
+        "candidate_wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
         "method": "setuptools sdist then pip wheel",
         "sdist": "open_agent_harness_os-0.1.8.tar.gz",
         "sdist_returncode": 0,
@@ -187,7 +189,7 @@
         "wheel_count": 1,
         "wheel_returncode": 0,
         "wheel_stderr_tail": "\n[notice] A new release of pip is available: 26.0.1 -> 26.1.2\n[notice] To update, run: C:\\Users\\steve\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe -m pip install --upgrade pip\n",
-        "wheel_stdout_tail": "Processing C:\\Users\\steve\\AppData\\Local\\Temp\\open-agent-harness-preflight-build-sm949fk0\\sdist\\open_agent_harness_os-0.1.8.tar.gz\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: open-agent-harness-os\n  Building wheel for open-agent-harness-os (pyproject.toml): started\n  Building wheel for open-agent-harness-os (pyproject.toml): finished with status 'done'\n  Created wheel for open-agent-harness-os: filename=open_agent_harness_os-0.1.8-py3-none-any.whl size=137578 sha256=76cc0f49db8a2d2802f2b941ed55a8dcb8541073f9aa78632dbe1ad8226af65d\n  Stored in directory: c:\\users\\steve\\appdata\\local\\pip\\cache\\wheels\\d0\\0c\\ae\\f69737a9554ff942b260c348a75d362bc86e8086950cda9a56\nSuccessfully built open-agent-harness-os\n"
+        "wheel_stdout_tail": "Processing C:\\Users\\steve\\AppData\\Local\\Temp\\open-agent-harness-preflight-build-g_kyvusp\\sdist\\open_agent_harness_os-0.1.8.tar.gz\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: open-agent-harness-os\n  Building wheel for open-agent-harness-os (pyproject.toml): started\n  Building wheel for open-agent-harness-os (pyproject.toml): finished with status 'done'\n  Created wheel for open-agent-harness-os: filename=open_agent_harness_os-0.1.8-py3-none-any.whl size=138263 sha256=07f1f832730a4742e40f3eca25127e2b801c2d10f681f5c0010bb2d9e1e5b9a2\n  Stored in directory: c:\\users\\steve\\appdata\\local\\pip\\cache\\wheels\\81\\60\\14\\0e2fc6bc0298d36807bb9b5055b5047358cbb6c70e298d2a41\nSuccessfully built open-agent-harness-os\n"
       },
       "id": "wheel_build",
       "passed": true
@@ -196,7 +198,7 @@
       "detail": {
         "bytecode_entries": 0,
         "bytecode_free": true,
-        "bytes": 137578,
+        "bytes": 138263,
         "entry_count": 74,
         "exists": true,
         "path": "open_agent_harness_os-0.1.8-py3-none-any.whl",
@@ -204,7 +206,7 @@
         "record_hashes_valid": true,
         "required_modules_present": true,
         "safe_paths": true,
-        "sha256": "76cc0f49db8a2d2802f2b941ed55a8dcb8541073f9aa78632dbe1ad8226af65d",
+        "sha256": "07f1f832730a4742e40f3eca25127e2b801c2d10f681f5c0010bb2d9e1e5b9a2",
         "wheel_metadata_present": true,
         "zipfile": true
       },
@@ -219,17 +221,21 @@
         "imports_returncode": 0,
         "install_returncode": 0,
         "path": "open_agent_harness_os-0.1.8-py3-none-any.whl",
-        "sha256": "76cc0f49db8a2d2802f2b941ed55a8dcb8541073f9aa78632dbe1ad8226af65d",
+        "reference_wheel_manifest_sha256": "cc0ab3d8b0db5d76dc3c3e05a6460168701af3fadbf57624f3f21d144c4a5354",
+        "reference_wheel_sha256": "07f1f832730a4742e40f3eca25127e2b801c2d10f681f5c0010bb2d9e1e5b9a2",
+        "sha256": "07f1f832730a4742e40f3eca25127e2b801c2d10f681f5c0010bb2d9e1e5b9a2",
         "source_matches_wheel": true,
-        "source_package_sha256": "f4cd251a23da998edc454b1ca9634734f68fea5889b0e1df9c33559efbcd3b9a",
-        "wheel_package_sha256": "f4cd251a23da998edc454b1ca9634734f68fea5889b0e1df9c33559efbcd3b9a"
+        "source_package_sha256": "5461faa6bc472952029d9cfcfde4682cabafd115160060aa936b687682735948",
+        "wheel_manifest_matches_reference": true,
+        "wheel_manifest_sha256": "cc0ab3d8b0db5d76dc3c3e05a6460168701af3fadbf57624f3f21d144c4a5354",
+        "wheel_package_sha256": "5461faa6bc472952029d9cfcfde4682cabafd115160060aa936b687682735948"
       },
       "id": "wheel_install_smoke",
       "passed": true
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 47 tests in 0.007s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 47 tests in 0.006s\n\nOK",
         "returncode": 0
       },
       "id": "companion_unit_tests",
@@ -268,14 +274,14 @@
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 104 tests in 2.183s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 107 tests in 2.318s\n\nOK",
         "returncode": 0
       },
       "id": "unit_tests",
       "passed": true
     }
   ],
-  "created_at": "2026-08-01T22:10:08.081797+00:00",
+  "created_at": "2026-08-01T22:22:42.715980+00:00",
   "limitations": [
     "This preflight does not establish public multi-user, operational, or external-benchmark readiness.",
     "The MCP check is in-process; the separate stdio subprocess artifact remains the protocol evidence."
@@ -283,5 +289,5 @@
   "passed": true,
   "schema": "launch-preflight/v1",
   "scope": "local-developer-preview",
-  "source_package_sha256": "f4cd251a23da998edc454b1ca9634734f68fea5889b0e1df9c33559efbcd3b9a"
+  "source_package_sha256": "5461faa6bc472952029d9cfcfde4682cabafd115160060aa936b687682735948"
 }

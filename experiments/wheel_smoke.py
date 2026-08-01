@@ -100,6 +100,18 @@ def wheel_source_tree_sha256(wheel: Path) -> str | None:
     return _package_digest(entries)
 
 
+def wheel_manifest_sha256(wheel: Path) -> str | None:
+    """Fingerprint every wheel member and its raw content, including metadata."""
+
+    if not wheel.is_file():
+        return None
+    entries: list[tuple[str, str]] = []
+    with zipfile.ZipFile(wheel) as archive:
+        for name in archive.namelist():
+            entries.append((name, hashlib.sha256(archive.read(name)).hexdigest()))
+    return _package_digest(entries)
+
+
 def _source_console_scripts(root: Path) -> tuple[str, ...] | None:
     try:
         project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
@@ -132,6 +144,7 @@ def run(
     *,
     target: Path | None = None,
     source_root: Path | None = None,
+    reference_wheel: Path | None = None,
 ) -> dict[str, Any]:
     if not wheel.is_file():
         raise FileNotFoundError(wheel)
@@ -171,12 +184,23 @@ def run(
         demo_value = None
     source_package_sha256 = source_tree_sha256(source_root) if source_root else None
     wheel_package_sha256 = wheel_source_tree_sha256(wheel)
+    wheel_manifest = wheel_manifest_sha256(wheel)
     source_console_scripts = _source_console_scripts(source_root) if source_root else None
     wheel_console_scripts = _wheel_console_scripts(wheel)
+    reference_manifest = wheel_manifest_sha256(reference_wheel) if reference_wheel else None
+    reference_manifest_matches = (
+        bool(reference_manifest and reference_manifest == wheel_manifest)
+        if reference_wheel
+        else None
+    )
     if source_root:
         package_matches = bool(source_package_sha256 and source_package_sha256 == wheel_package_sha256)
         console_scripts_match = bool(source_console_scripts is not None and source_console_scripts == wheel_console_scripts)
-        source_matches_wheel: bool | None = package_matches and console_scripts_match
+        source_matches_wheel: bool | None = bool(
+            package_matches
+            and console_scripts_match
+            and (reference_manifest_matches is None or reference_manifest_matches)
+        )
     else:
         console_scripts_match = None
         source_matches_wheel = None
@@ -202,10 +226,15 @@ def run(
         "wheel_bytes": wheel.stat().st_size,
         "source_package_sha256": source_package_sha256,
         "wheel_package_sha256": wheel_package_sha256,
+        "wheel_manifest_sha256": wheel_manifest,
         "source_matches_wheel": source_matches_wheel,
         "source_console_scripts": source_console_scripts,
         "wheel_console_scripts": wheel_console_scripts,
         "console_scripts_match": console_scripts_match,
+        "reference_wheel": reference_wheel.name if reference_wheel else None,
+        "reference_wheel_sha256": _sha256(reference_wheel) if reference_wheel and reference_wheel.is_file() else None,
+        "reference_wheel_manifest_sha256": reference_manifest,
+        "wheel_manifest_matches_reference": reference_manifest_matches,
         "target": "isolated-target" if owned_target else target.name,
         "target_created_by_runner": owned_target,
         "install_returncode": install.returncode,
@@ -230,16 +259,18 @@ def main() -> int:
     parser.add_argument("--output", required=True)
     parser.add_argument("--target")
     parser.add_argument("--source-root", default=".")
+    parser.add_argument("--reference-wheel", help="independent fresh source-derived wheel for full manifest comparison")
     args = parser.parse_args()
     report = run(
         Path(args.wheel),
         target=Path(args.target) if args.target else None,
         source_root=Path(args.source_root),
+        reference_wheel=Path(args.reference_wheel) if args.reference_wheel else None,
     )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps({"passed": report["passed"], "wheel_sha256": report["wheel_sha256"], "source_package_sha256": report["source_package_sha256"], "wheel_package_sha256": report["wheel_package_sha256"], "output": str(output)}, indent=2, sort_keys=True))
+    print(json.dumps({"passed": report["passed"], "wheel_sha256": report["wheel_sha256"], "source_package_sha256": report["source_package_sha256"], "wheel_package_sha256": report["wheel_package_sha256"], "wheel_manifest_matches_reference": report["wheel_manifest_matches_reference"], "output": str(output)}, indent=2, sort_keys=True))
     return 0 if report["passed"] else 1
 
 

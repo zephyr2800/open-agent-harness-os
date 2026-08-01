@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 
 from experiments.launch_preflight import _wheel_check
-from experiments.wheel_smoke import source_tree_sha256, wheel_source_tree_sha256
+from experiments.wheel_smoke import source_tree_sha256, wheel_manifest_sha256, wheel_source_tree_sha256
 
 
 class LaunchPreflightTests(unittest.TestCase):
@@ -104,6 +104,18 @@ class LaunchPreflightTests(unittest.TestCase):
                 archive.writestr("app/cli.py", "print('b')\n")
                 archive.writestr("experiments/agentdojo_adapter_server.py", "VALUE = 1\n")
             self.assertNotEqual(source_tree_sha256(root), wheel_source_tree_sha256(wheel))
+
+    def test_wheel_manifest_fingerprint_includes_metadata_and_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / "first.whl"
+            second = root / "second.whl"
+            for wheel, metadata in ((first, "Name: demo\nRequires-Dist: safe\n"), (second, "Name: demo\nRequires-Dist: altered\n")):
+                with zipfile.ZipFile(wheel, "w") as archive:
+                    archive.writestr("app/cli.py", "print('a')\n")
+                    archive.writestr("demo-0.0.0.dist-info/METADATA", metadata)
+                    archive.writestr("demo-0.0.0.dist-info/RECORD", "")
+            self.assertNotEqual(wheel_manifest_sha256(first), wheel_manifest_sha256(second))
 
 
 if __name__ == "__main__":

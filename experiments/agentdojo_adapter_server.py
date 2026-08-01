@@ -140,15 +140,26 @@ def _tool_catalog(tools: Any, *, compact: bool) -> tuple[list[str], str]:
 
 
 def _history(
-    messages: list[dict[str, Any]], *, compact_context: bool
+    messages: list[dict[str, Any]],
+    *,
+    compact_context: bool,
+    issued_tool_calls: Mapping[str, str] | None = None,
 ) -> tuple[list[str], list[dict[str, Any]], list[str], dict[str, str]]:
-    """Convert native tool history into provenance-tagged, untrusted evidence."""
+    """Convert caller history to untrusted context without fabricating evidence.
+
+    AgentDojo owns native tool execution and its messages arrive from the
+    caller. The bridge has no independent verifier for those payloads, so it
+    never turns them into ``verified_evidence``. A prior call contributes to
+    execution state only when its ID and tool name were issued by this adapter
+    process.
+    """
 
     executed: list[str] = []
     evidence: list[dict[str, Any]] = []
     untrusted: list[str] = []
     call_names: dict[str, str] = {}
-    evidence_index = 0
+    issued = dict(issued_tool_calls or {})
+    result_index = 0
     limit = 3_000 if compact_context else 12_000
     for message in messages:
         role = message.get("role")
@@ -160,10 +171,12 @@ def _history(
                 function = _message_dict(call.get("function"))
                 name = function.get("name")
                 if isinstance(name, str) and name:
-                    executed.append(name)
                     call_names[call_id] = name
+                    if issued.get(call_id) == name:
+                        executed.append(name)
         elif role == "tool":
-            call_id = str(message.get("tool_call_id") or f"tool-result-{evidence_index}")
+            call_id = str(message.get("tool_call_id") or f"tool-result-{result_index}")
+            result_index += 1
             name = str(message.get("name") or call_names.get(call_id) or "unknown_tool")
             raw = _content_text(message.get("content"))
             if len(raw) > limit:
@@ -172,20 +185,8 @@ def _history(
                     raw = raw[:half] + "...[head-tail-truncated]..." + raw[-half:]
                 else:
                     raw = raw[:limit] + "...[truncated]"
-            evidence_id = f"agentdojo-evidence-{evidence_index}"
-            evidence_index += 1
-            evidence.append(
-                {
-                    "evidence_id": evidence_id,
-                    "status": "verified",
-                    "source": "agentdojo-native-tool-result",
-                    "tool": name,
-                    "tool_call_id": call_id,
-                    "summary": raw[:2_000],
-                }
-            )
-            # Tool output may contain prompt injection.  Its provenance is
-            # known, but its instructions never confer model authority.
+            # Tool output may contain prompt injection. It is caller-supplied
+            # benchmark context, not independently verified harness evidence.
             untrusted.append(f"UNTRUSTED_TOOL_OUTPUT[{name}][{call_id}]={raw}")
     return executed, evidence, untrusted, call_names
 
@@ -238,17 +239,18 @@ def _evidence_first_guard(
     decision: Mapping[str, Any] | None,
     task_id: str,
     step: int,
-    evidence_count: int,
+    prior_adapter_issued_email_lookup: bool,
 ) -> dict[str, Any] | None:
     """Narrow, opt-in guard for email-derived consequential actions.
 
     It is intentionally a harness ablation, never a hidden default.  It only
     chooses the registered `search_emails` lookup when a task explicitly asks
-    for an action based on email evidence and none has been observed.
+    for an action based on email evidence and the adapter has not already
+    issued that lookup in this process.
     """
 
     lower = user_goal.lower()
-    if evidence_count or "email" not in lower or "search_emails" not in tool_names:
+    if prior_adapter_issued_email_lookup or "email" not in lower or "search_emails" not in tool_names:
         return None
     dependent = any(
         phrase in lower
@@ -304,6 +306,8 @@ class AdapterRuntime:
         self.policy: Any = None
         self.request_counter = 0
         self.log_lock = Lock()
+        self.state_lock = Lock()
+        self.issued_tool_calls: dict[str, str] = {}
 
     def _write_log(self, record: Mapping[str, Any]) -> None:
         self.config.log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -336,7 +340,15 @@ class AdapterRuntime:
         messages = [_message_dict(item) for item in raw_messages]
         tool_names, catalog = _tool_catalog(payload.get("tools", []), compact=self.config.compact_tool_catalog)
         task_id = _request_id(messages)
-        executed, evidence, untrusted, _ = _history(messages, compact_context=self.config.compact_context)
+        with self.state_lock:
+            issued_tool_calls = dict(self.issued_tool_calls)
+            self.request_counter += 1
+            request_index = self.request_counter
+        executed, evidence, untrusted, _ = _history(
+            messages,
+            compact_context=self.config.compact_context,
+            issued_tool_calls=issued_tool_calls,
+        )
         user_goal = _user_goal(messages)
         context = _goal(messages, catalog)
         request = ModelRequest(
@@ -364,7 +376,6 @@ class AdapterRuntime:
             step=len(executed),
             available_tools=tuple(tool_names),
         )
-        self.request_counter += 1
         policy = None
         guard_decision: dict[str, Any] | None = None
         started = time.perf_counter()
@@ -376,7 +387,7 @@ class AdapterRuntime:
                 if not self.config.enable_evidence_first_guard:
                     raise
                 guard_decision = _evidence_first_guard(
-                    user_goal, tool_names, None, task_id, len(executed), len(evidence)
+                    user_goal, tool_names, None, task_id, len(executed), "search_emails" in executed
                 )
                 if guard_decision is None:
                     raise
@@ -384,7 +395,7 @@ class AdapterRuntime:
             else:
                 if self.config.enable_evidence_first_guard:
                     guard_decision = _evidence_first_guard(
-                        user_goal, tool_names, decision, task_id, len(executed), len(evidence)
+                        user_goal, tool_names, decision, task_id, len(executed), "search_emails" in executed
                     )
                     if guard_decision is not None:
                         decision = guard_decision
@@ -392,7 +403,7 @@ class AdapterRuntime:
             self._write_log(
                 {
                     "schema": "agentdojo-adapter-record/v1",
-                    "request_index": self.request_counter,
+                    "request_index": request_index,
                     "task_id": task_id,
                     "request": dict(payload),
                     "action_ir": decision,
@@ -410,7 +421,7 @@ class AdapterRuntime:
             self._write_log(
                 {
                     "schema": "agentdojo-adapter-record/v1",
-                    "request_index": self.request_counter,
+                    "request_index": request_index,
                     "task_id": task_id,
                     "request": dict(payload),
                     "error": repr(exc),
@@ -430,11 +441,16 @@ class AdapterRuntime:
             if isinstance(intent, str) and intent in tool_names and isinstance(arguments, Mapping):
                 message["tool_calls"] = [
                     {
-                        "id": f"call-local-{self.request_counter}",
+                        "id": f"call-local-{request_index}",
                         "type": "function",
                         "function": {"name": intent, "arguments": json.dumps(dict(arguments), ensure_ascii=False)},
                     }
                 ]
+                with self.state_lock:
+                    self.issued_tool_calls[f"call-local-{request_index}"] = intent
+                    if len(self.issued_tool_calls) > 256:
+                        oldest_call_id = next(iter(self.issued_tool_calls))
+                        del self.issued_tool_calls[oldest_call_id]
                 finish_reason = "tool_calls"
             else:
                 message["content"] = json.dumps({"action_ir": decision}, ensure_ascii=False)
@@ -447,7 +463,7 @@ class AdapterRuntime:
         else:
             message["content"] = json.dumps({"error": "invalid Action IR kind", "action_ir": decision})
         return {
-            "id": f"chatcmpl-local-action-{self.request_counter}",
+            "id": f"chatcmpl-local-action-{request_index}",
             "object": "chat.completion",
             "created": int(time.time()),
             "model": str(payload.get("model") or "local-action-policy"),

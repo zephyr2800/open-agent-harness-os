@@ -64,6 +64,8 @@ def _current_wheel_smoke(
             and report.get("wheel_package_sha256") == expected_source_package_sha256
             and report.get("source_matches_wheel") is True
             and report.get("console_scripts_match") is True
+            and report.get("wheel_manifest_matches_reference") is True
+            and report.get("wheel_manifest_sha256") == report.get("reference_wheel_manifest_sha256")
         ):
             candidates.append((path, report))
     if candidates:
@@ -99,6 +101,8 @@ def _preflight_is_current(preflight: dict[str, Any] | None, expected_source_pack
         and detail.get("wheel_package_sha256") == expected_source_package_sha256
         and detail.get("source_matches_wheel") is True
         and detail.get("console_scripts_match") is True
+        and detail.get("wheel_manifest_matches_reference") is True
+        and detail.get("wheel_manifest_sha256") == detail.get("reference_wheel_manifest_sha256")
     )
 
 

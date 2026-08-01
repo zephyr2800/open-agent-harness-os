@@ -15,11 +15,11 @@ Reference: [AgentDojo repository](https://github.com/ethz-spylab/agentdojo).
 
 AgentDojo's native OpenAI function-call messages are translated into the
 Project 2 request boundary. The bridge exposes the registered AgentDojo tools,
-tracks prior tool calls, records tool results as verifier-issued evidence, and
-labels their contents as `UNTRUSTED_TOOL_OUTPUT` in the model state. Action IR
-tool decisions are translated back into native OpenAI function calls. Raw
-requests, Action IR decisions, parser failures, and latency are retained in
-the adapter JSONL log.
+tracks only prior calls it issued itself, and labels all caller-supplied tool
+results as `UNTRUSTED_TOOL_OUTPUT`; it does not place them in verified harness
+evidence. Action IR tool decisions are translated back into native OpenAI
+function calls. Raw requests, Action IR decisions, parser failures, and
+latency are retained in the adapter JSONL log.
 
 Reusable adapter source: `experiments/agentdojo_adapter_server.py`. The public
 adapter defaults to model-only behavior; the original evidence-first run must

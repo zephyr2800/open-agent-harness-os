@@ -457,14 +457,19 @@ def _wheel_check(wheel: Path) -> dict[str, Any]:
     )
 
 
-def _wheel_smoke_check(wheel: Path) -> dict[str, Any]:
+def _wheel_smoke_check(wheel: Path, *, reference_wheel: Path | None) -> dict[str, Any]:
     """Install the wheel into an isolated target and run package-only smoke."""
 
     if not wheel.is_file():
         return _check("wheel_install_smoke", False, {"path": wheel.name, "exists": False})
     try:
         with tempfile.TemporaryDirectory(prefix="open-agent-harness-wheel-preflight-") as target:
-            report = run_wheel_smoke(wheel, target=Path(target), source_root=ROOT)
+            report = run_wheel_smoke(
+                wheel,
+                target=Path(target),
+                source_root=ROOT,
+                reference_wheel=reference_wheel,
+            )
         detail = {
             "path": wheel.name,
             "sha256": report.get("wheel_sha256"),
@@ -474,8 +479,12 @@ def _wheel_smoke_check(wheel: Path) -> dict[str, Any]:
             "imports_returncode": report.get("imports_returncode"),
             "source_package_sha256": report.get("source_package_sha256"),
             "wheel_package_sha256": report.get("wheel_package_sha256"),
+            "wheel_manifest_sha256": report.get("wheel_manifest_sha256"),
             "source_matches_wheel": report.get("source_matches_wheel"),
             "console_scripts_match": report.get("console_scripts_match"),
+            "reference_wheel_sha256": report.get("reference_wheel_sha256"),
+            "reference_wheel_manifest_sha256": report.get("reference_wheel_manifest_sha256"),
+            "wheel_manifest_matches_reference": report.get("wheel_manifest_matches_reference"),
         }
         passed = bool(report.get("passed"))
     except (OSError, ValueError, zipfile.BadZipFile) as exc:
@@ -653,6 +662,7 @@ def _build_source_wheel(output_dir: Path) -> tuple[Path | None, dict[str, Any]]:
 def _run_with_wheel(
     wheel: Path,
     *,
+    reference_wheel: Path | None,
     include_tests: bool,
     wheel_build: dict[str, Any] | None,
 ) -> dict[str, Any]:
@@ -673,7 +683,7 @@ def _run_with_wheel(
             checks.append(_check("wheel_build", bool(wheel_build.get("passed")), wheel_build["detail"]))
         checks.extend([
             _wheel_check(wheel),
-            _wheel_smoke_check(wheel),
+            _wheel_smoke_check(wheel, reference_wheel=reference_wheel),
             _companion_test_check(),
             _check(
                 "launch_docs",
@@ -706,26 +716,35 @@ def _run_with_wheel(
 
 
 def run(*, wheel: Path | None = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str, Any]:
-    """Run preflight, building a fresh source-derived wheel by default."""
+    """Run preflight against a fresh source-derived wheel reference."""
 
-    if SOURCE_CHECKOUT and wheel is None:
+    if SOURCE_CHECKOUT:
         with tempfile.TemporaryDirectory(prefix="open-agent-harness-preflight-build-") as directory:
             built_wheel, detail = _build_source_wheel(Path(directory))
             if built_wheel is None:
                 missing = Path(directory) / "source-build-failed.whl"
                 return _run_with_wheel(
                     missing,
+                    reference_wheel=None,
                     include_tests=include_tests,
                     wheel_build={"passed": False, "detail": detail},
                 )
+            selected_wheel = wheel or built_wheel
+            detail = {
+                **detail,
+                "candidate_wheel": selected_wheel.name,
+                "candidate_is_fresh_reference": selected_wheel == built_wheel,
+            }
             return _run_with_wheel(
-                built_wheel,
+                selected_wheel,
+                reference_wheel=built_wheel,
                 include_tests=include_tests,
                 wheel_build={"passed": True, "detail": detail},
             )
     selected_wheel = wheel or ROOT / "wheel-not-applicable.whl"
     return _run_with_wheel(
         selected_wheel,
+        reference_wheel=None,
         include_tests=include_tests,
         wheel_build=(
             {"passed": True, "detail": {"method": "user-supplied", "wheel": selected_wheel.name}}

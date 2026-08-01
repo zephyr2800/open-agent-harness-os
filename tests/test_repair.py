@@ -60,6 +60,35 @@ class RepairTests(unittest.TestCase):
         ))
         self.assertEqual(result["action"]["arguments"], {"operation": "v4-reconcile-job-00", "attempt": 1})
 
+    def test_retry_parser_accepts_leading_digit_operation_identifier(self) -> None:
+        result = compile_repair(request(
+            "Retry 9-reconcile-job-00 operation until recovery is verified.",
+            tools=("retry_operation",),
+        ))
+        self.assertEqual(result["action"]["arguments"], {"operation": "9-reconcile-job-00", "attempt": 1})
+
+    def test_retry_parser_handles_operation_before_identifier(self) -> None:
+        result = compile_repair(request(
+            "The operation v4-reconcile-job-01 needs a recovery retry; continue at the successful attempt.",
+            tools=("retry_operation",),
+        ))
+        self.assertEqual(result["action"]["arguments"], {"operation": "v4-reconcile-job-01", "attempt": 1})
+
+    def test_retry_parser_handles_recover_phrase(self) -> None:
+        result = compile_repair(request(
+            "Recover v4-reconcile-job-02 by retrying it and wait for the verifier to report recovered.",
+            tools=("retry_operation",),
+        ))
+        self.assertEqual(result["action"]["arguments"], {"operation": "v4-reconcile-job-02", "attempt": 1})
+
+    def test_retry_parser_advances_to_attempt_two_after_first_execution(self) -> None:
+        result = compile_repair(request(
+            "Retry the flaky v4-reconcile-job-03 operation until recovery is verified.",
+            tools=("retry_operation",),
+            state={"executed_actions": ["retry_operation"]},
+        ))
+        self.assertEqual(result["action"]["arguments"], {"operation": "v4-reconcile-job-03", "attempt": 2})
+
     def test_write_parser_accepts_persist_and_through(self) -> None:
         result = compile_repair(request(
             "Persist memo.txt with the exact content hello-world through the renamed text tool.",

@@ -91,3 +91,35 @@ resource limits. The public launch message should be:
 > actions, the harness controls authority and proves state transitions, and
 > every promotion decision is replayable.
 
+## August 1 protocol addendum: defend against harness-search confounds
+
+The recent [Rethinking the Evaluation of Harness Evolution for
+Agents](https://arxiv.org/abs/2607.12227) paper makes the most important update
+to our study design. Harness evolution must be compared with task-level search
+and discovery baselines under matched feedback and inference budgets, and the
+final score must be reported on tasks that were not used during the search.
+Otherwise an apparent harness gain may be extra test-time search or benchmark
+overfitting rather than a reusable harness improvement.
+
+The next experiment report therefore has to contain, side by side:
+
+1. fixed model + fixed harness;
+2. fixed model + verifier-first harness;
+3. fixed model + matched-budget task-level retry/search;
+4. targeted post-training + fixed harness; and
+5. targeted post-training + verifier-first harness.
+
+For each arm, freeze the task list before execution, separate tuning from
+holdout families, record the same feedback and inference budgets, and publish
+the full trace-level ledger. Promotion requires improvement on held-out
+verified utility without an increase in unsafe attempts, replay disagreement,
+or cost beyond the pre-registered budget. A local 100% score is not a
+promotion gate.
+
+This also aligns the project with the current external bar: Harness-Bench uses
+106 sandboxed tasks and records artifacts, traces, usage, and validator outputs;
+TUA-Bench uses 120 real terminal tasks across five families with execution
+grading; and the Code as Agent Harness survey identifies incomplete-feedback
+verification and regression-free harness improvement as open problems. These
+are design references and external baselines, not claims that this repository
+has completed those suites.

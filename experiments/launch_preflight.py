@@ -33,7 +33,7 @@ from tools.memory_workspace import make_memory_registry
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_WHEEL = ROOT / "work" / "package-dist" / "open_agent_harness_os-0.1.4-py3-none-any.whl"
+DEFAULT_WHEEL = ROOT / "work" / "package-dist" / "open_agent_harness_os-0.1.5-py3-none-any.whl"
 SOURCE_CHECKOUT = (ROOT / "pyproject.toml").is_file()
 REQUIRED_DOCS = (
     "README.md",

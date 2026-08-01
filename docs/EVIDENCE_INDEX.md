@@ -141,8 +141,8 @@ model claim.
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
   the source suite passed at artifact creation; the current source suite is
-  73 tests. It records the 0.1.4 wheel SHA-256
-  `65cd1e8561d049b69f20fa89397fb016860704e9f08c910231ce39ddd91e94f8`.
+  74 tests. It records the 0.1.5 wheel SHA-256
+  `74ccb97f810142cffd69148e85f38332af4b69d86deb6c8c1ce783167ee08024`.
 
 See `PRODUCT.md` and `docs/PRODUCT_LAUNCH_PLAN.md` for the developer-preview
 boundary and remaining public-launch gates.
@@ -361,11 +361,11 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 73/73 after evaluator hardening, dense-reliability,
+- The current project test suite is 74/74 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
-- Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.4-py3-none-any.whl`,
-  SHA-256 `65cd1e8561d049b69f20fa89397fb016860704e9f08c910231ce39ddd91e94f8`;
+- Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.5-py3-none-any.whl`,
+  SHA-256 `74ccb97f810142cffd69148e85f38332af4b69d86deb6c8c1ce783167ee08024`;
   it contains the explicit non-loopback authentication-plus-TLS gate.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout
   command `python -m experiments.launch_preflight --with-tests`; the artifact

@@ -30,7 +30,7 @@ from app.cli import _load_auth_tokens, _optional_local_adapter, _server, _valida
 from app.storage import TraceStore
 from experiments.verify_checkpoint_run import verify as verify_checkpoint_run
 from experiments.run_promotion_matrix import _run_report, _write_heartbeat, main as promotion_matrix_main
-from experiments.release_readiness import build_readiness
+from experiments.release_readiness import _preflight_is_current, build_readiness
 from experiments.data_split_audit import (
     REQUIRED_FROZEN_FIXTURE_HASHES,
     audit,
@@ -226,9 +226,35 @@ class ExperimentTests(unittest.TestCase):
         report = build_readiness(ROOT)
         expected_wheel = f"open_agent_harness_os-{report['package_version']}-py3-none-any.whl"
         gate = report["gates"]["clean_wheel_smoke"]
-        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v3.json"))
+        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v4.json"))
         self.assertIn(expected_wheel, gate["detail"])
         self.assertEqual(gate["status"], "passed")
+
+    def test_readiness_requires_completed_source_bound_preflight(self) -> None:
+        fingerprint = "a" * 64
+        preflight = {
+            "passed": True,
+            "source_package_sha256": fingerprint,
+            "checks": [
+                {"id": "unit_tests", "passed": True},
+                {
+                    "id": "wheel_install_smoke",
+                    "passed": True,
+                    "detail": {
+                        "source_package_sha256": fingerprint,
+                        "wheel_package_sha256": fingerprint,
+                        "source_matches_wheel": True,
+                        "console_scripts_match": True,
+                    },
+                },
+            ],
+        }
+        self.assertTrue(_preflight_is_current(preflight, fingerprint))
+        preflight["checks"][1]["detail"]["wheel_package_sha256"] = "b" * 64
+        self.assertFalse(_preflight_is_current(preflight, fingerprint))
+        preflight["checks"][1]["detail"]["wheel_package_sha256"] = fingerprint
+        preflight["checks"] = preflight["checks"][1:]
+        self.assertFalse(_preflight_is_current(preflight, fingerprint))
 
     def test_readiness_labels_private_matrix_and_public_summary_separately(self) -> None:
         report = build_readiness(ROOT)

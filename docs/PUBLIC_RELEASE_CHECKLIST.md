@@ -6,18 +6,21 @@ This checklist records the evidence attached to the current public repository sn
 
 ## Verified locally
 
-- Open Agent Harness OS unit and integration suite: 95/95 passing, including
-  dense-reliability and claim-safe scorecard checks.
+- Open Agent Harness OS unit and integration suite: 104/104 passing, including
+  dense-reliability, source-bound wheel integrity, and claim-safe scorecard checks.
 - Local Action Model companion suite: 47/47 passing.
-- Launch preflight v5: 15/15 checks passing, including extracted-wheel install
-  smoke and the companion suite; the historical artifact records an 83-test
-  source suite, while the current suite has 95 tests.
+- Launch preflight v6: 16/16 checks passing, including a fresh
+  source-distribution wheel build, extracted-wheel install smoke, bytecode
+  exclusion, source-to-wheel package-digest and console-script binding, and the
+  companion suite; the historical v5 artifact records an 83-test source suite,
+  while v6 records 104.
 - Wheel build: `open_agent_harness_os-0.1.8-py3-none-any.whl` (no Python
-  bytecode caches; 72 archive entries).
-- Wheel SHA-256: `c6995127e0e6da0f6e4f112b440b2c5b21be7aff625b180d28e2289d597cd2ff`.
+  bytecode caches; 74 archive entries; source/package fingerprint
+  `f4cd251a23da998edc454b1ca9634734f68fea5889b0e1df9c33559efbcd3b9a`).
+- Wheel SHA-256: `95c657c96b7cf1f3d325b6a177b7791142f2d6513658ea4f84288365bd115c0b`.
 - Source distribution: `open_agent_harness_os-0.1.8.tar.gz` (no Python
-  bytecode caches; 103 archive entries).
-- Source distribution SHA-256: `8a607d8b5ae08b5936c7e7fdf6b399915afbc89f31ce55a2328f2a215f59918b`.
+  bytecode caches; 107 archive entries).
+- Source distribution SHA-256: `41dcc508892d84166893578785c99d9b1cd3518448f59415be7d37da93793fb9`.
 - Public package audit: no credentials, model weights, generated result directories, or private local traces included.
 
 ## Interpretation boundary

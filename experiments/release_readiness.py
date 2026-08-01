@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from experiments.wheel_smoke import source_tree_sha256
 
 def _load(path: Path) -> dict[str, Any] | None:
     if not path.exists():
@@ -41,8 +42,12 @@ def _package_version(root: Path) -> str | None:
     return match.group(1) if match else None
 
 
-def _current_wheel_smoke(results: Path, package_version: str | None) -> tuple[Path, dict[str, Any] | None, str | None]:
-    """Select smoke evidence only when it names the current package wheel."""
+def _current_wheel_smoke(
+    results: Path,
+    package_version: str | None,
+    expected_source_package_sha256: str | None,
+) -> tuple[Path, dict[str, Any] | None, str | None]:
+    """Select smoke evidence only when it matches the wheel and source tree."""
     expected_wheel = (
         f"open_agent_harness_os-{package_version}-py3-none-any.whl"
         if package_version
@@ -51,7 +56,15 @@ def _current_wheel_smoke(results: Path, package_version: str | None) -> tuple[Pa
     candidates: list[tuple[Path, dict[str, Any]]] = []
     for path in sorted(results.glob("clean-wheel-smoke-*.json")):
         report = _load(path)
-        if report is not None and report.get("wheel") == expected_wheel:
+        if (
+            report is not None
+            and report.get("passed") is True
+            and report.get("wheel") == expected_wheel
+            and report.get("source_package_sha256") == expected_source_package_sha256
+            and report.get("wheel_package_sha256") == expected_source_package_sha256
+            and report.get("source_matches_wheel") is True
+            and report.get("console_scripts_match") is True
+        ):
             candidates.append((path, report))
     if candidates:
         path, report = candidates[-1]
@@ -60,21 +73,55 @@ def _current_wheel_smoke(results: Path, package_version: str | None) -> tuple[Pa
     return missing, None, expected_wheel
 
 
+def _preflight_is_current(preflight: dict[str, Any] | None, expected_source_package_sha256: str | None) -> bool:
+    """Accept preflight only after its source-matched wheel and full source suite pass."""
+
+    if not (
+        preflight
+        and preflight.get("passed") is True
+        and preflight.get("source_package_sha256") == expected_source_package_sha256
+        and expected_source_package_sha256
+    ):
+        return False
+    checks = {
+        item.get("id"): item
+        for item in preflight.get("checks", [])
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    unit_tests = checks.get("unit_tests")
+    wheel_smoke = checks.get("wheel_install_smoke")
+    if not (unit_tests and unit_tests.get("passed") is True and wheel_smoke and wheel_smoke.get("passed") is True):
+        return False
+    detail = wheel_smoke.get("detail")
+    return bool(
+        isinstance(detail, dict)
+        and detail.get("source_package_sha256") == expected_source_package_sha256
+        and detail.get("wheel_package_sha256") == expected_source_package_sha256
+        and detail.get("source_matches_wheel") is True
+        and detail.get("console_scripts_match") is True
+    )
+
+
 def build_readiness(root: Path) -> dict[str, Any]:
     results = root / "experiments" / "results"
     package_version = _package_version(root)
-    preflight_path = results / "launch-preflight-v5.json"
+    source_fingerprint = source_tree_sha256(root)
+    preflight_path = results / "launch-preflight-v6.json"
     matrix_path = results / "research-project2-qwopus35-9b-promotion-greedy-v1.json"
     matrix_summary_path = results / "research-project2-qwopus35-9b-promotion-summary-v1.json"
     decision_path = results / "research-project2-qwopus35-9b-promotion-decision-v1.json"
     external_path = results / "research-project2-qwopus35-9b-external-bar-lite-v1.json"
     rl_gate_path = results / "verified-rl-gate-v2.json"
-    wheel_smoke_path, wheel_smoke, expected_wheel = _current_wheel_smoke(results, package_version)
+    wheel_smoke_path, wheel_smoke, expected_wheel = _current_wheel_smoke(
+        results,
+        package_version,
+        source_fingerprint,
+    )
     preflight = _load(preflight_path)
     matrix_summary = _load(matrix_summary_path)
     decision = _load(decision_path)
     rl_gate = _load(rl_gate_path)
-    preflight_passed = bool(preflight and preflight.get("passed"))
+    preflight_passed = _preflight_is_current(preflight, source_fingerprint)
     promotion_passed = bool(decision and decision.get("decision") == "promote" and decision.get("passed"))
     matrix_complete = matrix_path.exists()
     summary_aggregate = matrix_summary.get("aggregate", {}) if matrix_summary else {}
@@ -91,7 +138,11 @@ def build_readiness(root: Path) -> dict[str, Any]:
         "local_developer_preview": {
             "status": "ready" if preflight_passed else "blocked",
             "evidence": str(preflight_path),
-            "detail": "preflight passed" if preflight_passed else "preflight missing or failed",
+            "detail": (
+                "preflight passed with a source-matched wheel and completed source suite"
+                if preflight_passed
+                else "preflight missing, incomplete, failed, or does not match the current source package"
+            ),
         },
         "9b_frozen_matrix": {
             "status": "complete" if matrix_complete else ("context_only" if matrix_summary_complete else "pending"),
@@ -174,6 +225,7 @@ def build_readiness(root: Path) -> dict[str, Any]:
         "scope": "paired-local-action-model-and-open-agent-harness-os",
         "generated_from": str(root),
         "package_version": package_version,
+        "source_package_sha256": source_fingerprint,
         "status": {
             "developer_preview": "ready" if preflight_passed else "not_ready",
             "research": research_status,

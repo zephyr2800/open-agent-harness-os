@@ -31,6 +31,34 @@ and then expand to a preregistered subset. Preserve the benchmark's native
 utility and security metrics, the attack name, user task, injection task,
 defense configuration, and full environment commit.
 
+The public repository now supplies a dependency-free, loopback-only OpenAI
+bridge at `experiments/agentdojo_adapter_server.py`. It does **not** bundle or
+replace AgentDojo: install the official benchmark in an isolated environment
+under its own pinned revision, then configure its OpenAI client to use
+`http://127.0.0.1:8089/v1`. Start each ablation with an explicit configuration
+and a distinct log path:
+
+```powershell
+# Model-only baseline: no repair and no evidence-first intervention.
+python -m experiments.agentdojo_adapter_server `
+  --model-checkpoint <immutable-merged-checkpoint> `
+  --log work\external\agentdojo-model-only.jsonl `
+  --harness-variant H3-agentdojo-model-only
+
+# Registered-schema repair and evidence-first are separate harness ablations.
+python -m experiments.agentdojo_adapter_server `
+  --model-checkpoint <immutable-merged-checkpoint> `
+  --enable-repair `
+  --enable-evidence-first-guard `
+  --log work\external\agentdojo-evidence-first.jsonl `
+  --harness-variant H3-agentdojo-evidence-first
+```
+
+The adapter labels every native tool result as `UNTRUSTED_TOOL_OUTPUT`, retains
+the native function schema, records the selected intervention, and binds the
+local model checkpoint/revision to each decision record. Keep these local logs
+out of the source tree when they contain benchmark data or task content.
+
 Report separately:
 
 - clean utility without injection;

@@ -139,13 +139,14 @@ model claim.
 - `experiments/results/product-smoke-v0.json` covers six workflows with 1.0
   protocol validity, 0.833333 verified-success rate, and a deliberate safety
   denial for high-risk delete.
-- `experiments/results/launch-preflight-v5.json` is a fresh local developer-
+- `experiments/results/launch-preflight-v6.json` is a fresh local developer-
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the source suite passed at artifact creation; the current source suite is
-  82 tests at artifact creation; the current source suite is 95 tests. It
+  the 104-test source suite passed at artifact creation. It builds from a
+  source distribution, binds extracted wheel modules and console scripts to the
+  current package-source fingerprint, and rejects Python bytecode caches. It
   records the 0.1.8 wheel and source-distribution hashes in
   `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 
@@ -366,7 +367,7 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 95/95 after evaluator hardening, dense-reliability,
+- The current project test suite is 104/104 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,

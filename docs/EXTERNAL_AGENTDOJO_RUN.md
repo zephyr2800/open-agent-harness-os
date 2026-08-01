@@ -21,7 +21,9 @@ tool decisions are translated back into native OpenAI function calls. Raw
 requests, Action IR decisions, parser failures, and latency are retained in
 the adapter JSONL log.
 
-Adapter source: `work/external/agentdojo_adapter_server.py`.
+Reusable adapter source: `experiments/agentdojo_adapter_server.py`. The public
+adapter defaults to model-only behavior; the original evidence-first run must
+be reproduced as an explicitly configured harness ablation.
 
 ## Observed results
 

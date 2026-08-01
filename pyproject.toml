@@ -15,11 +15,17 @@ harness-replay = "traces.replay:main"
 harness-preflight = "experiments.launch_preflight:main"
 harness-scorecard = "experiments.scorecard:main"
 harness-promotion-decision = "experiments.promotion_decision:main"
+harness-agentdojo-adapter = "experiments.agentdojo_adapter_server:main"
 harness = "app.cli:main"
+
+[tool.setuptools]
+include-package-data = false
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*", "protocol*", "runtime*", "tools*", "memory*", "traces*", "adapters*", "search*", "improve*", "benchmarks*", "experiments*"]
+exclude = ["*.__pycache__", "*.__pycache__.*", "tests", "tests.*"]
+namespaces = false
 
 [tool.setuptools.exclude-package-data]
 "*" = ["*.pyc", "__pycache__/*"]

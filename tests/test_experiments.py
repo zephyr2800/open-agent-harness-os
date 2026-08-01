@@ -27,12 +27,64 @@ from app.storage import TraceStore
 from experiments.verify_checkpoint_run import verify as verify_checkpoint_run
 from experiments.run_promotion_matrix import _run_report, _write_heartbeat
 from experiments.release_readiness import build_readiness
+from experiments.data_split_audit import audit
 
 
 ROOT = Path(__file__).parent.parent
 
 
 class ExperimentTests(unittest.TestCase):
+    def test_train_holdout_audit_rejects_contract_overlap(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            train = root / "train.jsonl"
+            train.write_text(
+                json.dumps({"task_id": "training-retry", "input": {"goal": "retry frozen-job-17"}}) + "\n",
+                encoding="utf-8",
+            )
+            fixture = root / "fixture.json"
+            fixture.write_text(
+                json.dumps(
+                    {
+                        "tasks": [
+                            {
+                                "task_id": "holdout-retry-17",
+                                "prompt": "Recover frozen-job-17 before completing.",
+                                "expected_arguments": {"operation": "frozen-job-17", "attempt": 2},
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report = audit([train], [fixture])
+        self.assertFalse(report["passed"])
+        self.assertTrue(any(item["value"] == "frozen-job-17" for item in report["overlaps"]))
+
+    def test_train_holdout_audit_accepts_disjoint_contracts(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            train = root / "train.jsonl"
+            train.write_text(json.dumps({"task_id": "training-retry", "input": {"goal": "retry curriculum-job-19"}}) + "\n", encoding="utf-8")
+            fixture = root / "fixture.json"
+            fixture.write_text(
+                json.dumps(
+                    {
+                        "tasks": [
+                            {
+                                "task_id": "holdout-retry-17",
+                                "prompt": "Recover frozen-job-17 before completing.",
+                                "expected_arguments": {"operation": "frozen-job-17", "attempt": 2},
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report = audit([train], [fixture])
+        self.assertTrue(report["passed"])
+        self.assertEqual(report["overlap_count"], 0)
+
     def test_promotion_matrix_heartbeat_is_claim_safe_and_timestamped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "matrix.heartbeat.json"

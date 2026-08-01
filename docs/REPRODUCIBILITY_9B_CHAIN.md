@@ -21,6 +21,27 @@ promotion decision.
 The manifest values are descriptive evidence for this checkpoint; they do
 not establish that the checkpoint is better than the promoted 7B baseline.
 
+## Data-isolation gate
+
+The legacy rank-64 manifest does not record the source corpus or an auditable
+train/holdout split, so its frozen-matrix result is diagnostic context only.
+Every candidate evaluated after this document must publish a source manifest
+and pass the fail-closed audit against every frozen fixture before a result can
+be described as held-out:
+
+```powershell
+& $py -m experiments.data_split_audit `
+  --train-jsonl <candidate-training.jsonl> `
+  --task-spec benchmarks\fixtures\task-spec-research-v4.json `
+  --task-spec benchmarks\fixtures\task-spec-industry-proxy-v1.json `
+  --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
+  --manifest experiments\results\candidate-train-holdout-audit.json `
+  --fail-on-overlap
+```
+
+See [train/holdout integrity](TRAIN_HOLDOUT_INTEGRITY.md) for the exact
+contract markers and interpretation.
+
 ## Frozen promotion matrix
 
 Run from the Open Agent Harness OS project root only after confirming no other

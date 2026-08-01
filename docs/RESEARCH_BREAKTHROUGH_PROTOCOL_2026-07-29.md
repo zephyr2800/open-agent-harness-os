@@ -15,6 +15,7 @@ The primary comparison is a 2 x 3 configuration matrix:
 |:---|:---|
 | Policy | promoted compact policy; scale-branch policy |
 | Harness | model-only; verifier-first repair; verifier-backed post-training |
+| Search control | matched-budget independent model-only attempts selected only by the immutable verifier |
 
 The policy, tokenizer, task specification, output budget, decoding settings,
 and environment revision are held fixed within each comparison. The evaluator,
@@ -71,11 +72,13 @@ A breakthrough claim additionally requires:
 2. at least three decoding seeds and, where practical, independent training
    replication;
 3. a model-only versus verifier-first versus post-trained ablation;
-4. family-level improvement that is not explained by a single easy slice;
-5. a native external-suite result with its native metric;
-6. independent replay and artifact/state verification for every reported
+4. a matched-budget task-level search control, so extra attempts are not
+   misreported as a harness improvement;
+5. family-level improvement that is not explained by a single easy slice;
+6. a native external-suite result with its native metric;
+7. independent replay and artifact/state verification for every reported
    success; and
-7. an explicit negative-result section covering reward hacking, regressions,
+8. an explicit negative-result section covering reward hacking, regressions,
    unsafe attempts, and cost/latency tradeoffs.
 
 ## Post-training order

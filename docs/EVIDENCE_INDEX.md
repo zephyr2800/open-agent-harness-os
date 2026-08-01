@@ -23,6 +23,10 @@ review, the falsifiable systems claim, the Kimi/Inkling/autoresearch signals,
 and the execution order from the live 9B gate to external evaluation and
 public-launch readiness.
 
+`docs/RESEARCH_LAUNCH_UPDATE_2026-08-01.md` refreshes the external bar with
+TUA-Bench, OSWorld 2.0, OpenComputer, current verifier-grounded research,
+Inkling/Tinker, Kimi K3, and the current claim-safe launch consequences.
+
 `docs/SCALE_CONTROL_NOTE_2026-07-27.md` records the interim same-task-hash
 7B-versus-9B comparison and the parameter-scaling caveats; it is evidence for
 the ablation design, not a final model leaderboard result.
@@ -141,7 +145,8 @@ model claim.
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
   the source suite passed at artifact creation; the current source suite is
-  82 tests. It records the 0.1.8 wheel and source-distribution hashes in
+  82 tests at artifact creation; the current source suite is 83 tests. It
+  records the 0.1.8 wheel and source-distribution hashes in
   `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 
 See `PRODUCT.md` and `docs/PRODUCT_LAUNCH_PLAN.md` for the developer-preview

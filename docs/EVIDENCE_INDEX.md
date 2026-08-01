@@ -23,6 +23,10 @@ review, the falsifiable systems claim, the Kimi/Inkling/autoresearch signals,
 and the execution order from the live 9B gate to external evaluation and
 public-launch readiness.
 
+`docs/RESEARCH_LAUNCH_UPDATE_2026-08-01.md` refreshes the external bar with
+TUA-Bench, OSWorld 2.0, OpenComputer, current verifier-grounded research,
+Inkling/Tinker, Kimi K3, and the current claim-safe launch consequences.
+
 `docs/SCALE_CONTROL_NOTE_2026-07-27.md` records the interim same-task-hash
 7B-versus-9B comparison and the parameter-scaling caveats; it is evidence for
 the ablation design, not a final model leaderboard result.

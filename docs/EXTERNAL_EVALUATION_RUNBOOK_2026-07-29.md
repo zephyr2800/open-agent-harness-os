@@ -87,6 +87,71 @@ One repaired task is an ablation, not an AgentDojo average. The bridge must
 not silently translate a native tool schema into Action IR and then claim the
 native model score for the translated interface.
 
+## τ³-bench / Tau2 native text track
+
+The first pinned checkout is the official
+[τ³-bench repository](https://github.com/sierra-research/tau2-bench) at
+commit `363133ada1936491fb5bcec33cd62c3518a99f65` (package version `1.0.1`,
+MIT license, Python `>=3.12,<3.14`). It supersedes the earlier τ-bench setup:
+use the default `base` task split, preserve the native τ³ reward and `pass^k`,
+and run all text domains (`retail`, `airline`, `telecom`, and
+`banking_knowledge`) with four trials before treating a result as submission
+quality. The official repository labels an altered control loop as a custom
+submission, so every harness-assisted run must be reported as custom rather
+than as a standard model result.
+
+Use an isolated environment and a pinned user simulator. The local adapter
+must first pass a one-task smoke on the completed checkpoint; run one request
+at a time because the local 9B endpoint is single-GPU. Do not spend an
+external user-simulator API budget without an explicitly configured provider
+and key.
+
+```powershell
+# In the pinned τ³-bench checkout after its own isolated environment is ready.
+# The user simulator is deliberately explicit and must be recorded unchanged
+# across domains and trials.
+tau2 run `
+  --domain retail `
+  --task-split-name base `
+  --agent llm_agent `
+  --agent-llm openai/local-action-policy `
+  --agent-llm-args '{"temperature":0,"api_base":"http://127.0.0.1:8089/v1","api_key":"local"}' `
+  --user-llm <pinned-user-simulator> `
+  --user-llm-args '<pinned-user-simulator-arguments>' `
+  --num-trials 4 `
+  --max-concurrency 1 `
+  --save-to open-agent-harness-os-9b-retail-model-only
+```
+
+Repeat the same command for `airline` and `telecom`. For
+`banking_knowledge`, additionally record the chosen retrieval configuration
+(start with the offline `bm25` variant); do not silently use an embedding or
+reranking provider. A harness ablation changes only the explicitly stated
+control-plane condition, not the task split, model checkpoint, user simulator,
+or generation budget.
+
+After each complete domain run, convert the native artifact without inventing
+harness metrics:
+
+```powershell
+python -m experiments.tau2_export `
+  --results <tau2-results-json-or-directory> `
+  --domain retail `
+  --suite-version 1.0.1 `
+  --output work\external\tau3-retail-export.json
+```
+
+The export preserves τ³'s native reward and `pass^k`, fingerprints the complete
+JSON result layout, and uses `--domain` only as an assertion against the native
+`info.environment_info.domain_name`. It rejects a duplicate or missing
+task/trial pair, infrastructure error, or missing native reward rather than
+exporting an incomplete submission. It deliberately leaves Action IR protocol
+validity, independent replay, false completion, and unsafe-action rates
+unobserved: the scorecard writes those rates as `null` when coverage is below
+1.0, never as a measured zero. Pass the export itself to
+`experiments.scorecard` as the native report only after the external run is
+complete.
+
 ## TUA-Bench track
 
 Use the [official TUA-Bench site and code](https://tuabench.ai/) with its

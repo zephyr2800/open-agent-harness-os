@@ -49,6 +49,14 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual(gate["evidence"], "docs/PROVENANCE_REVIEW.md")
         self.assertTrue((ROOT / "docs" / "PROVENANCE_REVIEW.md").is_file())
 
+    def test_readiness_uses_smoke_evidence_for_current_package_version(self) -> None:
+        report = build_readiness(ROOT)
+        expected_wheel = f"open_agent_harness_os-{report['package_version']}-py3-none-any.whl"
+        gate = report["gates"]["clean_wheel_smoke"]
+        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v3.json"))
+        self.assertIn(expected_wheel, gate["detail"])
+        self.assertEqual(gate["status"], "passed")
+
     def test_factorial_covers_ten_model_harness_cells(self) -> None:
         report = run_factorial(ROOT / "benchmarks" / "fixtures" / "task-spec-v0.json")
         self.assertEqual(len(report["cells"]), 10)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -30,14 +31,44 @@ def _artifact(path: Path) -> dict[str, Any]:
     return {"path": str(path), "exists": path.exists(), "size_bytes": path.stat().st_size if path.exists() else 0, "sha256": digest}
 
 
+def _package_version(root: Path) -> str | None:
+    """Read the package version without requiring a TOML dependency."""
+    try:
+        text = (root / "pyproject.toml").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = re.search(r"(?m)^version\s*=\s*[\"']([^\"']+)[\"']\s*$", text)
+    return match.group(1) if match else None
+
+
+def _current_wheel_smoke(results: Path, package_version: str | None) -> tuple[Path, dict[str, Any] | None, str | None]:
+    """Select smoke evidence only when it names the current package wheel."""
+    expected_wheel = (
+        f"open_agent_harness_os-{package_version}-py3-none-any.whl"
+        if package_version
+        else None
+    )
+    candidates: list[tuple[Path, dict[str, Any]]] = []
+    for path in sorted(results.glob("clean-wheel-smoke-*.json")):
+        report = _load(path)
+        if report is not None and report.get("wheel") == expected_wheel:
+            candidates.append((path, report))
+    if candidates:
+        path, report = candidates[-1]
+        return path, report, expected_wheel
+    missing = results / f"clean-wheel-smoke-current-{package_version or 'unknown'}.json"
+    return missing, None, expected_wheel
+
+
 def build_readiness(root: Path) -> dict[str, Any]:
     results = root / "experiments" / "results"
-    preflight_path = results / "launch-preflight-v4.json"
+    package_version = _package_version(root)
+    preflight_path = results / "launch-preflight-v5.json"
     matrix_path = results / "research-project2-qwopus35-9b-promotion-greedy-v1.json"
     decision_path = results / "research-project2-qwopus35-9b-promotion-decision-v1.json"
     external_path = results / "research-project2-qwopus35-9b-external-bar-lite-v1.json"
     rl_gate_path = results / "verified-rl-gate-v2.json"
-    wheel_smoke_path = results / "clean-wheel-smoke-v2.json"
+    wheel_smoke_path, wheel_smoke, expected_wheel = _current_wheel_smoke(results, package_version)
     preflight = _load(preflight_path)
     decision = _load(decision_path)
     rl_gate = _load(rl_gate_path)
@@ -45,6 +76,7 @@ def build_readiness(root: Path) -> dict[str, Any]:
     promotion_passed = bool(decision and decision.get("decision") == "promote" and decision.get("passed"))
     matrix_complete = matrix_path.exists()
     external_complete = external_path.exists()
+    wheel_smoke_passed = bool(wheel_smoke and wheel_smoke.get("passed"))
 
     gates = {
         "local_developer_preview": {
@@ -73,9 +105,13 @@ def build_readiness(root: Path) -> dict[str, Any]:
             "detail": "frozen integrity and diagnostics passed; capability promotion remains separate" if bool(rl_gate and rl_gate.get("passed")) else "RL waits for a complete, replay-valid, zero-unsafe frozen matrix and diagnostics",
         },
         "clean_wheel_smoke": {
-            "status": "passed" if bool(_load(wheel_smoke_path) and _load(wheel_smoke_path).get("passed")) else "pending",
+            "status": "passed" if wheel_smoke_passed else "pending",
             "evidence": str(wheel_smoke_path),
-            "detail": "fresh-target wheel smoke passed" if bool(_load(wheel_smoke_path) and _load(wheel_smoke_path).get("passed")) else "fresh-target wheel smoke has not passed",
+            "detail": (
+                f"fresh-target wheel smoke passed for {expected_wheel}"
+                if wheel_smoke_passed
+                else f"fresh-target wheel smoke for {expected_wheel or 'the current package'} has not passed"
+            ),
         },
         "full_external_suite": {
             "status": "not_run",
@@ -108,6 +144,7 @@ def build_readiness(root: Path) -> dict[str, Any]:
         "schema": "release-readiness/v1",
         "scope": "paired-local-action-model-and-open-agent-harness-os",
         "generated_from": str(root),
+        "package_version": package_version,
         "status": {
             "developer_preview": "ready" if preflight_passed else "not_ready",
             "research": research_status,

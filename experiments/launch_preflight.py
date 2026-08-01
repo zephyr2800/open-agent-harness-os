@@ -33,7 +33,7 @@ from tools.memory_workspace import make_memory_registry
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_WHEEL = ROOT / "work" / "package-dist" / "open_agent_harness_os-0.1.7-py3-none-any.whl"
+DEFAULT_WHEEL = ROOT / "work" / "package-dist" / "open_agent_harness_os-0.1.8-py3-none-any.whl"
 SOURCE_CHECKOUT = (ROOT / "pyproject.toml").is_file()
 REQUIRED_DOCS = (
     "README.md",
@@ -622,7 +622,7 @@ def run(*, wheel: Path = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", default=str(ROOT / "experiments" / "results" / "launch-preflight-v4.json"))
+    parser.add_argument("--output", default=str(ROOT / "experiments" / "results" / "launch-preflight-v5.json"))
     parser.add_argument("--wheel", default=str(DEFAULT_WHEEL))
     parser.add_argument("--with-tests", action="store_true", help="also run the full source test suite")
     args = parser.parse_args()

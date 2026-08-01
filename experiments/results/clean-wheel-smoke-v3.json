@@ -1,0 +1,18 @@
+{
+  "demo_returncode": 0,
+  "demo_verified_success": true,
+  "has_license_file": true,
+  "imports_returncode": 0,
+  "install_returncode": 0,
+  "metadata_license": [
+    "License: Apache-2.0"
+  ],
+  "passed": true,
+  "schema": "clean-wheel-smoke/v1",
+  "stderr_tail": "",
+  "target": "isolated-target",
+  "target_created_by_runner": true,
+  "wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+  "wheel_bytes": 121207,
+  "wheel_sha256": "c6995127e0e6da0f6e4f112b440b2c5b21be7aff625b180d28e2289d597cd2ff"
+}

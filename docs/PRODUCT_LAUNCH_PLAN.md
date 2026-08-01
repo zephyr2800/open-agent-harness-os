@@ -83,7 +83,7 @@ The consolidated source-checkout preflight is recorded at
 launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
 isolation, tool-by-tool security metadata auditing, the external evaluation
 note and fixture. The current Project 2 source suite has 82 tests; the
-recorded v5 preflight artifact contains the current 82-test subcheck. The
+recorded v5 preflight artifact contains the current 83-test subcheck. The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
@@ -111,7 +111,7 @@ without state change.
 
 ## 2026-07-29 launch-candidate update
 
-The public branch now has 82/82 harness tests, 47/47 companion tests, and a
+The public branch now has 83/83 harness tests, 47/47 companion tests, and a
 15-check launch preflight. The preflight runs the companion suite from its own
 package root so same-name modules from the two projects cannot silently
 replace one another. It also validates the extracted wheel install and checks

@@ -45,7 +45,7 @@ audit and hash for that public-track boundary; the wheel contains no Qwopus
 weights, model binaries, or training fixtures.
 
 `docs/RESEARCH_REPORT.md` and `docs/RESEARCH_MATRIX_9B_2026-07-29.md` record the
-completed 9B frozen-matrix result and explicitly separate it from promotion,
+completed historical 9B frozen-matrix result and explicitly separate it from promotion,
 external-benchmark, RL, and generalized-capability claims. The committed
 sanitized result is
 `experiments/results/research-project2-qwopus35-9b-promotion-summary-v1.json`.
@@ -99,7 +99,7 @@ $py = 'python'
 & $py -m compileall -q .
 ```
 
-Current result: 69 Project 2 tests pass. The latest delta includes the
+Current result: 83 Project 2 tests pass. The latest delta includes the
 external-adapter and evidence/replay regressions.
 
 ## Independent research fixture
@@ -115,7 +115,7 @@ and fixture-only H3/H4 interaction `+0.090909`.
 ## Real-model evidence
 
 - `experiments/results/research-project2-qwopus35-9b-promotion-summary-v1.json`:
-  sanitized aggregate of the completed 9B frozen matrix: 483/552 verified,
+  public sanitized aggregate of the completed historical 9B frozen matrix: 483/552 verified,
   zero unsafe attempts, and rejected promotion.
 - `docs/QUANTIZED_SERVING_SMOKE_2026-07-29.md`: one-request RTX 5090
   4-bit-serving diagnostic with measured memory and timing.
@@ -361,7 +361,7 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 82/82 after evaluator hardening, dense-reliability,
+- The current project test suite is 83/83 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,

@@ -141,7 +141,7 @@ model claim.
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
   the source suite passed at artifact creation; the current source suite is
-  80 tests. It records the 0.1.6 wheel and source-distribution hashes in
+  81 tests. It records the 0.1.6 wheel and source-distribution hashes in
   `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 
 See `PRODUCT.md` and `docs/PRODUCT_LAUNCH_PLAN.md` for the developer-preview
@@ -361,7 +361,7 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 80/80 after evaluator hardening, dense-reliability,
+- The current project test suite is 81/81 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist/open_agent_harness_os-0.1.6-py3-none-any.whl`,

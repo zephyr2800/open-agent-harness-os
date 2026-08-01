@@ -81,8 +81,9 @@ The harder 32-task v2 diagnostic is frozen at:
 SHA-256:
 `e6c2d7a34fc4317ed116ab882df1f9c6cd363aa60e9f7067329334b9491d785e`
 
-Both diagnostics use seeds `0,1,2` and `max-new-tokens=256`. v2 additionally
-records false completions, unverified actions, unknown actions, premature
+Both diagnostics use greedy replicas (`do_sample=false`) at seeds `0,1,2` and
+`max-new-tokens=256`; these seeds are not stochastic decoding samples. v2
+additionally records false completions, unverified actions, unknown actions, premature
 finish rejections, and abstentions. Neither diagnostic is a native
 TUA-Bench, OSWorld 2.0, or AgentDojo leaderboard result.
 

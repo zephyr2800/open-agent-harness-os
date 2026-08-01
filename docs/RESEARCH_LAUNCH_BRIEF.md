@@ -168,7 +168,8 @@ before these are closed.
 
 A checkpoint can replace v6 only if it has:
 
-1. hidden v4 success plus three sampled decoding seeds;
+1. hidden v4 success plus three genuinely stochastic decoding seeds (or
+   independently trained replicas, explicitly labeled);
 2. v2 evidence-grounded result checks;
 3. family-level industry proxy scores and zero unsafe attempts;
 4. 100% independent trace validity and runtime/replay agreement;

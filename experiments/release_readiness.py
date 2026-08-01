@@ -65,16 +65,25 @@ def build_readiness(root: Path) -> dict[str, Any]:
     package_version = _package_version(root)
     preflight_path = results / "launch-preflight-v5.json"
     matrix_path = results / "research-project2-qwopus35-9b-promotion-greedy-v1.json"
+    matrix_summary_path = results / "research-project2-qwopus35-9b-promotion-summary-v1.json"
     decision_path = results / "research-project2-qwopus35-9b-promotion-decision-v1.json"
     external_path = results / "research-project2-qwopus35-9b-external-bar-lite-v1.json"
     rl_gate_path = results / "verified-rl-gate-v2.json"
     wheel_smoke_path, wheel_smoke, expected_wheel = _current_wheel_smoke(results, package_version)
     preflight = _load(preflight_path)
+    matrix_summary = _load(matrix_summary_path)
     decision = _load(decision_path)
     rl_gate = _load(rl_gate_path)
     preflight_passed = bool(preflight and preflight.get("passed"))
     promotion_passed = bool(decision and decision.get("decision") == "promote" and decision.get("passed"))
     matrix_complete = matrix_path.exists()
+    summary_aggregate = matrix_summary.get("aggregate", {}) if matrix_summary else {}
+    matrix_summary_complete = bool(
+        matrix_summary
+        and summary_aggregate.get("task_rows") == 552
+        and summary_aggregate.get("runs") == 9
+        and summary_aggregate.get("promotion_decision") in {"promote", "reject"}
+    )
     external_complete = external_path.exists()
     wheel_smoke_passed = bool(wheel_smoke and wheel_smoke.get("passed"))
 
@@ -85,14 +94,32 @@ def build_readiness(root: Path) -> dict[str, Any]:
             "detail": "preflight passed" if preflight_passed else "preflight missing or failed",
         },
         "9b_frozen_matrix": {
-            "status": "complete" if matrix_complete else "pending",
-            "evidence": str(matrix_path),
-            "detail": "matrix artifact exists" if matrix_complete else "long-running matrix has not completed",
+            "status": "complete" if matrix_complete else ("context_only" if matrix_summary_complete else "pending"),
+            "evidence": str(matrix_path if matrix_complete else matrix_summary_path),
+            "detail": (
+                "private raw matrix artifact exists"
+                if matrix_complete
+                else (
+                    "private raw matrix is omitted; public sanitized summary records the historical 9B matrix"
+                    if matrix_summary_complete
+                    else "long-running matrix has not completed"
+                )
+            ),
         },
         "9b_promotion_gate": {
-            "status": "passed" if promotion_passed else ("pending" if not decision else "failed"),
-            "evidence": str(decision_path),
-            "detail": decision.get("reason") if decision else "decision artifact not available",
+            "status": "passed" if promotion_passed else (
+                "failed" if decision or summary_aggregate.get("promotion_decision") == "reject" else "pending"
+            ),
+            "evidence": str(decision_path if decision else matrix_summary_path),
+            "detail": (
+                decision.get("reason")
+                if decision
+                else (
+                    "public sanitized summary records promotion_decision=reject; raw decision artifact is omitted"
+                    if summary_aggregate.get("promotion_decision") == "reject"
+                    else "decision artifact not available"
+                )
+            ),
         },
         "external_bar_lite": {
             "status": "complete" if external_complete else "pending",
@@ -138,6 +165,8 @@ def build_readiness(root: Path) -> dict[str, Any]:
         research_status = "candidate_for_external_review"
     elif matrix_complete:
         research_status = "matrix_complete_external_review_pending"
+    elif matrix_summary_complete:
+        research_status = "historical_matrix_context_external_review_pending"
     else:
         research_status = "evaluation_pending"
     return {
@@ -154,6 +183,7 @@ def build_readiness(root: Path) -> dict[str, Any]:
         "artifacts": {
             "preflight": _artifact(preflight_path),
             "matrix": _artifact(matrix_path),
+            "matrix_summary": _artifact(matrix_summary_path),
             "promotion_decision": _artifact(decision_path),
             "external_bar_lite": _artifact(external_path),
             "research_positioning": _artifact(root / "docs" / "RESEARCH_POSITIONING_REFRESH_2026-07-26.md"),
@@ -175,7 +205,11 @@ def build_readiness(root: Path) -> dict[str, Any]:
             "The product is production-ready or safe against all possible tools/content.",
         ],
         "next_actions": [
-            "Complete and independently audit the 9B frozen matrix.",
+            (
+                "Complete and independently audit any new 9B rerun; the public sanitized summary is historical context."
+                if matrix_summary_complete and not matrix_complete
+                else "Complete and independently audit the 9B frozen matrix."
+            ),
             "Run and summarize the disjoint external-bar-lite diagnostic.",
             "Run verifier-backed RL only after frozen integrity/diagnostic evidence passes, with a held-out control and decomposed rewards; keep capability promotion separate.",
             "Close external-suite, usability, identity/operations, security, and licensing gates before public launch.",

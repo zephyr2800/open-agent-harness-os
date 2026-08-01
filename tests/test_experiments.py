@@ -57,6 +57,16 @@ class ExperimentTests(unittest.TestCase):
         self.assertIn(expected_wheel, gate["detail"])
         self.assertEqual(gate["status"], "passed")
 
+    def test_readiness_labels_private_matrix_and_public_summary_separately(self) -> None:
+        report = build_readiness(ROOT)
+        matrix_gate = report["gates"]["9b_frozen_matrix"]
+        promotion_gate = report["gates"]["9b_promotion_gate"]
+        self.assertEqual(matrix_gate["status"], "context_only")
+        self.assertTrue(matrix_gate["evidence"].endswith("promotion-summary-v1.json"))
+        self.assertEqual(promotion_gate["status"], "failed")
+        self.assertIn("promotion_decision=reject", promotion_gate["detail"])
+        self.assertEqual(report["status"]["research"], "historical_matrix_context_external_review_pending")
+
     def test_factorial_covers_ten_model_harness_cells(self) -> None:
         report = run_factorial(ROOT / "benchmarks" / "fixtures" / "task-spec-v0.json")
         self.assertEqual(len(report["cells"]), 10)

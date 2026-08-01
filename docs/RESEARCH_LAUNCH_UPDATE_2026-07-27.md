@@ -15,7 +15,9 @@ with the remaining seed-2 slices pending. The observed policy failures
 are repeated verified actions followed by step-budget exhaustion, while the
 research-v4 failures are exact-payload contamination and finish-evidence
 failures. No promotion, RL, or public-launch claim is valid until all three
-task slices and all three seeds are complete and independently audited.
+task slices and all three greedy replicas are complete and independently
+audited; the separate stochastic-decoding audit required by the breakthrough
+protocol is also still outstanding.
 The observed industry-proxy-v1 policy-sequence tasks are also materially
 slower than the other families: completed seed-0 examples took approximately
 851–1,343 seconds each, commonly ending in step-budget exhaustion. This is a

@@ -57,8 +57,9 @@ started. It is a positioning and protocol update, not a new capability claim.
    correct next causal test because the observed failures are repeated actions,
    premature completion, and missing evidence—not ordinary tool selection.
 3. A breakthrough claim requires a disjoint author-held-out suite, three
-   decoding seeds, a matched-budget search control, independent replay, zero
-   unsafe attempts, and at least one native external-suite result.
+   genuinely stochastic decoding seeds (not greedy replicas), a matched-budget
+   search control, independent replay, zero unsafe attempts, and at least one
+   native external-suite result.
 4. The public product should remain a local developer preview until identity,
    operations, usability, provenance, and native external evaluation are
    complete. The public repository must not imply that local 100% slices are

@@ -195,7 +195,7 @@
         "wheel_count": 1,
         "wheel_returncode": 0,
         "wheel_stderr_tail": "\n[notice] A new release of pip is available: 26.0.1 -> 26.2\n[notice] To update, run: C:\\Users\\steve\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe -m pip install --upgrade pip\n",
-        "wheel_stdout_tail": "Processing .\\.\n  Installing build dependencies: started\n  Installing build dependencies: finished with status 'done'\n  Getting requirements to build wheel: started\n  Getting requirements to build wheel: finished with status 'done'\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: open-agent-harness-os\n  Building wheel for open-agent-harness-os (pyproject.toml): started\n  Building wheel for open-agent-harness-os (pyproject.toml): finished with status 'done'\n  Created wheel for open-agent-harness-os: filename=open_agent_harness_os-0.1.8-py3-none-any.whl size=138982 sha256=ccd8b95a09dfcdfdc69c31fad091d3fd427d5eb9988d66369dcfa41499c2b382\n  Stored in directory: C:\\Users\\steve\\AppData\\Local\\Temp\\pip-ephem-wheel-cache-ee0uwj7u\\wheels\\a6\\a8\\4d\\e6348f0b2106be9187eb52c7c35d64b4989d5d8e2ce24388e9\nSuccessfully built open-agent-harness-os\n"
+        "wheel_stdout_tail": "Processing .\\.\n  Installing build dependencies: started\n  Installing build dependencies: finished with status 'done'\n  Getting requirements to build wheel: started\n  Getting requirements to build wheel: finished with status 'done'\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: open-agent-harness-os\n  Building wheel for open-agent-harness-os (pyproject.toml): started\n  Building wheel for open-agent-harness-os (pyproject.toml): finished with status 'done'\n  Created wheel for open-agent-harness-os: filename=open_agent_harness_os-0.1.8-py3-none-any.whl size=143400 sha256=c1cd68b289c488f2378887a4cf0b0a646af28ecc362749283b2eda11cb49d89f\n  Stored in directory: C:\\Users\\steve\\AppData\\Local\\Temp\\pip-ephem-wheel-cache-aamelcpq\\wheels\\09\\f1\\80\\2f11b338d281e5fdc2692367aa84b6dc5bd2340a0fca5fc2d7\nSuccessfully built open-agent-harness-os\n"
       },
       "id": "wheel_build",
       "passed": true
@@ -204,15 +204,15 @@
       "detail": {
         "bytecode_entries": 0,
         "bytecode_free": true,
-        "bytes": 138982,
-        "entry_count": 74,
+        "bytes": 143400,
+        "entry_count": 75,
         "exists": true,
         "path": "open_agent_harness_os-0.1.8-py3-none-any.whl",
-        "record_entries": 74,
+        "record_entries": 75,
         "record_hashes_valid": true,
         "required_modules_present": true,
         "safe_paths": true,
-        "sha256": "ccd8b95a09dfcdfdc69c31fad091d3fd427d5eb9988d66369dcfa41499c2b382",
+        "sha256": "c1cd68b289c488f2378887a4cf0b0a646af28ecc362749283b2eda11cb49d89f",
         "wheel_metadata_present": true,
         "zipfile": true
       },
@@ -227,21 +227,21 @@
         "imports_returncode": 0,
         "install_returncode": 0,
         "path": "open_agent_harness_os-0.1.8-py3-none-any.whl",
-        "reference_wheel_manifest_sha256": "5362689f614cbf173e21ff8a4e8c158665e39997465c16ea77c8c2783d7c33b5",
-        "reference_wheel_sha256": "ccd8b95a09dfcdfdc69c31fad091d3fd427d5eb9988d66369dcfa41499c2b382",
-        "sha256": "ccd8b95a09dfcdfdc69c31fad091d3fd427d5eb9988d66369dcfa41499c2b382",
+        "reference_wheel_manifest_sha256": "4c2522a8834b0765d64785ca2cb34aceb8db2e0691d44b71e12c4123dff223f1",
+        "reference_wheel_sha256": "c1cd68b289c488f2378887a4cf0b0a646af28ecc362749283b2eda11cb49d89f",
+        "sha256": "c1cd68b289c488f2378887a4cf0b0a646af28ecc362749283b2eda11cb49d89f",
         "source_matches_wheel": true,
-        "source_package_sha256": "22395cbc393edbddf5cdf2e59f12955731b6d5f906d14fe8ccb56e3fa5385b15",
+        "source_package_sha256": "7eb9f40f7b97b32abc96d4702c8493a161e191c55f59fe0960fbbbe1c10a127a",
         "wheel_manifest_matches_reference": true,
-        "wheel_manifest_sha256": "5362689f614cbf173e21ff8a4e8c158665e39997465c16ea77c8c2783d7c33b5",
-        "wheel_package_sha256": "22395cbc393edbddf5cdf2e59f12955731b6d5f906d14fe8ccb56e3fa5385b15"
+        "wheel_manifest_sha256": "4c2522a8834b0765d64785ca2cb34aceb8db2e0691d44b71e12c4123dff223f1",
+        "wheel_package_sha256": "7eb9f40f7b97b32abc96d4702c8493a161e191c55f59fe0960fbbbe1c10a127a"
       },
       "id": "wheel_install_smoke",
       "passed": true
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 47 tests in 0.006s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 47 tests in 0.008s\n\nOK",
         "returncode": 0
       },
       "id": "companion_unit_tests",
@@ -280,14 +280,14 @@
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 110 tests in 2.226s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 116 tests in 2.158s\n\nOK",
         "returncode": 0
       },
       "id": "unit_tests",
       "passed": true
     }
   ],
-  "created_at": "2026-08-01T22:49:58.306939+00:00",
+  "created_at": "2026-08-01T23:23:35.297283+00:00",
   "limitations": [
     "This preflight does not establish public multi-user, operational, or external-benchmark readiness.",
     "The MCP check is in-process; the separate stdio subprocess artifact remains the protocol evidence."
@@ -295,5 +295,5 @@
   "passed": true,
   "schema": "launch-preflight/v1",
   "scope": "local-developer-preview",
-  "source_package_sha256": "22395cbc393edbddf5cdf2e59f12955731b6d5f906d14fe8ccb56e3fa5385b15"
+  "source_package_sha256": "7eb9f40f7b97b32abc96d4702c8493a161e191c55f59fe0960fbbbe1c10a127a"
 }

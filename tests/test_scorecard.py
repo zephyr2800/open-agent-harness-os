@@ -31,6 +31,9 @@ class ScorecardTests(unittest.TestCase):
         self.assertEqual(result["task_spec_sha256"], "abc")
         self.assertEqual(result["execution_budget"]["max_steps"], 6)
         self.assertEqual(result["runtime"]["device"], "cpu")
+        self.assertEqual(result["metric_coverage"]["protocol_valid"], 1.0)
+        self.assertEqual(result["metric_coverage"]["unsafe_attempt"], 0.0)
+        self.assertIsNone(result["unsafe_attempt_rate"])
 
     def test_independent_trace_fields_are_promoted_from_nested_audit(self) -> None:
         result = build_scorecard(
@@ -42,6 +45,8 @@ class ScorecardTests(unittest.TestCase):
                 "independent": {"trace_valid": True, "matches_runtime": True},
                 "adversarial": True,
                 "abstained": True,
+                "unsafe_attempt": False,
+                "false_completion": False,
             }],
             suite="fixture-v2",
             suite_kind="local_fixture",
@@ -55,9 +60,9 @@ class ScorecardTests(unittest.TestCase):
     def test_safe_abstain_excludes_failed_or_unsafe_abstentions(self) -> None:
         result = build_scorecard(
             [
-                {"task_id": "safe", "family": "security", "verified_success": True, "adversarial": True, "abstained": True},
-                {"task_id": "unsafe", "family": "security", "verified_success": True, "adversarial": True, "abstained": True, "unsafe_attempt": True},
-                {"task_id": "failed", "family": "security", "verified_success": False, "adversarial": True, "abstained": True},
+                {"task_id": "safe", "family": "security", "verified_success": True, "adversarial": True, "abstained": True, "unsafe_attempt": False, "false_completion": False},
+                {"task_id": "unsafe", "family": "security", "verified_success": True, "adversarial": True, "abstained": True, "unsafe_attempt": True, "false_completion": False},
+                {"task_id": "failed", "family": "security", "verified_success": False, "adversarial": True, "abstained": True, "unsafe_attempt": False, "false_completion": False},
             ],
             suite="fixture-safety-v1",
             suite_kind="local_fixture",
@@ -94,6 +99,22 @@ class ScorecardTests(unittest.TestCase):
         )
         self.assertEqual(result["claim_boundary"], "native external-suite result; report the suite's native metric")
         self.assertEqual(result["native_metric_value"], 0.75)
+        self.assertEqual(result["metric_coverage"]["unsafe_attempt"], 0.0)
+        self.assertIsNone(result["unsafe_attempt_rate"])
+
+    def test_partial_observation_does_not_publish_a_zero_rate(self) -> None:
+        result = build_scorecard(
+            [
+                {"task_id": "observed", "verified_success": True, "unsafe_attempt": False},
+                {"task_id": "unobserved", "verified_success": True},
+            ],
+            suite="fixture-coverage-v1",
+            suite_kind="local_fixture",
+            model="m",
+            harness="h",
+        )
+        self.assertEqual(result["metric_coverage"]["unsafe_attempt"], 0.5)
+        self.assertIsNone(result["unsafe_attempt_rate"])
 
     def test_external_scorecard_rejects_empty_or_incomplete_provenance(self) -> None:
         kwargs = {
@@ -113,6 +134,8 @@ class ScorecardTests(unittest.TestCase):
             build_scorecard([], **kwargs)
         with self.assertRaisesRegex(ValueError, "native_metric_value"):
             build_scorecard([{"task_id": "t", "verified_success": True}], **{**kwargs, "native_metric_value": None})
+        with self.assertRaisesRegex(ValueError, "incomplete native run"):
+            build_scorecard([{"task_id": "t", "verified_success": True}], **{**kwargs, "native_run_complete": False})
         with self.assertRaisesRegex(ValueError, "does not match"):
             build_scorecard([{"task_id": "t", "verified_success": True}], **kwargs)
 

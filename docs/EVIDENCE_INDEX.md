@@ -144,7 +144,7 @@ model claim.
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 110-test source suite passed at artifact creation. It builds from a
+  the 116-test source suite passed at artifact creation. It builds from a
   clean source copy, binds the complete wheel archive, modules, and console
   scripts to a fresh source-derived reference, and rejects Python bytecode
   caches. It
@@ -307,6 +307,10 @@ available.
 - `docs/EXTERNAL_AGENTDOJO_RUN.md`: exploratory AgentDojo integration report;
   includes the pinned source commit, v5 baseline, v6 guard ablation, exact
   clean/injection outcomes, raw trace paths, and next promotion gate.
+- `experiments/tau2_export.py`: dependency-free τ³-bench result exporter. It
+  fingerprints the native report layout and preserves native reward/pass^k,
+  while making unobserved Action IR replay, safety, and protocol metrics
+  explicit rather than treating them as measured zeros.
 - `../work/external/agentdojo_adapter_server.py`: local OpenAI-compatible
   Action IR bridge; it retains raw model decisions and labels tool results as
   untrusted context, never verified harness evidence.
@@ -368,7 +372,7 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 110/110 after evaluator hardening, dense-reliability,
+- The current project test suite is 116/116 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,

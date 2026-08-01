@@ -1,6 +1,7 @@
 # Research ablation specification v2
 
-Status: preregistered design for the 9B branch; results are not yet available.
+Status: preregistered design for the 9B branch; no causal-cell result is
+available until the train/holdout isolation gate passes.
 
 ## Claim
 
@@ -25,9 +26,12 @@ is now a close comparison for verifier-backed state and progress checkpointing.
 | D | Action-IR QLoRA SFT | verifier/evidence/replay runtime | none | model × harness interaction |
 | E | Action-IR QLoRA SFT | verifier/evidence/replay runtime | frozen-evaluator remediation/RL | self-improvement effect |
 
-The current live matrix is the first gated evaluation of cell D in greedy
-decoding mode. Its seeds are deterministic reproducibility replicas, not
-stochastic samples. Cells A-C must be run on the same task specifications,
+The prior targeted 9B matrix is diagnostic only: a subsequent data-split audit
+found frozen-contract overlap in its targeted curriculum. Its score cannot be
+used as cell-D, held-out, or promotion evidence. The next cell-D candidate must
+record a passing train/holdout audit before evaluation. Its greedy seeds are
+deterministic reproducibility replicas, not stochastic samples. Cells A-C must
+be run on the same task specifications,
 prompt/tool contract, decoding mode, seed policy, and hardware before claiming
 a causal interaction. Cell E is eligible only after its reward audit and
 held-out before/after comparison pass.
@@ -38,6 +42,12 @@ held-out before/after comparison pass.
   industry-proxy-v2; greedy reproducibility replicas at seeds 0, 1, and 2,
   plus a separately reported `do_sample=true` stochastic audit at the same
   seeds.
+- Mandatory data-isolation gate: an auditable source manifest plus a passing
+  `experiments.data_split_audit` result against the six pinned fixture hashes
+  (three promotion slices, exact-payload holdout, and external-bar-lite v1/v2)
+  before any score may be described as held-out. The same manifest digest is
+  required by the matrix, promotion, and RL gates, and its training-data
+  fingerprints must match the merged checkpoint's copied training manifest.
 - Disjoint diagnostics: external-bar-lite and the exact-payload holdout.
 - Native reality check: pinned AgentDojo workspace cases, with clean and
   direct-injection cases reported separately.

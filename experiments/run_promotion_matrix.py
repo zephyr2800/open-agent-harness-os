@@ -21,6 +21,10 @@ from typing import Any, Callable
 
 from adapters.project1_transformers import Project1TransformersAdapter
 from benchmarks.tasks import load_tasks
+from experiments.data_split_audit import (
+    validate_checkpoint_training_binding,
+    validate_required_audit_manifest,
+)
 from runtime.orchestrator import Harness, HarnessConfig, TaskRequest
 from tools.memory_workspace import make_memory_registry
 from verify.independent import verify_trace
@@ -352,6 +356,11 @@ def main() -> int:
     parser.add_argument("--project1-root", required=True)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--train-holdout-audit",
+        required=True,
+        help="passing persisted audit covering every pinned fixture at its fixed hash",
+    )
     parser.add_argument("--task-spec", action="append", required=True)
     parser.add_argument("--seeds", default="0,1,2")
     parser.add_argument("--do-sample", action="store_true")
@@ -371,6 +380,16 @@ def main() -> int:
     task_specs = [Path(item) for item in args.task_spec]
     seeds = [int(item.strip()) for item in args.seeds.split(",") if item.strip()]
     output = Path(args.output)
+    audit_gate = validate_required_audit_manifest(Path(args.train_holdout_audit))
+    if not audit_gate["passed"]:
+        parser.error("--train-holdout-audit must be a clean audit of every pinned fixture at its fixed hash")
+    checkpoint_training_binding = validate_checkpoint_training_binding(checkpoint, audit_gate)
+    if not checkpoint_training_binding["passed"]:
+        parser.error("--checkpoint must carry a merge/training manifest bound to the audited training-data hashes")
+    task_spec_hashes = [
+        {"path": str(path), "sha256": _sha256(path)}
+        for path in task_specs
+    ]
     partial = output.with_name(output.name + ".partial.json")
     heartbeat_output = Path(args.heartbeat_output) if args.heartbeat_output else output.with_name(output.name + ".heartbeat.json")
     runs: list[dict[str, Any]] = []
@@ -387,6 +406,9 @@ def main() -> int:
                 and int(saved.get("max_new_tokens", 256)) == args.max_new_tokens
                 and int(saved.get("checkpoint_every_tasks", 5)) == args.checkpoint_every_tasks
                 and saved.get("quantization") == args.quantization
+                and saved.get("train_holdout_audit", {}).get("sha256") == audit_gate["sha256"]
+                and saved.get("checkpoint_training_binding") == checkpoint_training_binding
+                and saved.get("task_spec_hashes") == task_spec_hashes
             )
             if compatible:
                 runs = list(saved.get("runs", []))
@@ -415,6 +437,9 @@ def main() -> int:
             "max_new_tokens": args.max_new_tokens,
             "checkpoint_every_tasks": args.checkpoint_every_tasks,
             "quantization": args.quantization,
+            "train_holdout_audit": audit_gate,
+            "checkpoint_training_binding": checkpoint_training_binding,
+            "task_spec_hashes": task_spec_hashes,
             "heartbeat_output": str(heartbeat_output),
             "heartbeat_seconds": args.heartbeat_seconds,
             "completed_runs": sum(bool(item.get("complete", True)) for item in runs),
@@ -493,6 +518,9 @@ def main() -> int:
         "enable_repair": args.repair,
         "max_new_tokens": args.max_new_tokens,
         "checkpoint_every_tasks": args.checkpoint_every_tasks,
+        "train_holdout_audit": audit_gate,
+        "checkpoint_training_binding": checkpoint_training_binding,
+        "task_spec_hashes": task_spec_hashes,
         "runs": runs,
     }
     output.parent.mkdir(parents=True, exist_ok=True)

@@ -239,36 +239,28 @@ merged into a reproducible full checkpoint. The completed historical 9B frozen
 promotion matrix is recorded in
 `experiments/results/research-project2-qwopus35-9b-promotion-summary-v1.json`:
 483/552 independently verified, zero unsafe attempts, and promotion rejected.
-A separate targeted state/evidence matrix is still running; no new 9B score,
-promotion decision, or RL improvement claim should be made from that live run
-until its frozen evaluation and post-training ablations are complete.
+The targeted state/evidence matrix was stopped after a saved 441-row partial
+when its curriculum audit found frozen-contract leakage (216 overlaps). Its
+partial artifact remains diagnostic only; no new 9B score, promotion decision,
+or RL improvement claim may be made from it.
 The linked Qwopus model card,
 fine-tuning guide, and PDF motivate SFT engineering choices but do not by
 themselves establish an independently verified action-policy RL result.
 
-### Live 9B frozen-matrix checkpoint — 2026-07-27
+### Historical targeted 9B matrix — stopped 2026-08-01
 
-The resumable 9B promotion matrix is now running across the three frozen
-task slices (`research-v4`, `industry-proxy-v1`, and `industry-proxy-v2`) at
-seeds 0, 1, and 2. Seed 0 is complete: research-v4 is 116/120 verified,
-industry-proxy-v1 is 37/48, and industry-proxy-v2 is 8/16. Seed 1 research-v4
-and industry-proxy-v1 are complete at the same scores; seed 2 is in progress.
-The partial matrix and its refreshable summary report only the currently
-committed prefix, not a promotion result. The remaining seed-2 slices are
-pending.
+The targeted state/evidence run is no longer live. It was stopped at a saved
+441-row partial after the data-split audit found 216 overlaps between its
+training curriculum and frozen proxy contracts. The partial artifact is useful
+for failure taxonomy only; it is neither a complete matrix nor independent
+holdout evidence. A fresh clean-split candidate must pass the six-fixture
+manifest gate before a new matrix can be evaluated.
 
-The current independent audit covers every committed row and has shown perfect
-trace validity and runtime/replay agreement, zero protocol failures, zero
-unknown or unverified actions, and zero unsafe attempts. The observed
-negative rows are task failures, principally exact-payload contamination,
-finish-evidence failure, repeated verified actions, and step-budget
-exhaustion. These labels are diagnostic, not causal proof. A CUDA lifecycle
-fix was added to release the previous seed's model before loading the next;
-this prevents accidental CPU offload under `device_map="auto"` and preserves
-the frozen evaluation condition while improving reproducibility and runtime.
-No 9B promotion, external benchmark, RL improvement, or generalized
-capability claim is valid until all nine runs are complete and independently
-audited.
+The historical partial showed trace-valid, replay-consistent behavior on the
+completed rows, but that does not repair its contaminated training source. No
+9B promotion, external-benchmark, RL-improvement, or generalized-capability
+claim is valid until a new clean candidate completes the enforced audit,
+matrix, and independent replay gates.
 
 ### Product evidence update
 
@@ -278,7 +270,7 @@ contract and replay, local-only endpoint policy, bearer authentication,
 non-loopback TLS gating, high-risk denial, 12-way concurrent trace writes
 with restart recovery, token-principal trace isolation, validated wheel
 integrity plus extracted-wheel install smoke, documentation presence, and an
-earlier 59/59 source-test run. The current suite is 83/83 and trace
+earlier 59/59 source-test run. The current suite is 95/95 and trace
 publication is atomic. This supports a technically
 capable local preview; it does not close multi-user isolation,
 operational hardening, usability,

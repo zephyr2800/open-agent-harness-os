@@ -6,12 +6,12 @@ This checklist records the evidence attached to the current public repository sn
 
 ## Verified locally
 
-- Open Agent Harness OS unit and integration suite: 83/83 passing, including
+- Open Agent Harness OS unit and integration suite: 95/95 passing, including
   dense-reliability and claim-safe scorecard checks.
 - Local Action Model companion suite: 47/47 passing.
 - Launch preflight v5: 15/15 checks passing, including extracted-wheel install
-  smoke and the companion suite; the artifact records the current 83-test
-  source suite.
+  smoke and the companion suite; the historical artifact records an 83-test
+  source suite, while the current suite has 95 tests.
 - Wheel build: `open_agent_harness_os-0.1.8-py3-none-any.whl` (no Python
   bytecode caches; 72 archive entries).
 - Wheel SHA-256: `c6995127e0e6da0f6e4f112b440b2c5b21be7aff625b180d28e2289d597cd2ff`.

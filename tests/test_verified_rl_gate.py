@@ -1,8 +1,14 @@
 import json
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
 
+from experiments.data_split_audit import (
+    REQUIRED_FROZEN_FIXTURE_HASHES,
+    validate_checkpoint_training_binding,
+    validate_required_audit_manifest,
+)
 from experiments.verified_rl_gate import check_gate
 
 
@@ -21,10 +27,42 @@ def _matrix(path: Path, tasks: int) -> None:
     }), encoding="utf-8")
 
 
-def _decision(path: Path, *, promoted: bool) -> None:
+def _audit(path: Path) -> Path:
+    path.write_text(json.dumps({
+        "schema": "train-holdout-audit/v1",
+        "passed": True,
+        "overlap_count": 0,
+        "train": [{"path": "clean-train.jsonl", "sha256": "b" * 64, "rows": 1}],
+        "fixtures": [
+            {"path": f"C:/fixtures/{name}", "sha256": digest, "tasks": 1}
+            for name, digest in REQUIRED_FROZEN_FIXTURE_HASHES.items()
+        ],
+    }), encoding="utf-8")
+    return path
+
+
+def _checkpoint(path: Path, audit: Path) -> Path:
+    checkpoint = path / "checkpoint"
+    checkpoint.mkdir()
+    source = validate_required_audit_manifest(audit)["training_sources"][0]
+    training = {"schema": "lora-sft-run/v0", "training_data": source}
+    training_bytes = (json.dumps(training, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    (checkpoint / "training_manifest.json").write_bytes(training_bytes)
+    (checkpoint / "merge_manifest.json").write_text(json.dumps({
+        "schema": "merged-lora-checkpoint/v2",
+        "training_manifest": "training_manifest.json",
+        "training_manifest_sha256": hashlib.sha256(training_bytes).hexdigest(),
+        "training_data": [source],
+    }), encoding="utf-8")
+    (checkpoint / "model.safetensors").write_bytes(b"weights")
+    return checkpoint
+
+
+def _decision(path: Path, *, promoted: bool, audit: Path, checkpoint: Path) -> None:
     checks = {
         "run_complete": True,
         "all_task_rows_present": True,
+        "task_spec_hash_matches_pinned": True,
         "all_tasks_verified": promoted,
         "independent_replay_verified": promoted,
         "trace_valid": True,
@@ -47,7 +85,12 @@ def _decision(path: Path, *, promoted: bool) -> None:
             "no_duplicate_seeds": True,
             "no_unknown_task_specs": True,
             "all_frozen_runs_pass": promoted,
+            "required_train_holdout_audit": True,
+            "pinned_task_spec_hashes": True,
+            "checkpoint_training_binding": True,
         },
+        "train_holdout_audit": {**validate_required_audit_manifest(audit), "linked_to_matrix": True},
+        "checkpoint_training_binding": {**validate_checkpoint_training_binding(checkpoint, validate_required_audit_manifest(audit)), "linked_to_matrix": True},
         "slices": slices,
     }), encoding="utf-8")
 
@@ -57,20 +100,19 @@ class VerifiedRLGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             decision = root / "decision.json"
-            _decision(decision, promoted=True)
+            audit = _audit(root / "audit.json")
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=True, audit=audit, checkpoint=checkpoint)
             external_v1 = root / "external-v1.json"
             external_v2 = root / "external-v2.json"
             _matrix(external_v1, 20)
             _matrix(external_v2, 32)
-            checkpoint = root / "checkpoint"
-            checkpoint.mkdir()
-            (checkpoint / "merge_manifest.json").write_text("{}", encoding="utf-8")
-            (checkpoint / "model.safetensors").write_bytes(b"weights")
             report = check_gate(
                 decision_path=decision,
                 external_v1_path=external_v1,
                 external_v2_path=external_v2,
                 checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
             )
             self.assertTrue(report["passed"])
 
@@ -78,40 +120,86 @@ class VerifiedRLGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             decision = root / "decision.json"
-            _decision(decision, promoted=False)
+            audit = _audit(root / "audit.json")
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=False, audit=audit, checkpoint=checkpoint)
             external_v1 = root / "external-v1.json"
             external_v2 = root / "external-v2.json"
             _matrix(external_v1, 20)
             _matrix(external_v2, 32)
-            checkpoint = root / "checkpoint"
-            checkpoint.mkdir()
-            (checkpoint / "merge_manifest.json").write_text("{}", encoding="utf-8")
-            (checkpoint / "model.safetensors").write_bytes(b"weights")
             report = check_gate(
                 decision_path=decision,
                 external_v1_path=external_v1,
                 external_v2_path=external_v2,
                 checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
             )
             self.assertTrue(report["passed"])
             self.assertFalse(report["promotion"]["passed"])
             self.assertTrue(report["frozen_evidence"]["passed"])
 
+    def test_per_run_task_spec_hash_mismatch_blocks_research_rl(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            decision = root / "decision.json"
+            audit = _audit(root / "audit.json")
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=False, audit=audit, checkpoint=checkpoint)
+            payload = json.loads(decision.read_text(encoding="utf-8"))
+            payload["slices"]["research_v4"]["runs"][0]["checks"]["task_spec_hash_matches_pinned"] = False
+            decision.write_text(json.dumps(payload), encoding="utf-8")
+            external_v1 = root / "external-v1.json"
+            external_v2 = root / "external-v2.json"
+            _matrix(external_v1, 20)
+            _matrix(external_v2, 32)
+            report = check_gate(
+                decision_path=decision,
+                external_v1_path=external_v1,
+                external_v2_path=external_v2,
+                checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
+            )
+            self.assertFalse(report["passed"])
+            self.assertFalse(report["frozen_evidence"]["integrity_checks_passed"])
+
     def test_missing_diagnostic_blocks_gate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             decision = root / "decision.json"
-            _decision(decision, promoted=True)
+            audit = _audit(root / "audit.json")
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=True, audit=audit, checkpoint=checkpoint)
             external_v1 = root / "external-v1.json"
             _matrix(external_v1, 20)
-            checkpoint = root / "checkpoint"
-            checkpoint.mkdir()
-            (checkpoint / "merge_manifest.json").write_text("{}", encoding="utf-8")
-            (checkpoint / "model.safetensors").write_bytes(b"weights")
             report = check_gate(
                 decision_path=decision,
                 external_v1_path=external_v1,
                 external_v2_path=root / "missing.json",
                 checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
             )
             self.assertFalse(report["passed"])
+
+    def test_bad_or_unlinked_audit_blocks_research_rl(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audit = _audit(root / "audit.json")
+            decision = root / "decision.json"
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=False, audit=audit, checkpoint=checkpoint)
+            payload = json.loads(decision.read_text(encoding="utf-8"))
+            payload["train_holdout_audit"]["linked_to_matrix"] = False
+            decision.write_text(json.dumps(payload), encoding="utf-8")
+            external_v1 = root / "external-v1.json"
+            external_v2 = root / "external-v2.json"
+            _matrix(external_v1, 20)
+            _matrix(external_v2, 32)
+            report = check_gate(
+                decision_path=decision,
+                external_v1_path=external_v1,
+                external_v2_path=external_v2,
+                checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
+            )
+        self.assertFalse(report["passed"])
+        self.assertFalse(report["frozen_evidence"]["train_holdout_audit_linked"])

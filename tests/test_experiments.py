@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import io
+import sys
 import threading
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from unittest import mock
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from http.client import HTTPConnection
@@ -25,14 +29,183 @@ from app.service import run_action
 from app.cli import _load_auth_tokens, _optional_local_adapter, _server, _validate_bind_host, _validate_server_security
 from app.storage import TraceStore
 from experiments.verify_checkpoint_run import verify as verify_checkpoint_run
-from experiments.run_promotion_matrix import _run_report, _write_heartbeat
+from experiments.run_promotion_matrix import _run_report, _write_heartbeat, main as promotion_matrix_main
 from experiments.release_readiness import build_readiness
+from experiments.data_split_audit import (
+    REQUIRED_FROZEN_FIXTURE_HASHES,
+    audit,
+    main as audit_main,
+    validate_required_audit_manifest,
+)
 
 
 ROOT = Path(__file__).parent.parent
 
 
 class ExperimentTests(unittest.TestCase):
+    def test_train_holdout_audit_rejects_contract_overlap(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            train = root / "train.jsonl"
+            train.write_text(
+                json.dumps({"task_id": "training-retry", "input": {"goal": "retry frozen-job-17"}}) + "\n",
+                encoding="utf-8",
+            )
+            fixture = root / "fixture.json"
+            fixture.write_text(
+                json.dumps(
+                    {
+                        "tasks": [
+                            {
+                                "task_id": "holdout-retry-17",
+                                "prompt": "Recover frozen-job-17 before completing.",
+                                "expected_arguments": {"operation": "frozen-job-17", "attempt": 2},
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report = audit([train], [fixture])
+        self.assertFalse(report["passed"])
+        self.assertTrue(any(item["value"] == "frozen-job-17" for item in report["overlaps"]))
+
+    def test_train_holdout_audit_accepts_disjoint_contracts(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            train = root / "train.jsonl"
+            train.write_text(json.dumps({"task_id": "training-retry", "input": {"goal": "retry curriculum-job-19"}}) + "\n", encoding="utf-8")
+            fixture = root / "fixture.json"
+            fixture.write_text(
+                json.dumps(
+                    {
+                        "tasks": [
+                            {
+                                "task_id": "holdout-retry-17",
+                                "prompt": "Recover frozen-job-17 before completing.",
+                                "expected_arguments": {"operation": "frozen-job-17", "attempt": 2},
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report = audit([train], [fixture])
+        self.assertTrue(report["passed"])
+        self.assertEqual(report["overlap_count"], 0)
+
+    def test_train_holdout_audit_covers_contract_values_and_short_mapping_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            train = root / "train.jsonl"
+            train.write_text(json.dumps({
+                "task": "frozen-task-001",
+                "prompt": "prompt-contract-001",
+                "argument": "arg-001",
+                "action": "act-001",
+                "file": "a.cfg",
+                "file_content": "file-contract-001",
+                "api_key": "api-001",
+                "api_value": "api-contract-001",
+                "page_key": "page-01",
+                "page_value": "browser-contract-001",
+                "answer": "result-contract-001",
+            }) + "\n", encoding="utf-8")
+            fixture = root / "fixture.json"
+            fixture.write_text(json.dumps({
+                "tasks": [{
+                    "task_id": "frozen-task-001",
+                    "prompt": "prompt-contract-001",
+                    "expected_arguments": {"operation": "arg-001"},
+                    "expected_actions": [{"arguments": {"token": "act-001"}}],
+                    "expected_files": {"a.cfg": "file-contract-001"},
+                    "api_records": {"api-001": {"token": "api-contract-001"}},
+                    "browser_pages": {"page-01": {"body": "browser-contract-001"}},
+                    "expected_result_contains": ["result-contract-001"],
+                }],
+            }), encoding="utf-8")
+            report = audit([train], [fixture])
+        kinds = {item["kind"] for item in report["overlaps"]}
+        self.assertTrue({
+            "task_id", "prompt", "expected_arguments_short_exact",
+            "expected_action_arguments_short_exact", "expected_files",
+            "expected_file_key_short_exact", "api_records",
+            "api_record_key_short_exact", "browser_pages",
+            "browser_page_key_short_exact", "expected_result_contains",
+        }.issubset(kinds))
+
+    def test_train_holdout_audit_known_proxy_contamination_regression(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            train = Path(temporary) / "train.jsonl"
+            train.write_text(json.dumps({"path": "proxy_v1_source_00.dat"}) + "\n", encoding="utf-8")
+            fixture = ROOT / "benchmarks" / "fixtures" / "task-spec-industry-proxy-v1.json"
+            report = audit([train], [fixture])
+        self.assertFalse(report["passed"])
+        self.assertTrue(any(item["value"] == "proxy_v1_source_00.dat" for item in report["overlaps"]))
+
+    def test_train_holdout_audit_covers_every_pinned_fixture_at_fixed_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            train = Path(temporary) / "train.jsonl"
+            train.write_text(json.dumps({"example": "fresh-training-only-token-912"}) + "\n", encoding="utf-8")
+            fixtures = [
+                ROOT / "benchmarks" / "fixtures" / name
+                for name in REQUIRED_FROZEN_FIXTURE_HASHES
+            ]
+            report = audit([train], fixtures)
+            manifest = Path(temporary) / "audit.json"
+            manifest.write_text(json.dumps(report), encoding="utf-8")
+            validated = validate_required_audit_manifest(manifest)
+        self.assertTrue(report["required_fixture_gate"]["passed"])
+        self.assertEqual(set(report["required_fixture_gate"]["required_fixture_hashes"]), set(REQUIRED_FROZEN_FIXTURE_HASHES))
+        self.assertTrue(validated["passed"])
+
+    def test_required_audit_manifest_rejects_pinned_fixture_hash_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            train = Path(temporary) / "train.jsonl"
+            train.write_text(json.dumps({"example": "fresh-training-only-token-913"}) + "\n", encoding="utf-8")
+            report = audit([train], [
+                ROOT / "benchmarks" / "fixtures" / name
+                for name in REQUIRED_FROZEN_FIXTURE_HASHES
+            ])
+            report["fixtures"][0]["sha256"] = "0" * 64
+            manifest = Path(temporary) / "audit.json"
+            manifest.write_text(json.dumps(report), encoding="utf-8")
+            validated = validate_required_audit_manifest(manifest)
+        self.assertFalse(validated["passed"])
+        self.assertTrue(validated["fixture_gate"]["hash_mismatches"])
+
+    def test_train_holdout_audit_cli_fails_for_overlap_and_incomplete_fixture_set(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            train = root / "train.jsonl"
+            fixture = root / "fixture.json"
+            fixture.write_text(json.dumps({"tasks": [{"task_id": "cli-holdout", "expected_arguments": {"token": "cli-frozen-token"}}]}), encoding="utf-8")
+            train.write_text(json.dumps({"token": "cli-frozen-token"}) + "\n", encoding="utf-8")
+            with mock.patch.object(sys, "argv", [
+                "data_split_audit", "--train-jsonl", str(train), "--task-spec", str(fixture), "--fail-on-overlap",
+            ]):
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(audit_main(), 2)
+            train.write_text(json.dumps({"token": "clean-curriculum-token"}) + "\n", encoding="utf-8")
+            with mock.patch.object(sys, "argv", [
+                "data_split_audit", "--train-jsonl", str(train), "--task-spec", str(fixture), "--require-required-fixtures",
+            ]):
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(audit_main(), 2)
+
+    def test_promotion_matrix_refuses_missing_or_incomplete_audit_before_model_load(self) -> None:
+        missing_audit = ROOT / "work" / "missing-train-holdout-audit.json"
+        task_spec = ROOT / "benchmarks" / "fixtures" / "task-spec-research-v4.json"
+        with mock.patch.object(sys, "argv", [
+            "run_promotion_matrix", "--project1-root", "missing-project", "--checkpoint", "missing-checkpoint",
+            "--output", "missing-output.json", "--train-holdout-audit", str(missing_audit),
+            "--task-spec", str(task_spec),
+        ]):
+            with redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as exited:
+                    promotion_matrix_main()
+        self.assertEqual(exited.exception.code, 2)
+
     def test_promotion_matrix_heartbeat_is_claim_safe_and_timestamped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "matrix.heartbeat.json"

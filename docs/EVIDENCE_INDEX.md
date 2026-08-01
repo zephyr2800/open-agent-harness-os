@@ -103,7 +103,7 @@ $py = 'python'
 & $py -m compileall -q .
 ```
 
-Current result: 83 Project 2 tests pass. The latest delta includes the
+Current result: 95 Project 2 tests pass. The latest delta includes the
 external-adapter and evidence/replay regressions.
 
 ## Independent research fixture
@@ -145,7 +145,7 @@ model claim.
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
   the source suite passed at artifact creation; the current source suite is
-  82 tests at artifact creation; the current source suite is 83 tests. It
+  82 tests at artifact creation; the current source suite is 95 tests. It
   records the 0.1.8 wheel and source-distribution hashes in
   `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 
@@ -366,7 +366,7 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 83/83 after evaluator hardening, dense-reliability,
+- The current project test suite is 95/95 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,

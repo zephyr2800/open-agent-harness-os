@@ -48,11 +48,13 @@ started. It is a positioning and protocol update, not a new capability claim.
 
 ## Consequences for this project
 
-1. Two 9B results must remain distinct in public claims: the completed
-   historical frozen promotion matrix is summarized as 483/552 independently
-   verified with promotion rejected, while the separate live targeted
-   state/evidence matrix is still a scale and failure-localization experiment.
-   The live run cannot be promoted from local proxy scores alone.
+1. Two 9B results must remain distinct and context-only in public claims: the
+   completed historical frozen promotion matrix is summarized as 483/552
+   independently verified with promotion rejected, but its source-corpus split
+   is not auditably recorded. A later targeted curriculum was found to overlap
+   with frozen proxy contracts, so its matrix was stopped at a saved 441-row
+   partial and remains diagnostic only. Neither result can be promoted from
+   local proxy scores alone.
 2. The policy-sequence, finish-DPO, and retry-repair interventions are the
    correct next causal test because the observed failures are repeated actions,
    premature completion, and missing evidence—not ordinary tool selection.
@@ -67,6 +69,7 @@ started. It is a positioning and protocol update, not a new capability claim.
 
 The current state is therefore strategically coherent but scientifically
 unfinished: the harness/product boundary is launchable as a developer preview,
-while the research breakthrough is still an empirical gate awaiting completion
-of the live targeted matrix and post-training ablations. This is separate from
-the completed historical frozen promotion matrix summarized above.
+while the research breakthrough is still an empirical gate awaiting a
+clean-split candidate, stochastic audit, post-training ablations, and native
+external evaluation. This is separate from the diagnostic historical matrices
+summarized above.

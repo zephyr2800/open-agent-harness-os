@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -591,37 +592,33 @@ def _companion_test_check() -> dict[str, Any]:
 
 
 def _build_source_wheel(output_dir: Path) -> tuple[Path | None, dict[str, Any]]:
-    """Build a fresh wheel from a clean source distribution."""
+    """Build a fresh wheel from a copied source tree without build products."""
 
-    sdist_dir = output_dir / "sdist"
+    source_dir = output_dir / "source"
     wheel_dir = output_dir / "wheel"
-    sdist_dir.mkdir(parents=True, exist_ok=True)
     wheel_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        sdist_completed = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "from setuptools import build_meta; import sys; print(build_meta.build_sdist(sys.argv[1], config_settings=None))",
-                str(sdist_dir),
-            ],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return None, {"method": "setuptools sdist then pip wheel", "error": str(exc)}
-    sdists = sorted(sdist_dir.glob("*.tar.gz"))
-    if sdist_completed.returncode != 0 or len(sdists) != 1:
-        return None, {
-            "method": "setuptools sdist then pip wheel",
-            "sdist_returncode": sdist_completed.returncode,
-            "sdist_count": len(sdists),
-            "sdist_stdout_tail": sdist_completed.stdout[-2000:],
-            "sdist_stderr_tail": sdist_completed.stderr[-2000:],
+    ignored_names = {
+        ".git",
+        ".pytest_cache",
+        ".venv",
+        "__pycache__",
+        "build",
+        "dist",
+        "outputs",
+        "work",
+    }
+
+    def ignore_build_products(_: str, names: list[str]) -> set[str]:
+        return {
+            name
+            for name in names
+            if name in ignored_names
+            or name.endswith((".pyc", ".pyo"))
+            or name.endswith(".egg-info")
         }
+
     try:
+        shutil.copytree(ROOT, source_dir, ignore=ignore_build_products)
         wheel_completed = subprocess.run(
             [
                 sys.executable,
@@ -629,28 +626,25 @@ def _build_source_wheel(output_dir: Path) -> tuple[Path | None, dict[str, Any]]:
                 "pip",
                 "wheel",
                 "--no-deps",
-                "--no-build-isolation",
+                "--no-cache-dir",
                 "--wheel-dir",
                 str(wheel_dir),
-                str(sdists[0]),
+                str(source_dir),
             ],
-            cwd=ROOT,
+            cwd=source_dir,
             capture_output=True,
             text=True,
             timeout=180,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return None, {"method": "setuptools sdist then pip wheel", "error": str(exc)}
+        return None, {"method": "pip wheel from clean source copy", "error": str(exc)}
     candidates = sorted(wheel_dir.glob("*.whl"))
     detail = {
-        "method": "setuptools sdist then pip wheel",
-        "sdist": sdists[0].name,
-        "sdist_returncode": sdist_completed.returncode,
+        "method": "pip wheel from clean source copy",
+        "source_copy_excludes": sorted(ignored_names),
         "wheel_returncode": wheel_completed.returncode,
         "wheel": candidates[0].name if len(candidates) == 1 else None,
         "wheel_count": len(candidates),
-        "sdist_stdout_tail": sdist_completed.stdout[-2000:],
-        "sdist_stderr_tail": sdist_completed.stderr[-2000:],
         "wheel_stdout_tail": wheel_completed.stdout[-2000:],
         "wheel_stderr_tail": wheel_completed.stderr[-2000:],
     }

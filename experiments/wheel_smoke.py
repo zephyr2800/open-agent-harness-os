@@ -7,10 +7,10 @@ from configparser import ConfigParser
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
-import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -114,13 +114,24 @@ def wheel_manifest_sha256(wheel: Path) -> str | None:
 
 def _source_console_scripts(root: Path) -> tuple[str, ...] | None:
     try:
-        project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError):
+        lines = (root / "pyproject.toml").read_text(encoding="utf-8").splitlines()
+    except OSError:
         return None
-    scripts = project.get("project", {}).get("scripts", {})
-    if not isinstance(scripts, dict):
-        return None
-    return tuple(sorted(f"{name} = {value}" for name, value in scripts.items() if isinstance(value, str)))
+    scripts: list[str] = []
+    in_project_scripts = False
+    for raw_line in lines:
+        line = raw_line.strip()
+        if line == "[project.scripts]":
+            in_project_scripts = True
+            continue
+        if in_project_scripts and line.startswith("["):
+            break
+        if not in_project_scripts or not line or line.startswith("#"):
+            continue
+        match = re.fullmatch(r"([A-Za-z0-9_.-]+)\s*=\s*[\"']([^\"']+)[\"']", line)
+        if match:
+            scripts.append(f"{match.group(1)} = {match.group(2)}")
+    return tuple(sorted(scripts))
 
 
 def _wheel_console_scripts(wheel: Path) -> tuple[str, ...] | None:

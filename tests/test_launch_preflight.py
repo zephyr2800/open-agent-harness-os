@@ -10,10 +10,27 @@ import zipfile
 from pathlib import Path
 
 from experiments.launch_preflight import _wheel_check
-from experiments.wheel_smoke import source_tree_sha256, wheel_manifest_sha256, wheel_source_tree_sha256
+from experiments.wheel_smoke import _source_console_scripts, source_tree_sha256, wheel_manifest_sha256, wheel_source_tree_sha256
 
 
 class LaunchPreflightTests(unittest.TestCase):
+    def test_source_console_scripts_parse_project_table(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pyproject.toml").write_text(
+                "[project.scripts]\n"
+                'alpha-tool = "alpha.cli:main"\n'
+                "beta_tool = 'beta.cli:main'\n"
+                "\n"
+                "[tool.setuptools]\n"
+                "include-package-data = false\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                _source_console_scripts(root),
+                ("alpha-tool = alpha.cli:main", "beta_tool = beta.cli:main"),
+            )
+
     def test_wheel_check_rejects_non_wheel_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "not-a-wheel.whl"

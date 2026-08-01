@@ -6,23 +6,25 @@ This checklist records the evidence attached to the current public repository sn
 
 ## Verified locally
 
-- Open Agent Harness OS unit and integration suite: 109/109 passing, including
+- Open Agent Harness OS unit and integration suite: 110/110 passing, including
   dense-reliability, source-bound wheel integrity, and claim-safe scorecard checks.
 - Local Action Model companion suite: 47/47 passing.
 - Launch preflight v6: 16/16 checks passing, including a fresh
-  source-distribution wheel build, extracted-wheel install smoke, bytecode
+  clean-source wheel build, extracted-wheel install smoke, bytecode
   exclusion, complete archive-manifest, package-digest, and console-script
   binding to a fresh reference wheel, and the companion suite; the historical
   v5 artifact records an 83-test source suite,
-  while v6 records 109.
+  while v6 records 110.
 - Wheel build: `open_agent_harness_os-0.1.8-py3-none-any.whl` (no Python
   bytecode caches; 74 archive entries; source/package fingerprint
-  `7ac315af02319b124f52e132607a57628912164d40a86403b6c689b04546f2c7`).
-- Wheel SHA-256: `ff48aee817b2c46836df89657c52c9c9cdcf465c570f738365057c47b9871b2e`.
-- Wheel archive-manifest SHA-256: `ffb911a0497dc6fbf6c54c323058fb0be099506c137f1eca02776c169e2a0b6d`.
-- Source distribution: `open_agent_harness_os-0.1.8.tar.gz` (no Python
-  bytecode caches; 107 archive entries).
-- Source distribution SHA-256: `bea709096bfb94ef88190848dbf4c5d91ef3cde2b3d10244ab8026f9fd8c8d0f`.
+  `22395cbc393edbddf5cdf2e59f12955731b6d5f906d14fe8ccb56e3fa5385b15`).
+- Paired clean-wheel candidate SHA-256 (recorded in the smoke artifact):
+  `5b452350a4805cb115056777f54ffe052219e72bed7e370d07600c2b2e61b364`.
+- Wheel archive-manifest SHA-256 (identical across the paired clean builds):
+  `5362689f614cbf173e21ff8a4e8c158665e39997465c16ea77c8c2783d7c33b5`.
+- The release gate rebuilds from a clean source copy and records each raw
+  wheel hash in its evidence; the archive-manifest hash is the cross-build
+  provenance binding.
 - Public package audit: no credentials, model weights, generated result directories, or private local traces included.
 
 ## Interpretation boundary

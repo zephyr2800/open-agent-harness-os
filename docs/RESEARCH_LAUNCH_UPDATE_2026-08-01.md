@@ -50,9 +50,10 @@ started. It is a positioning and protocol update, not a new capability claim.
 
 1. Two 9B results must remain distinct in public claims: the completed
    historical frozen promotion matrix is summarized as 483/552 independently
-   verified with promotion rejected, while the separate live targeted
-   state/evidence matrix is still a scale and failure-localization experiment.
-   The live run cannot be promoted from local proxy scores alone.
+   verified with promotion rejected. Its three seeds are deterministic greedy
+   replicas (`do_sample=false`), not stochastic samples. The separate live
+   targeted state/evidence matrix is still a scale and failure-localization
+   experiment; it cannot be promoted from local proxy scores alone.
 2. The policy-sequence, finish-DPO, and retry-repair interventions are the
    correct next causal test because the observed failures are repeated actions,
    premature completion, and missing evidence—not ordinary tool selection.

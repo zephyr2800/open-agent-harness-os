@@ -88,6 +88,9 @@ than one aggregate success number.
 | Project 2 test suite | 83/83 passing | Harness/evaluator regression control |
 | Qwopus3.5-9B rank-64 QLoRA | SFT, merge, and 9-run frozen matrix complete on RTX 5090 | 483/552 independently verified (87.5%), zero unsafe attempts, perfect trace/replay checks; promotion rejected because failed slices remain |
 
+The 9-run historical matrix is three deterministic greedy replicas
+(`do_sample=false`) across three suite slices, not stochastic decoding samples.
+
 The Qwopus-compatible verifier-backed REINFORCE path also passes a local
 dry-run on the disjoint 24-task Action IR specification after sharing the same
 thinking-disabled chat serializer as SFT and inference. This validates the RL
@@ -149,7 +152,7 @@ replays. ([model card](https://huggingface.co/Jackrong/Qwopus3.5-9B-v3),
 
 The local product surface has a CLI, loopback HTTP API, MCP stdio server,
 typed Action IR, allowlisted tools, default high-risk denial, independent
-verification, bounded budgets, and replayable JSONL traces. The 73-test suite,
+verification, bounded budgets, and replayable JSONL traces. The 83-test suite,
 offline demo, replay smoke, explicit concurrent-retention preflight, and
 bearer-authentication plus tenant-isolation checks support a technically
 capable local preview.

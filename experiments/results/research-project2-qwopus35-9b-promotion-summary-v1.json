@@ -10,6 +10,12 @@
     "sha256": "dad70c92fb331c3eb1f1bb84329a129029464b748eb60c777739df9a643ed2e2"
   },
   "seeds": [0, 1, 2],
+  "decoding": {
+    "mode": "greedy",
+    "do_sample": false,
+    "replica_type": "deterministic_reproducibility",
+    "note": "Seeds identify deterministic greedy replicas, not stochastic decoding samples."
+  },
   "runtime": {
     "device": "NVIDIA GeForce RTX 5090",
     "cuda": "12.8",

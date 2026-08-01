@@ -1,6 +1,8 @@
 # Research ablation specification v2
 
-Status: preregistered design for the 9B branch; results are not yet available.
+Status: preregistered five-cell causal design for the 9B branch; its causal
+comparison results are not yet available. This does not erase the separately
+reported historical 9B frozen-matrix result.
 
 ## Claim
 
@@ -26,8 +28,8 @@ is now a close comparison for verifier-backed state and progress checkpointing.
 | E | Action-IR QLoRA SFT | verifier/evidence/replay runtime | frozen-evaluator remediation/RL | self-improvement effect |
 
 The current live matrix is the first gated evaluation of cell D in greedy
-decoding mode. Its seeds are deterministic reproducibility replicas, not
-stochastic samples. Cells A-C must be run on the same task specifications,
+decoding mode (`do_sample=false`). Its seeds are deterministic reproducibility
+replicas, not stochastic samples. Cells A-C must be run on the same task specifications,
 prompt/tool contract, decoding mode, seed policy, and hardware before claiming
 a causal interaction. Cell E is eligible only after its reward audit and
 held-out before/after comparison pass.

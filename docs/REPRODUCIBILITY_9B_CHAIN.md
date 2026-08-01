@@ -5,6 +5,10 @@ experiment. The promotion matrix, v1 diagnostic, and v2 diagnostic are
 separate artifacts; a diagnostic result must not be substituted for the
 promotion decision.
 
+The historical promotion command below deliberately omits `--do-sample`, so it
+uses greedy decoding (`do_sample=false`). Seeds `0,1,2` are deterministic
+reproducibility replicas, not stochastic decoding samples.
+
 ## Checkpoint identity
 
 - Merged checkpoint: `work/action-model-project2-qwopus35-9b-qlora-v1-merged`

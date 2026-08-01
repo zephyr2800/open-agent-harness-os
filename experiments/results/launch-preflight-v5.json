@@ -246,14 +246,14 @@
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 82 tests in 2.044s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 82 tests in 2.035s\n\nOK",
         "returncode": 0
       },
       "id": "unit_tests",
       "passed": true
     }
   ],
-  "created_at": "2026-08-01T09:39:40.260047+00:00",
+  "created_at": "2026-08-01T10:51:04.878537+00:00",
   "limitations": [
     "This preflight does not establish public multi-user, operational, or external-benchmark readiness.",
     "The MCP check is in-process; the separate stdio subprocess artifact remains the protocol evidence."

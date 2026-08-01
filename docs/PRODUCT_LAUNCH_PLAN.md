@@ -69,7 +69,7 @@ memory alongside correctness and replay data. The quantized-serving smoke adds
 an RTX 5090 memory/timing baseline. Broader deployment-cost measurement across
 the external suite and representative workflows remains open.
 
-The current wheel (`open_agent_harness_os-0.1.7-py3-none-any.whl`) was built
+The current wheel (`open_agent_harness_os-0.1.8-py3-none-any.whl`) was built
 with the local setuptools backend, installed into a fresh target directory
 without dependencies, and passed `python -m app.cli demo` with verified
 success. This closes the packaging smoke gate for the developer preview; it
@@ -77,13 +77,13 @@ does not close multi-user isolation, production operational,
 security-review, or external-agent benchmark gates.
 
 The consolidated source-checkout preflight is recorded at
-`experiments/results/launch-preflight-v4.json`. It passes the six-case product
+`experiments/results/launch-preflight-v5.json`. It passes the six-case product
  smoke, MCP contract and replay, local-only endpoint policy, bearer
  authentication, high-risk denial, persistence, wheel integrity,
 launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
 isolation, tool-by-tool security metadata auditing, the external evaluation
- note and fixture. The current Project 2 source suite has 81 tests; the
- recorded v4 preflight artifact contains the current 81-test subcheck. The
+note and fixture. The current Project 2 source suite has 82 tests; the
+recorded v5 preflight artifact contains the current 82-test subcheck. The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
@@ -111,7 +111,7 @@ without state change.
 
 ## 2026-07-29 launch-candidate update
 
-The public branch now has 81/81 harness tests, 47/47 companion tests, and a
+The public branch now has 82/82 harness tests, 47/47 companion tests, and a
 15-check launch preflight. The preflight runs the companion suite from its own
 package root so same-name modules from the two projects cannot silently
 replace one another. It also validates the extracted wheel install and checks

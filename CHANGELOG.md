@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.8 - 2026-08-01
+
+- Made release-readiness wheel smoke selection version-aware so stale
+  historical smoke artifacts cannot satisfy the current-package gate.
+- Added current-package regression coverage and refreshed the MCP/preflight
+  package version metadata.
+
 ## 0.1.7 - 2026-08-01
 
 - Excluded Python bytecode caches from distributable package artifacts.

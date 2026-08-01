@@ -178,15 +178,15 @@
     },
     {
       "detail": {
-        "bytes": 116419,
+        "bytes": 116498,
         "entry_count": 71,
         "exists": true,
-        "path": "open_agent_harness_os-0.1.4-py3-none-any.whl",
+        "path": "open_agent_harness_os-0.1.5-py3-none-any.whl",
         "record_entries": 71,
         "record_hashes_valid": true,
         "required_modules_present": true,
         "safe_paths": true,
-        "sha256": "65cd1e8561d049b69f20fa89397fb016860704e9f08c910231ce39ddd91e94f8",
+        "sha256": "74ccb97f810142cffd69148e85f38332af4b69d86deb6c8c1ce783167ee08024",
         "wheel_metadata_present": true,
         "zipfile": true
       },
@@ -199,15 +199,15 @@
         "demo_verified_success": true,
         "imports_returncode": 0,
         "install_returncode": 0,
-        "path": "open_agent_harness_os-0.1.4-py3-none-any.whl",
-        "sha256": "65cd1e8561d049b69f20fa89397fb016860704e9f08c910231ce39ddd91e94f8"
+        "path": "open_agent_harness_os-0.1.5-py3-none-any.whl",
+        "sha256": "74ccb97f810142cffd69148e85f38332af4b69d86deb6c8c1ce783167ee08024"
       },
       "id": "wheel_install_smoke",
       "passed": true
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 47 tests in 0.008s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 47 tests in 0.007s\n\nOK",
         "returncode": 0
       },
       "id": "companion_unit_tests",
@@ -246,14 +246,14 @@
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 73 tests in 1.956s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 74 tests in 1.959s\n\nOK",
         "returncode": 0
       },
       "id": "unit_tests",
       "passed": true
     }
   ],
-  "created_at": "2026-07-30T00:44:56.725213+00:00",
+  "created_at": "2026-08-01T05:51:59.424343+00:00",
   "limitations": [
     "This preflight does not establish public multi-user, operational, or external-benchmark readiness.",
     "The MCP check is in-process; the separate stdio subprocess artifact remains the protocol evidence."

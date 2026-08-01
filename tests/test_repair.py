@@ -53,6 +53,13 @@ class RepairTests(unittest.TestCase):
         ))
         self.assertEqual(result["action"]["arguments"], {"operation": "sync", "attempt": 1})
 
+    def test_retry_parser_accepts_versioned_operation_identifier(self) -> None:
+        result = compile_repair(request(
+            "Follow the exact contract; retry the flaky v4-reconcile-job-00 operation until recovery is verified.",
+            tools=("retry_operation",),
+        ))
+        self.assertEqual(result["action"]["arguments"], {"operation": "v4-reconcile-job-00", "attempt": 1})
+
     def test_write_parser_accepts_persist_and_through(self) -> None:
         result = compile_repair(request(
             "Persist memo.txt with the exact content hello-world through the renamed text tool.",

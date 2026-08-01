@@ -118,10 +118,13 @@ def compile_repair(request: ModelRequest) -> dict[str, Any] | None:
     retry_tool = _tools(request, "retry_operation")
     if retry_tool and ("retry" in lower or "flaky" in lower):
         operation = "export"
-        named_operation = re.search(r"\b([a-z_][\w-]*)\s+operation\b", lower)
+        # Operation identifiers in native/task fixtures may contain digits
+        # (for example ``v4-reconcile-job-00``). Keep the parser bounded to a
+        # single identifier and never infer it from tool output.
+        named_operation = re.search(r"\b([a-z0-9_][\w-]*)\s+operation\b", lower)
         if named_operation:
             operation = named_operation.group(1)
-        match = re.search(r"(?:operation|retry)\s+['`]?([a-z_][\w-]*)", lower)
+        match = re.search(r"(?:operation|retry)\s+['`]?([a-z0-9_][\w-]*)", lower)
         if not named_operation and match and match.group(1) not in {"the", "until"}:
             operation = match.group(1)
         return _action(request, retry_tool, {"operation": operation, "attempt": 2 if retry_tool in executed else 1})

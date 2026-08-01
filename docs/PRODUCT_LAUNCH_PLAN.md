@@ -69,7 +69,7 @@ memory alongside correctness and replay data. The quantized-serving smoke adds
 an RTX 5090 memory/timing baseline. Broader deployment-cost measurement across
 the external suite and representative workflows remains open.
 
-The current wheel (`open_agent_harness_os-0.1.5-py3-none-any.whl`) was built
+The current wheel (`open_agent_harness_os-0.1.6-py3-none-any.whl`) was built
 with the local setuptools backend, installed into a fresh target directory
 without dependencies, and passed `python -m app.cli demo` with verified
 success. This closes the packaging smoke gate for the developer preview; it
@@ -82,13 +82,13 @@ The consolidated source-checkout preflight is recorded at
  authentication, high-risk denial, persistence, wheel integrity,
 launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
 isolation, tool-by-tool security metadata auditing, the external evaluation
-  note and fixture. The current Project 2 source suite has 74 tests; the
-  recorded v4 preflight artifact contains the current 74-test subcheck. The
+ note and fixture. The current Project 2 source suite has 80 tests; the
+ recorded v4 preflight artifact contains the current 80-test subcheck. The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
 The timeout-boundary hardening was revalidated on 2026-07-27: Project 2's
-  source tests pass 74/74, Project 1's source tests pass 47/47, and the
+  source tests pass 80/80, Project 1's source tests pass 47/47, and the
 consolidated launch preflight remains green. This closes the adapter-level
 budget-enforcement regression; it does not by itself close real-model
 performance, usability, security-review, licensing, or external-benchmark
@@ -111,7 +111,7 @@ without state change.
 
 ## 2026-07-29 launch-candidate update
 
-The public branch now has 74/74 harness tests, 47/47 companion tests, and a
+The public branch now has 80/80 harness tests, 47/47 companion tests, and a
 15-check launch preflight. The preflight runs the companion suite from its own
 package root so same-name modules from the two projects cannot silently
 replace one another. It also validates the extracted wheel install and checks

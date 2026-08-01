@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.6 - 2026-08-01
+
+- Versioned the post-0.1.5 retry-parser hardening as a reproducible patch
+  release and aligned package metadata, MCP server metadata, and preflight
+  wheel selection.
+- Refreshed release evidence for the current 80-test harness suite.
+
 ## 0.1.5 - 2026-08-01
 
 - Fixed retry-repair parsing for versioned operation identifiers that contain

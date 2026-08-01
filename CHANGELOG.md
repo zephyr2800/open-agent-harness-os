@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7 - 2026-08-01
+
+- Excluded Python bytecode caches from distributable package artifacts.
+- Refreshed the package metadata and preflight default to the clean 0.1.7
+  developer-preview wheel and source distribution.
+
 ## 0.1.6 - 2026-08-01
 
 - Versioned the post-0.1.5 retry-parser hardening as a reproducible patch

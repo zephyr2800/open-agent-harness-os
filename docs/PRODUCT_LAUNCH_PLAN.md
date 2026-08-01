@@ -69,7 +69,7 @@ memory alongside correctness and replay data. The quantized-serving smoke adds
 an RTX 5090 memory/timing baseline. Broader deployment-cost measurement across
 the external suite and representative workflows remains open.
 
-The current wheel (`open_agent_harness_os-0.1.6-py3-none-any.whl`) was built
+The current wheel (`open_agent_harness_os-0.1.7-py3-none-any.whl`) was built
 with the local setuptools backend, installed into a fresh target directory
 without dependencies, and passed `python -m app.cli demo` with verified
 success. This closes the packaging smoke gate for the developer preview; it

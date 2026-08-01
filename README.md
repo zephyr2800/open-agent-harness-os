@@ -25,7 +25,7 @@ actually complete.
 
 The local developer-preview harness passes its documented product checks:
 
-- Project 2 tests: 110/110 (including dense-reliability, source-bound wheel integrity, scorecard, and promotion-heartbeat checks)
+- Project 2 tests: 114/114 (including dense-reliability, source-bound wheel integrity, scorecard, promotion-heartbeat, and matched-budget-control checks)
 - Project 1 tests: 47/47
 - Launch preflight: 16/16 (including a fresh clean-source wheel build and extracted-wheel installation smoke)
 

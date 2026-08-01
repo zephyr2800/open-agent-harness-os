@@ -144,7 +144,7 @@ model claim.
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 110-test source suite passed at artifact creation. It builds from a
+  the 114-test source suite passed at artifact creation. It builds from a
   clean source copy, binds the complete wheel archive, modules, and console
   scripts to a fresh source-derived reference, and rejects Python bytecode
   caches. It
@@ -359,7 +359,12 @@ available.
   fresh markers and no training-row reuse.
 - `experiments/run_promotion_matrix.py`: one-command greedy/sampled matrix
   runner that hides contract hints, reuses one loaded checkpoint, and records
-  runtime plus independent replay outcomes for every task.
+  explicit step/generation budgets plus runtime and independent replay outcomes
+  for every task.
+- `experiments/task_search_control.py`: matched-budget model-only search
+  control that matches the step horizon and aggregate generation ceiling,
+  requires the same audit/checkpoint binding, and records per-attempt replay,
+  latency, token metrics, and sampler seeds.
 - `experiments/promotion_decision.py`: separate frozen promotion gate that
   requires all three slices, all recorded runs, independent replay agreement,
   zero unsafe attempts, and no unknown task specifications.
@@ -368,12 +373,13 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 110/110 after evaluator hardening, dense-reliability,
-  atomic concurrent
-  trace-retention coverage, and HTTP bearer-auth coverage.
-- Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,
-  SHA-256 is recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`;
-  it contains the explicit non-loopback authentication-plus-TLS gate.
+- The current project test suite is 114/114 after evaluator hardening,
+  dense-reliability, atomic concurrent trace-retention, HTTP bearer-auth, and
+  matched-budget-control coverage.
+- Current paired wheel/preflight evidence:
+  `experiments/results/clean-wheel-smoke-v5.json` and
+  `experiments/results/launch-preflight-v6.json`; their source/package and
+  archive-manifest hashes are recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout
   command `python -m experiments.launch_preflight --with-tests`; the artifact
   explicitly records 12 concurrent writes, 12 valid traces after a fresh

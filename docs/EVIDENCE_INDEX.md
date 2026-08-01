@@ -145,7 +145,8 @@ model claim.
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
   the source suite passed at artifact creation; the current source suite is
-  82 tests. It records the 0.1.8 wheel and source-distribution hashes in
+  82 tests at artifact creation; the current source suite is 83 tests. It
+  records the 0.1.8 wheel and source-distribution hashes in
   `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 
 See `PRODUCT.md` and `docs/PRODUCT_LAUNCH_PLAN.md` for the developer-preview

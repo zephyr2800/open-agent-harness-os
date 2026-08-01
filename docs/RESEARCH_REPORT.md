@@ -235,8 +235,13 @@ Qwopus3.5-9B-v3 -> response-only Action IR QLoRA SFT
 ```
 
 The rank-64 4-bit QLoRA run completed on the 32 GB RTX 5090 and the adapter was
-merged into a reproducible full checkpoint. No 9B score, promotion decision,
-or RL improvement claim is recorded until the same frozen matrix is complete.
+merged into a reproducible full checkpoint. The completed historical 9B frozen
+promotion matrix is recorded in
+`experiments/results/research-project2-qwopus35-9b-promotion-summary-v1.json`:
+483/552 independently verified, zero unsafe attempts, and promotion rejected.
+A separate targeted state/evidence matrix is still running; no new 9B score,
+promotion decision, or RL improvement claim should be made from that live run
+until its frozen evaluation and post-training ablations are complete.
 The linked Qwopus model card,
 fine-tuning guide, and PDF motivate SFT engineering choices but do not by
 themselves establish an independently verified action-policy RL result.

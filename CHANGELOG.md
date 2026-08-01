@@ -25,6 +25,8 @@
 
 ## Unreleased - research and launch hardening (2026-07-29)
 
+- Added per-task promotion-matrix heartbeats so long generations expose
+  auditable progress without altering score or resume state.
 - Added `agent-eval-scorecard/v1` with macro-family scoring, Wilson intervals,
   replay/process integrity, safety, false-completion, and efficiency metrics.
 - Added a preflight guard that rejects external-native claims without a

@@ -25,7 +25,7 @@ from app.service import run_action
 from app.cli import _load_auth_tokens, _optional_local_adapter, _server, _validate_bind_host, _validate_server_security
 from app.storage import TraceStore
 from experiments.verify_checkpoint_run import verify as verify_checkpoint_run
-from experiments.run_promotion_matrix import _run_report
+from experiments.run_promotion_matrix import _run_report, _write_heartbeat
 from experiments.release_readiness import build_readiness
 
 
@@ -33,6 +33,15 @@ ROOT = Path(__file__).parent.parent
 
 
 class ExperimentTests(unittest.TestCase):
+    def test_promotion_matrix_heartbeat_is_claim_safe_and_timestamped(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "matrix.heartbeat.json"
+            _write_heartbeat(path, {"schema": "promotion-matrix/v1-heartbeat", "status": "generating", "task_id": "t"})
+            report = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(report["status"], "generating")
+        self.assertEqual(report["task_id"], "t")
+        self.assertIsInstance(report["updated_at"], float)
+
     def test_readiness_manifest_keeps_provenance_gate_explicit(self) -> None:
         report = build_readiness(ROOT)
         gate = report["gates"]["licensing_provenance_review"]

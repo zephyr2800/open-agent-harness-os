@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import platform
+import threading
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -67,6 +68,31 @@ def _write_json_atomic(path: Path, value: dict[str, Any]) -> None:
     temporary = path.with_name(path.name + ".tmp")
     temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     temporary.replace(path)
+
+
+def _write_heartbeat(path: Path, payload: dict[str, Any]) -> None:
+    """Write best-effort live progress without changing evaluation state."""
+
+    try:
+        _write_json_atomic(path, {**payload, "updated_at": time.time()})
+    except OSError:
+        # Observability must not turn a valid model run into an evaluation
+        # failure when a user-mounted output path is temporarily unavailable.
+        return
+
+
+def _start_heartbeat(path: Path, payload: dict[str, Any], interval_seconds: float) -> tuple[threading.Event, threading.Thread]:
+    stop = threading.Event()
+
+    def loop() -> None:
+        while True:
+            _write_heartbeat(path, payload)
+            if stop.wait(interval_seconds):
+                return
+
+    thread = threading.Thread(target=loop, name="promotion-matrix-heartbeat", daemon=True)
+    thread.start()
+    return stop, thread
 
 
 def _run_report(
@@ -147,6 +173,8 @@ def _run_spec(
     checkpoint_every_tasks: int = 5,
     initial_rows: list[dict[str, Any]] | None = None,
     initial_elapsed_seconds: float = 0.0,
+    heartbeat_output: Path | None = None,
+    heartbeat_seconds: float = 15.0,
 ) -> dict[str, Any]:
     tasks = load_tasks(task_spec)
     rows: list[dict[str, Any]] = list(initial_rows or [])
@@ -201,8 +229,56 @@ def _run_spec(
             task.expected_result_contains,
         )
         task_started = time.perf_counter()
-        result = harness.run(request)
+        heartbeat_stop: threading.Event | None = None
+        heartbeat_thread: threading.Thread | None = None
+        if heartbeat_output is not None:
+            heartbeat_output.parent.mkdir(parents=True, exist_ok=True)
+            heartbeat_stop, heartbeat_thread = _start_heartbeat(
+                heartbeat_output,
+                {
+                    "schema": "promotion-matrix/v1-heartbeat",
+                    "status": "generating",
+                    "task_spec": str(task_spec),
+                    "seed": seed,
+                    "task_id": task.task_id,
+                    "task_index": task_index,
+                    "completed_tasks": len(rows),
+                    "started_at": time.time(),
+                },
+                heartbeat_seconds,
+            )
+        try:
+            result = harness.run(request)
+        except BaseException as exc:
+            if heartbeat_output is not None:
+                _write_heartbeat(heartbeat_output, {
+                    "schema": "promotion-matrix/v1-heartbeat",
+                    "status": "error",
+                    "task_spec": str(task_spec),
+                    "seed": seed,
+                    "task_id": task.task_id,
+                    "task_index": task_index,
+                    "completed_tasks": len(rows),
+                    "error": f"{type(exc).__name__}: {exc}",
+                })
+            raise
+        finally:
+            if heartbeat_stop is not None:
+                heartbeat_stop.set()
+            if heartbeat_thread is not None:
+                heartbeat_thread.join(timeout=max(1.0, heartbeat_seconds))
         task_elapsed = time.perf_counter() - task_started
+        if heartbeat_output is not None:
+            _write_heartbeat(heartbeat_output, {
+                "schema": "promotion-matrix/v1-heartbeat",
+                "status": "task_complete",
+                "task_spec": str(task_spec),
+                "seed": seed,
+                "task_id": task.task_id,
+                "task_index": task_index,
+                "completed_tasks": len(rows) + 1,
+                "task_elapsed_seconds": task_elapsed,
+            })
         independent = verify_trace(task, "H3", result.trace_jsonl)
         unsafe_attempt = any(
             event.event_type == "tool_call" and event.payload.get("tool") == "delete_file"
@@ -283,15 +359,20 @@ def main() -> int:
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"))
     parser.add_argument("--checkpoint-every-tasks", type=int, default=5)
+    parser.add_argument("--heartbeat-output", help="write live per-task progress JSON")
+    parser.add_argument("--heartbeat-seconds", type=float, default=15.0)
     args = parser.parse_args()
     if args.checkpoint_every_tasks < 1:
         parser.error("--checkpoint-every-tasks must be positive")
+    if args.heartbeat_seconds <= 0:
+        parser.error("--heartbeat-seconds must be positive")
     project1_root = Path(args.project1_root)
     checkpoint = Path(args.checkpoint)
     task_specs = [Path(item) for item in args.task_spec]
     seeds = [int(item.strip()) for item in args.seeds.split(",") if item.strip()]
     output = Path(args.output)
     partial = output.with_name(output.name + ".partial.json")
+    heartbeat_output = Path(args.heartbeat_output) if args.heartbeat_output else output.with_name(output.name + ".heartbeat.json")
     runs: list[dict[str, Any]] = []
     if partial.exists():
         try:
@@ -334,6 +415,8 @@ def main() -> int:
             "max_new_tokens": args.max_new_tokens,
             "checkpoint_every_tasks": args.checkpoint_every_tasks,
             "quantization": args.quantization,
+            "heartbeat_output": str(heartbeat_output),
+            "heartbeat_seconds": args.heartbeat_seconds,
             "completed_runs": sum(bool(item.get("complete", True)) for item in runs),
             "runs": runs,
         })
@@ -396,6 +479,8 @@ def main() -> int:
                 checkpoint_every_tasks=args.checkpoint_every_tasks,
                 initial_rows=initial_rows,
                 initial_elapsed_seconds=initial_elapsed_seconds,
+                heartbeat_output=heartbeat_output,
+                heartbeat_seconds=args.heartbeat_seconds,
             ))
             completed.add(key)
             persist_report(runs[-1])
@@ -412,6 +497,11 @@ def main() -> int:
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_heartbeat(heartbeat_output, {
+        "schema": "promotion-matrix/v1-heartbeat",
+        "status": "matrix_complete",
+        "completed_runs": len(runs),
+    })
     print(json.dumps({
         "run_count": len(runs),
         "task_runs": sum(item["task_count"] for item in runs),

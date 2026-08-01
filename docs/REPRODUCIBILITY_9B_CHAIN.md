@@ -71,7 +71,7 @@ try {
     --task-spec benchmarks\fixtures\task-spec-research-v4.json `
     --task-spec benchmarks\fixtures\task-spec-industry-proxy-v1.json `
     --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
-    --seeds 0,1,2 --max-new-tokens 256 --quantization 4bit
+    --seeds 0,1,2 --max-steps 6 --max-new-tokens 256 --quantization 4bit
 } finally { Pop-Location }
 ```
 
@@ -95,6 +95,31 @@ The promotion rule is machine-checked by:
 Do not promote based on a partial matrix, a model-card score, or a diagnostic
 slice. The decision requires complete frozen slices, independent replay,
 valid traces, zero unsafe attempts, and no unknown task specifications.
+
+## Matched-budget task-search control
+
+Run this control against the same candidate checkpoint and audit before
+attributing a result to the verifier-first harness. It records each model-only
+attempt, uses an immutable independent-verifier selector, and rejects an
+uneven step split rather than quietly giving the control a smaller horizon.
+The per-decision generation cap stays equal to the matrix cap, and the
+task-level request budget is allocated across attempts without increasing its
+total. Each attempt also records a distinct sampler seed.
+
+```powershell
+& $py -m experiments.task_search_control `
+  --project1-root $project1 `
+  --checkpoint (Join-Path $root 'work\action-model-project2-qwopus35-9b-qlora-v1-merged') `
+  --output experiments\results\candidate-task-search-control.json `
+  --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
+  --task-spec benchmarks\fixtures\task-spec-research-v4.json `
+  --task-spec benchmarks\fixtures\task-spec-industry-proxy-v1.json `
+  --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
+  --seeds 0,1,2 --attempts 2 --max-steps 6 --max-new-tokens 256 --quantization 4bit
+```
+
+This is a causal control, not a deployment mode or a substitute for a native
+external-suite result.
 
 ## Diagnostics after the promotion process
 

@@ -30,6 +30,9 @@ from tools.memory_workspace import make_memory_registry
 from verify.independent import verify_trace
 
 
+DEFAULT_MAX_STEPS = 6
+
+
 def _runtime_manifest() -> dict[str, Any]:
     manifest: dict[str, Any] = {
         "python": platform.python_version(),
@@ -108,6 +111,8 @@ def _run_report(
     rows: list[dict[str, Any]],
     elapsed_seconds: float,
     complete: bool,
+    max_steps: int = DEFAULT_MAX_STEPS,
+    max_new_tokens: int = 256,
     active_task_id: str | None = None,
 ) -> dict[str, Any]:
     """Build a resumable report for a complete or in-progress task spec."""
@@ -138,6 +143,11 @@ def _run_report(
         "seed": seed,
         "do_sample": do_sample,
         "enable_repair": enable_repair,
+        "execution_budget": {
+            "max_steps": max_steps,
+            "max_new_tokens_per_decision": max_new_tokens,
+            "max_generation_tokens": max_steps * max_new_tokens,
+        },
         "quantization": os.environ.get("ACTION_MODEL_QUANTIZATION"),
         "complete": complete,
         "task_count": total,
@@ -173,6 +183,8 @@ def _run_spec(
     seed: int,
     do_sample: bool,
     enable_repair: bool,
+    max_steps: int = DEFAULT_MAX_STEPS,
+    max_new_tokens: int = 256,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
     checkpoint_every_tasks: int = 5,
     initial_rows: list[dict[str, Any]] | None = None,
@@ -197,6 +209,8 @@ def _run_spec(
                 seed=seed,
                 do_sample=do_sample,
                 enable_repair=enable_repair,
+                max_steps=max_steps,
+                max_new_tokens=max_new_tokens,
                 rows=rows,
                 elapsed_seconds=time.perf_counter() - started,
                 complete=False,
@@ -213,7 +227,7 @@ def _run_spec(
             config=HarnessConfig(
                 variant="H3",
                 model_name=str(checkpoint),
-                max_steps=6,
+                max_steps=max_steps,
                 expose_contract_hints=False,
                 include_tool_outputs=task.include_tool_outputs,
             ),
@@ -335,6 +349,8 @@ def _run_spec(
                 seed=seed,
                 do_sample=do_sample,
                 enable_repair=enable_repair,
+                max_steps=max_steps,
+                max_new_tokens=max_new_tokens,
                 rows=rows,
                 elapsed_seconds=time.perf_counter() - started,
                 complete=False,
@@ -345,6 +361,8 @@ def _run_spec(
         seed=seed,
         do_sample=do_sample,
         enable_repair=enable_repair,
+        max_steps=max_steps,
+        max_new_tokens=max_new_tokens,
         rows=rows,
         elapsed_seconds=time.perf_counter() - started,
         complete=True,
@@ -365,6 +383,7 @@ def main() -> int:
     parser.add_argument("--seeds", default="0,1,2")
     parser.add_argument("--do-sample", action="store_true")
     parser.add_argument("--repair", action="store_true")
+    parser.add_argument("--max-steps", type=int, default=DEFAULT_MAX_STEPS)
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"))
     parser.add_argument("--checkpoint-every-tasks", type=int, default=5)
@@ -373,6 +392,10 @@ def main() -> int:
     args = parser.parse_args()
     if args.checkpoint_every_tasks < 1:
         parser.error("--checkpoint-every-tasks must be positive")
+    if args.max_steps < 1:
+        parser.error("--max-steps must be positive")
+    if args.max_new_tokens < 1:
+        parser.error("--max-new-tokens must be positive")
     if args.heartbeat_seconds <= 0:
         parser.error("--heartbeat-seconds must be positive")
     project1_root = Path(args.project1_root)
@@ -403,6 +426,7 @@ def main() -> int:
                 and saved.get("task_specs") == [str(path) for path in task_specs]
                 and bool(saved.get("do_sample")) == bool(args.do_sample)
                 and bool(saved.get("enable_repair")) == bool(args.repair)
+                and int(saved.get("max_steps", DEFAULT_MAX_STEPS)) == args.max_steps
                 and int(saved.get("max_new_tokens", 256)) == args.max_new_tokens
                 and int(saved.get("checkpoint_every_tasks", 5)) == args.checkpoint_every_tasks
                 and saved.get("quantization") == args.quantization
@@ -434,6 +458,7 @@ def main() -> int:
             "task_specs": [str(path) for path in task_specs],
             "do_sample": args.do_sample,
             "enable_repair": args.repair,
+            "max_steps": args.max_steps,
             "max_new_tokens": args.max_new_tokens,
             "checkpoint_every_tasks": args.checkpoint_every_tasks,
             "quantization": args.quantization,
@@ -500,6 +525,8 @@ def main() -> int:
                 seed=seed,
                 do_sample=args.do_sample,
                 enable_repair=args.repair,
+                max_steps=args.max_steps,
+                max_new_tokens=args.max_new_tokens,
                 on_progress=persist_report,
                 checkpoint_every_tasks=args.checkpoint_every_tasks,
                 initial_rows=initial_rows,
@@ -516,6 +543,7 @@ def main() -> int:
         "task_specs": [str(path) for path in task_specs],
         "do_sample": args.do_sample,
         "enable_repair": args.repair,
+        "max_steps": args.max_steps,
         "max_new_tokens": args.max_new_tokens,
         "checkpoint_every_tasks": args.checkpoint_every_tasks,
         "train_holdout_audit": audit_gate,

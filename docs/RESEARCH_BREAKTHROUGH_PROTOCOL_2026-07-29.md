@@ -54,6 +54,20 @@ with the following reported beside it:
 The scorecard must expose the worst family. A launch or research headline may
 not use the micro average to hide a zero-success long-horizon or safety slice.
 
+## Matched-budget search control
+
+The model-only matrix records explicit `max_steps`, a per-decision
+`max_new_tokens` cap, and their aggregate generation ceiling in every run. The
+task-level search control splits the step horizon evenly across independent
+attempts while retaining the same per-decision generation cap, so its aggregate
+generation ceiling is identical. It allocates each task's request-level output
+budget across attempts without increasing its total and rejects a configuration
+that cannot split the step horizon exactly. It must validate the same
+six-fixture train/holdout audit and the checkpoint's training/merge binding
+before model loading. This makes the search control a real alternative
+explanation for a harness gain, rather than an unbounded retry loop or a
+differently sourced checkpoint.
+
 ## Promotion criteria
 
 ### Research candidate

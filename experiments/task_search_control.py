@@ -1,10 +1,11 @@
 """Run a matched-budget task-level search control.
 
 This is a deliberately explicit control for harness-evolution studies.  It
-spends the same total step and generation budgets as one model-only episode,
-splits that budget across independent model-only attempts, and lets an
-immutable verifier choose the best recorded attempt.  It is an evaluation
-baseline, not a production harness and not evidence of general autonomy.
+spends the same total step horizon and aggregate generation ceiling as one
+model-only episode, splits that horizon across independent model-only attempts,
+and lets an immutable verifier choose the best recorded attempt. It is an
+evaluation baseline, not a production harness and not evidence of general
+autonomy.
 """
 
 from __future__ import annotations
@@ -14,12 +15,15 @@ import gc
 import json
 import os
 import time
-from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from adapters.project1_transformers import Project1TransformersAdapter
 from benchmarks.tasks import Task, load_tasks
+from experiments.data_split_audit import (
+    validate_checkpoint_training_binding,
+    validate_required_audit_manifest,
+)
 from experiments.run_promotion_matrix import _runtime_manifest, _sha256, _write_json_atomic
 from runtime.orchestrator import Harness, HarnessConfig, TaskRequest
 from tools.memory_workspace import make_memory_registry
@@ -27,29 +31,40 @@ from verify.independent import verify_trace
 
 
 def matched_budget(*, attempts: int, max_steps: int, max_new_tokens: int) -> dict[str, int]:
-    """Return per-attempt caps that never exceed the total control budget."""
+    """Return caps whose step and aggregate generation ceilings match exactly."""
 
     if attempts < 1:
         raise ValueError("attempts must be positive")
     if max_steps < attempts:
         raise ValueError("max_steps must be at least attempts")
-    if max_new_tokens < attempts:
-        raise ValueError("max_new_tokens must be at least attempts")
+    if max_new_tokens < 1:
+        raise ValueError("max_new_tokens must be positive")
+    if max_steps % attempts:
+        raise ValueError("max_steps must divide evenly across attempts for an exact matched budget")
+    max_steps_per_attempt = max_steps // attempts
     return {
         "attempts": attempts,
         "total_max_steps": max_steps,
-        "total_max_new_tokens": max_new_tokens,
-        "max_steps_per_attempt": max_steps // attempts,
-        "max_new_tokens_per_attempt": max_new_tokens // attempts,
+        "max_steps_per_attempt": max_steps_per_attempt,
+        "max_new_tokens_per_decision": max_new_tokens,
+        "max_generation_tokens_per_attempt": max_steps_per_attempt * max_new_tokens,
+        "total_max_generation_tokens": max_steps * max_new_tokens,
     }
 
 
-def _request(task: Task) -> TaskRequest:
+def _attempt_output_token_budget(task: Task, *, attempt: int, attempts: int) -> int:
+    """Split the task-level request budget across attempts without increasing it."""
+
+    base, remainder = divmod(max(0, int(task.output_token_budget)), attempts)
+    return base + int(attempt < remainder)
+
+
+def _request(task: Task, *, output_token_budget: int) -> TaskRequest:
     return TaskRequest(
         task.task_id,
         task.prompt,
         task.available_tools,
-        task.output_token_budget,
+        output_token_budget,
         task.expected_kind,
         task.expected_tool,
         task.expected_arguments,
@@ -61,7 +76,15 @@ def _request(task: Task) -> TaskRequest:
     )
 
 
-def _attempt_row(task: Task, result: Any, independent: dict[str, Any], attempt: int) -> dict[str, Any]:
+def _attempt_row(
+    task: Task,
+    result: Any,
+    independent: dict[str, Any],
+    attempt: int,
+    attempt_seed: int,
+    elapsed_seconds: float,
+    request_output_token_budget: int,
+) -> dict[str, Any]:
     tool_calls = [event for event in result.trace.events if event.event_type == "tool_call"]
     unsafe_attempt = any(
         event.payload.get("tool") == "delete_file" for event in tool_calls
@@ -74,10 +97,13 @@ def _attempt_row(task: Task, result: Any, independent: dict[str, Any], attempt: 
     )
     return {
         "attempt": attempt,
+        "attempt_seed": attempt_seed,
         "protocol_valid": result.protocol_valid,
         "verified_success": result.verified_success,
         "independent_success": bool(independent["independent_success"]),
         "trace_valid": bool(independent["trace_valid"]),
+        "runtime_replay_agreement": bool(independent["independent_success"]) == bool(result.verified_success),
+        "request_output_token_budget": request_output_token_budget,
         "unsafe_attempt": unsafe_attempt,
         "false_completion": false_completion,
         "unverified_action_attempts": sum(
@@ -86,7 +112,7 @@ def _attempt_row(task: Task, result: Any, independent: dict[str, Any], attempt: 
         "unknown_action_attempts": sum(
             1 for event in tool_calls if event.payload.get("tool") not in task.available_tools
         ),
-        "elapsed_seconds": result.metrics.get("tool_time_ms", 0.0),
+        "elapsed_seconds": elapsed_seconds,
         "metrics": dict(result.metrics),
         "trace_jsonl": result.trace_jsonl,
         "independent": independent,
@@ -99,10 +125,16 @@ def _run_task(
     checkpoint: Path,
     task: Task,
     *,
+    seed: int,
     budget: dict[str, int],
 ) -> dict[str, Any]:
     attempts: list[dict[str, Any]] = []
     for attempt in range(budget["attempts"]):
+        attempt_seed = seed * 1000 + attempt
+        policy = getattr(adapter, "policy", None)
+        if policy is None or not hasattr(policy, "seed"):
+            raise RuntimeError("task search control requires a sampler with an explicit mutable seed")
+        policy.seed = attempt_seed
         _, registry = make_memory_registry(
             task.initial_files,
             api_records=task.api_records,
@@ -119,15 +151,35 @@ def _run_task(
                 include_tool_outputs=task.include_tool_outputs,
             ),
         )
-        result = harness.run(_request(task))
+        started = time.perf_counter()
+        request = _request(
+            task,
+            output_token_budget=_attempt_output_token_budget(
+                task,
+                attempt=attempt,
+                attempts=budget["attempts"],
+            ),
+        )
+        result = harness.run(request)
+        elapsed_seconds = time.perf_counter() - started
         independent = verify_trace(task, "H3", result.trace_jsonl)
-        attempts.append(_attempt_row(task, result, independent, attempt))
+        attempts.append(
+            _attempt_row(
+                task,
+                result,
+                independent,
+                attempt,
+                attempt_seed,
+                elapsed_seconds,
+                request.output_token_budget,
+            )
+        )
 
     # This selection is intentionally verifier-owned.  It makes the baseline
     # a generous test-time-search control while keeping the selector immutable
     # and visible in the report.
     selected = next(
-        (item for item in attempts if item["independent_success"]),
+        (item for item in attempts if item["independent_success"] and not item["unsafe_attempt"]),
         attempts[0],
     )
     return {
@@ -138,6 +190,7 @@ def _run_task(
         "selected_attempt": selected["attempt"],
         "selected_independent_success": selected["independent_success"],
         "selected_verified_success": selected["verified_success"],
+        "task_output_token_budget": task.output_token_budget,
         "attempt_count": len(attempts),
         "attempts": attempts,
         "unsafe_attempts": sum(int(item["unsafe_attempt"]) for item in attempts),
@@ -158,7 +211,30 @@ def _run_report(
     active_task_id: str | None = None,
 ) -> dict[str, Any]:
     selected_successes = sum(int(row["selected_independent_success"]) for row in rows)
-    attempts = sum(int(row["attempt_count"]) for row in rows)
+    attempt_rows = [attempt for row in rows for attempt in row["attempts"]]
+    attempts = len(attempt_rows)
+    replay_matches = sum(bool(item["runtime_replay_agreement"]) for item in attempt_rows)
+    output_tokens = [
+        float(item["metrics"]["output_tokens"])
+        for item in attempt_rows
+        if isinstance(item.get("metrics"), dict) and isinstance(item["metrics"].get("output_tokens"), (int, float))
+    ]
+    elapsed_seconds = [float(item["elapsed_seconds"]) for item in attempt_rows]
+    exact_budget = (
+        budget["max_steps_per_attempt"] * budget["attempts"] == budget["total_max_steps"]
+        and budget["max_generation_tokens_per_attempt"] * budget["attempts"]
+        == budget["total_max_generation_tokens"]
+    )
+    request_budget_matches = all(
+        isinstance(row.get("task_output_token_budget"), int)
+        and sum(int(item.get("request_output_token_budget", -1)) for item in row["attempts"])
+        == int(row["task_output_token_budget"])
+        for row in rows
+    )
+    independent_attempt_seeds = all(
+        len({item.get("attempt_seed") for item in row["attempts"]}) == int(row["attempt_count"])
+        for row in rows
+    )
     report: dict[str, Any] = {
         "schema": "task-search-control/v1-partial" if not complete else "task-search-control/v1",
         "task_spec": str(task_spec),
@@ -167,11 +243,14 @@ def _run_report(
         "seed": seed,
         "search_selector": "immutable_independent_verifier_first_success",
         "budget": budget,
-        "matched_budget": attempts <= len(rows) * budget["attempts"] and all(
-            budget["max_steps_per_attempt"] * budget["attempts"] <= budget["total_max_steps"]
-            and budget["max_new_tokens_per_attempt"] * budget["attempts"] <= budget["total_max_new_tokens"]
-            for _ in (0,)
-        ),
+        "matched_budget": exact_budget and all(
+            int(row["attempt_count"]) == budget["attempts"] for row in rows
+        ) and request_budget_matches and independent_attempt_seeds,
+        "request_output_budget_matches_baseline": request_budget_matches,
+        "independent_attempt_seeds": independent_attempt_seeds,
+        "runtime_replay_agreement": replay_matches / attempts if attempts else 0.0,
+        "mean_elapsed_seconds": sum(elapsed_seconds) / len(elapsed_seconds) if elapsed_seconds else None,
+        "mean_output_tokens": sum(output_tokens) / len(output_tokens) if output_tokens else None,
         "complete": complete,
         "task_count": len(rows),
         "search_attempts": attempts,
@@ -199,6 +278,11 @@ def main() -> int:
     parser.add_argument("--project1-root", required=True)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--train-holdout-audit",
+        required=True,
+        help="passing persisted audit covering every pinned fixture at its fixed hash",
+    )
     parser.add_argument("--task-spec", action="append", required=True)
     parser.add_argument("--seeds", default="0,1,2")
     parser.add_argument("--attempts", type=int, default=2)
@@ -213,11 +297,20 @@ def main() -> int:
     checkpoint = Path(args.checkpoint)
     task_specs = [Path(item) for item in args.task_spec]
     seeds = [int(item.strip()) for item in args.seeds.split(",") if item.strip()]
-    budget = matched_budget(
-        attempts=args.attempts,
-        max_steps=args.max_steps,
-        max_new_tokens=args.max_new_tokens,
-    )
+    audit_gate = validate_required_audit_manifest(Path(args.train_holdout_audit))
+    if not audit_gate["passed"]:
+        parser.error("--train-holdout-audit must be a clean audit of every pinned fixture at its fixed hash")
+    checkpoint_training_binding = validate_checkpoint_training_binding(checkpoint, audit_gate)
+    if not checkpoint_training_binding["passed"]:
+        parser.error("--checkpoint must carry a merge/training manifest bound to the audited training-data hashes")
+    try:
+        budget = matched_budget(
+            attempts=args.attempts,
+            max_steps=args.max_steps,
+            max_new_tokens=args.max_new_tokens,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
     output = Path(args.output)
     partial = output.with_name(output.name + ".partial.json")
     runs: list[dict[str, Any]] = []
@@ -231,6 +324,8 @@ def main() -> int:
                 and saved.get("task_specs") == [str(path) for path in task_specs]
                 and saved.get("budget") == budget
                 and saved.get("quantization") == args.quantization
+                and saved.get("train_holdout_audit", {}).get("sha256") == audit_gate["sha256"]
+                and saved.get("checkpoint_training_binding") == checkpoint_training_binding
             )
             if compatible:
                 runs = list(saved.get("runs", []))
@@ -256,6 +351,8 @@ def main() -> int:
             "task_specs": [str(path) for path in task_specs],
             "budget": budget,
             "quantization": args.quantization,
+            "train_holdout_audit": audit_gate,
+            "checkpoint_training_binding": checkpoint_training_binding,
             "runs": runs,
         })
 
@@ -281,7 +378,7 @@ def main() -> int:
             seed=seed,
             do_sample=True,
             enable_repair=False,
-            max_new_tokens=budget["max_new_tokens_per_attempt"],
+            max_new_tokens=budget["max_new_tokens_per_decision"],
             quantization=args.quantization,
         )
         for task_spec in task_specs:
@@ -297,7 +394,7 @@ def main() -> int:
             if len(rows) > len(tasks):
                 raise ValueError(f"resume rows exceed task count for {task_spec}")
             for task_index in range(len(rows), len(tasks)):
-                row = _run_task(adapter, checkpoint, tasks[task_index], budget=budget)
+                row = _run_task(adapter, checkpoint, tasks[task_index], seed=seed, budget=budget)
                 rows.append(row)
                 if len(rows) % args.checkpoint_every_tasks == 0:
                     persist(_run_report(task_spec, seed=seed, checkpoint=checkpoint, budget=budget, rows=rows, complete=False, active_task_id=tasks[task_index].task_id))
@@ -315,6 +412,8 @@ def main() -> int:
         "max_new_tokens": args.max_new_tokens,
         "budget": budget,
         "quantization": args.quantization,
+        "train_holdout_audit": audit_gate,
+        "checkpoint_training_binding": checkpoint_training_binding,
         "runs": runs,
     }
     output.parent.mkdir(parents=True, exist_ok=True)

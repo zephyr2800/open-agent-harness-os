@@ -30,6 +30,7 @@ from app.cli import _load_auth_tokens, _optional_local_adapter, _server, _valida
 from app.storage import TraceStore
 from experiments.verify_checkpoint_run import verify as verify_checkpoint_run
 from experiments.run_promotion_matrix import _run_report, _write_heartbeat, main as promotion_matrix_main
+from experiments.task_search_control import main as task_search_control_main
 from experiments.release_readiness import _preflight_is_current, build_readiness
 from experiments.data_split_audit import (
     REQUIRED_FROZEN_FIXTURE_HASHES,
@@ -206,6 +207,19 @@ class ExperimentTests(unittest.TestCase):
                     promotion_matrix_main()
         self.assertEqual(exited.exception.code, 2)
 
+    def test_task_search_control_refuses_missing_audit_before_model_load(self) -> None:
+        missing_audit = ROOT / "work" / "missing-train-holdout-audit.json"
+        task_spec = ROOT / "benchmarks" / "fixtures" / "task-spec-research-v4.json"
+        with mock.patch.object(sys, "argv", [
+            "task_search_control", "--project1-root", "missing-project", "--checkpoint", "missing-checkpoint",
+            "--output", "missing-output.json", "--train-holdout-audit", str(missing_audit),
+            "--task-spec", str(task_spec),
+        ]):
+            with redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as exited:
+                    task_search_control_main()
+        self.assertEqual(exited.exception.code, 2)
+
     def test_promotion_matrix_heartbeat_is_claim_safe_and_timestamped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "matrix.heartbeat.json"
@@ -226,7 +240,7 @@ class ExperimentTests(unittest.TestCase):
         report = build_readiness(ROOT)
         expected_wheel = f"open_agent_harness_os-{report['package_version']}-py3-none-any.whl"
         gate = report["gates"]["clean_wheel_smoke"]
-        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v4.json"))
+        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v5.json"))
         self.assertIn(expected_wheel, gate["detail"])
         self.assertEqual(gate["status"], "passed")
 
@@ -398,6 +412,11 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual(report["task_count"], 1)
         self.assertEqual(report["rows"][0]["expected_action_count"], 3)
         self.assertEqual(report["runtime_replay_agreement"], 1.0)
+        self.assertEqual(report["execution_budget"], {
+            "max_steps": 6,
+            "max_new_tokens_per_decision": 256,
+            "max_generation_tokens": 1536,
+        })
 
     def test_real_report_verifier_replays_protocol_error_traces(self) -> None:
         report = {"rows": [{"model": "qwen", "variant": "H1", "seed": 0, "task_id": "t", "protocol_valid": False, "verified_success": False, "trace_jsonl": run_action("real-audit", "Write x", "write_file", {"path": "x", "content": "y"})["trace_jsonl"]}]}

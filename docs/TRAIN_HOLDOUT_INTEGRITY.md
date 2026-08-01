@@ -36,11 +36,12 @@ the required corpus and audit artifacts before training.
 
 ## Mechanical enforcement
 
-`run_promotion_matrix`, `promotion_decision`, and `verified_rl_gate` each
-require the same audit-manifest path. They recompute its digest, reject a
-missing/dirty/incomplete manifest, and require the matrix and decision to link
-that digest. A passing standalone audit is therefore necessary but cannot be
-silently detached from the evaluation or RL authorization it is meant to
-support. The SFT training manifest records the training JSONL hash and row
-count; merge copies that manifest into the checkpoint, and the gates reject a
-checkpoint whose recorded source fingerprints differ from the audit.
+`run_promotion_matrix`, `task_search_control`, `promotion_decision`, and
+`verified_rl_gate` each require the same audit-manifest path. They recompute
+its digest, reject a missing/dirty/incomplete manifest, and require the matrix,
+control, and decision to link that digest. A passing standalone audit is
+therefore necessary but cannot be silently detached from the evaluation or RL
+authorization it is meant to support. The SFT training manifest records the
+training JSONL hash and row count; merge copies that manifest into the
+checkpoint, and the gates reject a checkpoint whose recorded source
+fingerprints differ from the audit.

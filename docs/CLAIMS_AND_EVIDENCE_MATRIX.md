@@ -12,7 +12,7 @@ metadata.
 
 | Claim | Status | Authoritative evidence | Allowed wording now |
 |---|---|---|---|
-| A local developer preview exists | Supported | `experiments/results/launch-preflight-v5.json` | “The local developer preview passes its documented smoke, safety, auth/TLS, isolation, replay, packaging, security-metadata, and test gates.” |
+| A local developer preview exists | Supported | `experiments/results/launch-preflight-v6.json` | “The local developer preview passes its documented smoke, safety, auth/TLS, isolation, replay, source-bound packaging, security-metadata, and test gates.” |
 | The harness executes typed actions with independent verification and replay | Supported | source tests, product smoke, MCP replay artifact, trace schemas | “The harness provides a deterministic authority/evidence/replay plane.” |
 | The local policy learned the Action IR task family | Supported only on local fixtures | completed 7B v6/v6 proxy reports and independent replay reports | “Protocol specialization improves these frozen local tasks.” |
 | The system is generally capable on terminal or computer-use work | Not supported | TUA-Bench/OSWorld 2.0 run is still absent | Do not make this claim. |

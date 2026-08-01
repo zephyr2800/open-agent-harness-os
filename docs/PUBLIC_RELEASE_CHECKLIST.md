@@ -6,18 +6,25 @@ This checklist records the evidence attached to the current public repository sn
 
 ## Verified locally
 
-- Open Agent Harness OS unit and integration suite: 95/95 passing, including
-  dense-reliability and claim-safe scorecard checks.
+- Open Agent Harness OS unit and integration suite: 110/110 passing, including
+  dense-reliability, source-bound wheel integrity, and claim-safe scorecard checks.
 - Local Action Model companion suite: 47/47 passing.
-- Launch preflight v5: 15/15 checks passing, including extracted-wheel install
-  smoke and the companion suite; the historical artifact records an 83-test
-  source suite, while the current suite has 95 tests.
+- Launch preflight v6: 16/16 checks passing, including a fresh
+  clean-source wheel build, extracted-wheel install smoke, bytecode
+  exclusion, complete archive-manifest, package-digest, and console-script
+  binding to a fresh reference wheel, and the companion suite; the historical
+  v5 artifact records an 83-test source suite,
+  while v6 records 110.
 - Wheel build: `open_agent_harness_os-0.1.8-py3-none-any.whl` (no Python
-  bytecode caches; 72 archive entries).
-- Wheel SHA-256: `c6995127e0e6da0f6e4f112b440b2c5b21be7aff625b180d28e2289d597cd2ff`.
-- Source distribution: `open_agent_harness_os-0.1.8.tar.gz` (no Python
-  bytecode caches; 103 archive entries).
-- Source distribution SHA-256: `8a607d8b5ae08b5936c7e7fdf6b399915afbc89f31ce55a2328f2a215f59918b`.
+  bytecode caches; 74 archive entries; source/package fingerprint
+  `22395cbc393edbddf5cdf2e59f12955731b6d5f906d14fe8ccb56e3fa5385b15`).
+- Paired clean-wheel candidate SHA-256 (recorded in the smoke artifact):
+  `5b452350a4805cb115056777f54ffe052219e72bed7e370d07600c2b2e61b364`.
+- Wheel archive-manifest SHA-256 (identical across the paired clean builds):
+  `5362689f614cbf173e21ff8a4e8c158665e39997465c16ea77c8c2783d7c33b5`.
+- The release gate rebuilds from a clean source copy and records each raw
+  wheel hash in its evidence; the archive-manifest hash is the cross-build
+  provenance binding.
 - Public package audit: no credentials, model weights, generated result directories, or private local traces included.
 
 ## Interpretation boundary

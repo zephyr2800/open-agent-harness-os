@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -27,13 +28,13 @@ from app.service import run_action
 from app.storage import TraceStore
 from experiments.product_smoke import run as run_product_smoke
 from experiments.scorecard import build_scorecard
-from experiments.wheel_smoke import run as run_wheel_smoke
+from experiments.wheel_smoke import run as run_wheel_smoke, source_tree_sha256
 from traces.replay import load_jsonl
 from tools.memory_workspace import make_memory_registry
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_WHEEL = ROOT / "work" / "package-dist" / "open_agent_harness_os-0.1.8-py3-none-any.whl"
+DEFAULT_WHEEL: Path | None = None
 SOURCE_CHECKOUT = (ROOT / "pyproject.toml").is_file()
 REQUIRED_DOCS = (
     "README.md",
@@ -395,10 +396,12 @@ def _wheel_check(wheel: Path) -> dict[str, Any]:
         with zipfile.ZipFile(wheel) as archive:
             names = archive.namelist()
             safe_names = all(not Path(name).is_absolute() and ".." not in Path(name).parts for name in names)
+            bytecode_entries = [name for name in names if "/__pycache__/" in name or name.endswith((".pyc", ".pyo"))]
             dist_info = {name for name in names if ".dist-info/" in name}
             required = {
                 "app/__init__.py",
                 "app/cli.py",
+                "experiments/agentdojo_adapter_server.py",
                 "experiments/launch_preflight.py",
             }
             required_metadata = {name for name in dist_info if name.endswith(("/METADATA", "/WHEEL", "/RECORD"))}
@@ -437,12 +440,14 @@ def _wheel_check(wheel: Path) -> dict[str, Any]:
                 "zipfile": True,
                 "entry_count": len(names),
                 "safe_paths": safe_names,
+                "bytecode_free": not bytecode_entries,
+                "bytecode_entries": len(bytecode_entries),
                 "required_modules_present": required.issubset(names),
                 "wheel_metadata_present": len(required_metadata) == 3,
                 "record_entries": record_entries,
                 "record_hashes_valid": record_valid,
             })
-            passed = bool(safe_names and required.issubset(names) and len(required_metadata) == 3 and record_valid)
+            passed = bool(safe_names and not bytecode_entries and required.issubset(names) and len(required_metadata) == 3 and record_valid)
     except (OSError, zipfile.BadZipFile) as exc:
         detail.update({"zipfile": False, "reason": str(exc)})
         passed = False
@@ -453,14 +458,19 @@ def _wheel_check(wheel: Path) -> dict[str, Any]:
     )
 
 
-def _wheel_smoke_check(wheel: Path) -> dict[str, Any]:
+def _wheel_smoke_check(wheel: Path, *, reference_wheel: Path | None) -> dict[str, Any]:
     """Install the wheel into an isolated target and run package-only smoke."""
 
     if not wheel.is_file():
         return _check("wheel_install_smoke", False, {"path": wheel.name, "exists": False})
     try:
         with tempfile.TemporaryDirectory(prefix="open-agent-harness-wheel-preflight-") as target:
-            report = run_wheel_smoke(wheel, target=Path(target))
+            report = run_wheel_smoke(
+                wheel,
+                target=Path(target),
+                source_root=ROOT,
+                reference_wheel=reference_wheel,
+            )
         detail = {
             "path": wheel.name,
             "sha256": report.get("wheel_sha256"),
@@ -468,6 +478,14 @@ def _wheel_smoke_check(wheel: Path) -> dict[str, Any]:
             "demo_returncode": report.get("demo_returncode"),
             "demo_verified_success": report.get("demo_verified_success"),
             "imports_returncode": report.get("imports_returncode"),
+            "source_package_sha256": report.get("source_package_sha256"),
+            "wheel_package_sha256": report.get("wheel_package_sha256"),
+            "wheel_manifest_sha256": report.get("wheel_manifest_sha256"),
+            "source_matches_wheel": report.get("source_matches_wheel"),
+            "console_scripts_match": report.get("console_scripts_match"),
+            "reference_wheel_sha256": report.get("reference_wheel_sha256"),
+            "reference_wheel_manifest_sha256": report.get("reference_wheel_manifest_sha256"),
+            "wheel_manifest_matches_reference": report.get("wheel_manifest_matches_reference"),
         }
         passed = bool(report.get("passed"))
     except (OSError, ValueError, zipfile.BadZipFile) as exc:
@@ -573,7 +591,75 @@ def _companion_test_check() -> dict[str, Any]:
     )
 
 
-def run(*, wheel: Path = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str, Any]:
+def _build_source_wheel(output_dir: Path) -> tuple[Path | None, dict[str, Any]]:
+    """Build a fresh wheel from a copied source tree without build products."""
+
+    source_dir = output_dir / "source"
+    wheel_dir = output_dir / "wheel"
+    wheel_dir.mkdir(parents=True, exist_ok=True)
+    ignored_names = {
+        ".git",
+        ".pytest_cache",
+        ".venv",
+        "__pycache__",
+        "build",
+        "dist",
+        "outputs",
+        "work",
+    }
+
+    def ignore_build_products(_: str, names: list[str]) -> set[str]:
+        return {
+            name
+            for name in names
+            if name in ignored_names
+            or name.endswith((".pyc", ".pyo"))
+            or name.endswith(".egg-info")
+        }
+
+    try:
+        shutil.copytree(ROOT, source_dir, ignore=ignore_build_products)
+        wheel_completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "wheel",
+                "--no-deps",
+                "--no-cache-dir",
+                "--wheel-dir",
+                str(wheel_dir),
+                str(source_dir),
+            ],
+            cwd=source_dir,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, {"method": "pip wheel from clean source copy", "error": str(exc)}
+    candidates = sorted(wheel_dir.glob("*.whl"))
+    detail = {
+        "method": "pip wheel from clean source copy",
+        "source_copy_excludes": sorted(ignored_names),
+        "wheel_returncode": wheel_completed.returncode,
+        "wheel": candidates[0].name if len(candidates) == 1 else None,
+        "wheel_count": len(candidates),
+        "wheel_stdout_tail": wheel_completed.stdout[-2000:],
+        "wheel_stderr_tail": wheel_completed.stderr[-2000:],
+    }
+    if wheel_completed.returncode != 0 or len(candidates) != 1:
+        return None, detail
+    return candidates[0], detail
+
+
+def _run_with_wheel(
+    wheel: Path,
+    *,
+    reference_wheel: Path | None,
+    include_tests: bool,
+    wheel_build: dict[str, Any] | None,
+) -> dict[str, Any]:
     checks = [
         _check("product_smoke", True, run_product_smoke()),
         _mcp_check(),
@@ -587,9 +673,11 @@ def run(*, wheel: Path = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str
         _scorecard_check(),
     ]
     if SOURCE_CHECKOUT:
+        if wheel_build is not None:
+            checks.append(_check("wheel_build", bool(wheel_build.get("passed")), wheel_build["detail"]))
         checks.extend([
             _wheel_check(wheel),
-            _wheel_smoke_check(wheel),
+            _wheel_smoke_check(wheel, reference_wheel=reference_wheel),
             _companion_test_check(),
             _check(
                 "launch_docs",
@@ -611,6 +699,7 @@ def run(*, wheel: Path = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str
         "schema": "launch-preflight/v1",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "scope": "local-developer-preview" if SOURCE_CHECKOUT else "installed-wheel-package",
+        "source_package_sha256": source_tree_sha256(ROOT) if SOURCE_CHECKOUT else None,
         "checks": checks,
         "passed": all(item["passed"] for item in checks),
         "limitations": [
@@ -620,15 +709,54 @@ def run(*, wheel: Path = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str
     }
 
 
+def run(*, wheel: Path | None = DEFAULT_WHEEL, include_tests: bool = False) -> dict[str, Any]:
+    """Run preflight against a fresh source-derived wheel reference."""
+
+    if SOURCE_CHECKOUT:
+        with tempfile.TemporaryDirectory(prefix="open-agent-harness-preflight-build-") as directory:
+            built_wheel, detail = _build_source_wheel(Path(directory))
+            if built_wheel is None:
+                missing = Path(directory) / "source-build-failed.whl"
+                return _run_with_wheel(
+                    missing,
+                    reference_wheel=None,
+                    include_tests=include_tests,
+                    wheel_build={"passed": False, "detail": detail},
+                )
+            selected_wheel = wheel or built_wheel
+            detail = {
+                **detail,
+                "candidate_wheel": selected_wheel.name,
+                "candidate_is_fresh_reference": selected_wheel == built_wheel,
+            }
+            return _run_with_wheel(
+                selected_wheel,
+                reference_wheel=built_wheel,
+                include_tests=include_tests,
+                wheel_build={"passed": True, "detail": detail},
+            )
+    selected_wheel = wheel or ROOT / "wheel-not-applicable.whl"
+    return _run_with_wheel(
+        selected_wheel,
+        reference_wheel=None,
+        include_tests=include_tests,
+        wheel_build=(
+            {"passed": True, "detail": {"method": "user-supplied", "wheel": selected_wheel.name}}
+            if SOURCE_CHECKOUT
+            else None
+        ),
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", default=str(ROOT / "experiments" / "results" / "launch-preflight-v5.json"))
-    parser.add_argument("--wheel", default=str(DEFAULT_WHEEL))
+    parser.add_argument("--output", default=str(ROOT / "experiments" / "results" / "launch-preflight-v6.json"))
+    parser.add_argument("--wheel", help="optional wheel; source checkouts build a fresh wheel by default")
     parser.add_argument("--with-tests", action="store_true", help="also run the full source test suite")
     args = parser.parse_args()
-    report = run(wheel=Path(args.wheel), include_tests=args.with_tests)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
+    report = run(wheel=Path(args.wheel) if args.wheel else None, include_tests=args.with_tests)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps({"passed": report["passed"], "checks": {item["id"]: item["passed"] for item in report["checks"]}}, indent=2, sort_keys=True))
     return 0 if report["passed"] else 1

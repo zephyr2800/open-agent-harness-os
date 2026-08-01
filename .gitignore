@@ -13,6 +13,11 @@ dist/
 # Generated evaluation and runtime state
 results/
 experiments/results/
+# Versioned public release evidence; all other generated results stay local.
+!experiments/results/
+experiments/results/*
+!experiments/results/clean-wheel-smoke-v4.json
+!experiments/results/launch-preflight-v6.json
 work/*
 !work/.gitkeep
 *.partial.json

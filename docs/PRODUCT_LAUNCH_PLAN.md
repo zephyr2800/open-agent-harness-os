@@ -70,27 +70,28 @@ an RTX 5090 memory/timing baseline. Broader deployment-cost measurement across
 the external suite and representative workflows remains open.
 
 The current wheel (`open_agent_harness_os-0.1.8-py3-none-any.whl`) was built
-with the local setuptools backend, installed into a fresh target directory
-without dependencies, and passed `python -m app.cli demo` with verified
-success. This closes the packaging smoke gate for the developer preview; it
-does not close multi-user isolation, production operational,
-security-review, or external-agent benchmark gates.
+from a fresh clean source copy, matched to the current complete archive
+manifest, package-module digest, and console-script manifest, installed into a
+fresh target directory without dependencies, and passed `python -m app.cli
+demo` with verified success. This closes the packaging smoke gate for the
+developer preview; it does not close multi-user isolation, production
+operational, security-review, or external-agent benchmark gates.
 
 The consolidated source-checkout preflight is recorded at
-`experiments/results/launch-preflight-v5.json`. It passes the six-case product
+`experiments/results/launch-preflight-v6.json`. It passes the six-case product
  smoke, MCP contract and replay, local-only endpoint policy, bearer
  authentication, high-risk denial, persistence, wheel integrity,
 launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
 isolation, tool-by-tool security metadata auditing, the external evaluation
 note and fixture. At artifact creation, the Project 2 source suite had 82
 tests and the recorded v5 preflight artifact contains an 83-test subcheck.
-The current source suite has 95 tests. The
+The current source-bound v6 preflight contains a 110-test subcheck. The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
 The 2026-07-27 timeout-boundary artifact recorded Project 2 source tests at
 81/81 and Project 1 source tests at 47/47; those are historical artifact
-counts. The current suites are 95/95 and 47/47, respectively, and the
+counts. The current suites are 110/110 and 47/47, respectively, and the
 consolidated launch preflight remains green. This closes the adapter-level
 budget-enforcement regression; it does not by itself close real-model
 performance, usability, security-review, licensing, or external-benchmark
@@ -113,10 +114,12 @@ without state change.
 
 ## 2026-07-29 launch-candidate update
 
-The public branch now has 95/95 harness tests, 47/47 companion tests, and a
-15-check launch preflight. The preflight runs the companion suite from its own
+The public branch now has 110/110 harness tests, 47/47 companion tests, and a
+16-check launch preflight. The preflight runs the companion suite from its own
 package root so same-name modules from the two projects cannot silently
-replace one another. It also validates the extracted wheel install and checks
+replace one another. It builds a fresh clean-source wheel, validates
+the extracted install, and compares the complete archive manifest, package
+module digest, and console scripts against the fresh reference before checking
 the claim-safe scorecard, which rejects an external-native label without
 complete native provenance.
 

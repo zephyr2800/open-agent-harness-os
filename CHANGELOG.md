@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5 - 2026-08-01
+
+- Fixed retry-repair parsing for versioned operation identifiers that contain
+  digits, with regression coverage for the public harness adapter.
+- Refreshed the public research and launch landscape against current
+  harness, safety, terminal-use, and customization benchmarks.
+- Kept the developer-preview boundary explicit: local evidence is not a
+  native external benchmark or general autonomous-agent claim.
+
 ## 0.1.4 — 2026-07-29
 
 - Pointed release-readiness and preflight defaults at the current versioned

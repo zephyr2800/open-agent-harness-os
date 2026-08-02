@@ -11,6 +11,8 @@ The registered local-only condition is intentionally narrow:
 
 This is a native solo-condition result, not an interactive τ³-bench user-simulator result. It must be reported with that condition intact.
 
+The pinned v1.0.1 runtime has two observed Windows/solo-mode compatibility defects: its CLI passes five generic constructor arguments to `DummyUser`, which accepts none, and its optional verbose-log path uses raw telecom task IDs containing `|`. The launcher uses `experiments.tau2_native_runner` to apply only the first fix in memory, records its source hash and the inspected constructor signature, leaves the τ³ checkout clean, and disables optional verbose logs. Native `results.json`, the preserved native result tree, adapter log, and process logs remain the authoritative artifacts.
+
 ## Integrity rules
 
 The launcher rejects a run unless all of these are true:
@@ -20,6 +22,7 @@ The launcher rejects a run unless all of these are true:
 - Requested task IDs exist in the pinned `telecom/base` catalog and are valid for τ³-bench solo mode.
 - The local run directory and τ³-bench output directory are both new, so the benchmark cannot resume or mix an earlier score.
 - The model is deterministic (`temperature=0`), uses one local worker, has explicit step/error/token limits, and disables benchmark retries.
+- The wrapper's in-memory `DummyUser` compatibility status is recorded. It does not modify τ³-bench source, task data, tool environment, or grader.
 - The adapter has a unique loopback port, a health check, and is stopped only if this launcher started it.
 
 Every plan records the selector-catalog hash, checkpoint and source hashes, τ³-bench commit/runtime details, commands, environment, and the exact adapter variant. Execution writes the official output to τ³-bench's native result directory and copies that tree into the immutable run directory alongside adapter and benchmark logs.

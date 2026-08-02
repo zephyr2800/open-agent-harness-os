@@ -8,6 +8,11 @@ local-only condition is deliberately narrow: τ³-bench telecom/base in its
 official solo mode.  That condition uses ``DummyUser`` and never silently
 falls back to a paid or external user simulator.
 
+τ³-bench v1.0.1 needs a transparent in-memory constructor compatibility shim
+for its documented ``DummyUser`` solo condition.  The plan records the shim's
+source hash and whether the pinned runtime requires it; the benchmark checkout
+itself remains clean and unmodified.
+
 By default this module only validates inputs and writes an immutable plan.
 ``--execute`` is explicit because it loads the policy onto the local GPU.
 """
@@ -93,6 +98,16 @@ print(json.dumps({
 """
 
 
+_COMPATIBILITY_PROBE_SCRIPT = """
+import json
+
+from experiments.tau2_native_runner import compatibility_metadata
+from tau2.user.user_simulator import DummyUser
+
+print(json.dumps(compatibility_metadata(DummyUser), sort_keys=True))
+"""
+
+
 @dataclass(frozen=True)
 class Tau2NativeRunConfig:
     checkpoint: Path
@@ -166,9 +181,9 @@ def _tau2_environment(config: Tau2NativeRunConfig) -> tuple[dict[str, str], list
 
     pythonpath = [
         str(config.tau2_root / "src"),
-        str(config.tau2_runtime),
-        str(config.project1_root),
         str(REPO_ROOT),
+        str(config.project1_root),
+        str(config.tau2_runtime),
     ]
     inherited_pythonpath = os.environ.get("PYTHONPATH")
     if inherited_pythonpath:
@@ -274,6 +289,37 @@ def _selector_catalog(config: Tau2NativeRunConfig, environment: dict[str, str]) 
     return {**normalized, "sha256": hashlib.sha256(normalized_bytes).hexdigest()}
 
 
+def _compatibility_probe(config: Tau2NativeRunConfig, environment: dict[str, str]) -> dict[str, Any]:
+    """Inspect the pinned runtime's solo-mode constructor boundary without running a task."""
+
+    probe_environment = os.environ.copy()
+    probe_environment.update(environment)
+    try:
+        completed = subprocess.run(
+            [str(config.python), "-c", _COMPATIBILITY_PROBE_SCRIPT],
+            cwd=config.tau2_root,
+            env=probe_environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ValueError(f"could not inspect τ³-bench solo-mode compatibility: {error}") from error
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip() or "unknown compatibility probe error"
+        raise ValueError(f"could not inspect τ³-bench solo-mode compatibility: {detail}")
+    try:
+        payload = json.loads(completed.stdout)
+    except ValueError as error:
+        raise ValueError("τ³-bench compatibility probe was not valid JSON") from error
+    if not isinstance(payload, dict) or not isinstance(payload.get("required"), bool):
+        raise ValueError("τ³-bench compatibility probe returned an invalid payload")
+    if payload.get("id") != "tau2-dummy-user-constructor-v1":
+        raise ValueError("τ³-bench compatibility probe returned an unexpected shim identity")
+    return payload
+
+
 def _validate_selectors(config: Tau2NativeRunConfig, catalog: dict[str, Any]) -> None:
     if len(set(config.task_ids)) != len(config.task_ids):
         raise ValueError("each --task-id selector must be unique to preserve the registered evaluation budget")
@@ -353,7 +399,7 @@ def _benchmark_command(config: Tau2NativeRunConfig) -> list[str]:
     return [
         str(config.python),
         "-m",
-        "tau2.cli",
+        "experiments.tau2_native_runner",
         "run",
         "--domain",
         config.domain,
@@ -387,9 +433,6 @@ def _benchmark_command(config: Tau2NativeRunConfig) -> list[str]:
         _save_name(config),
         "--log-level",
         "ERROR",
-        "--verbose-logs",
-        "--llm-log-mode",
-        "all",
         "--enforce-communication-protocol",
     ]
 
@@ -448,7 +491,9 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
     runtime = _runtime_probe(config, environment)
     selector_catalog = _selector_catalog(config, environment)
     _validate_selectors(config, selector_catalog)
+    compatibility = _compatibility_probe(config, environment)
     adapter = REPO_ROOT / "experiments" / "agentdojo_adapter_server.py"
+    runner_wrapper = REPO_ROOT / "experiments" / "tau2_native_runner.py"
     return {
         "schema": "tau2-native-run/v1",
         "status": "planned",
@@ -475,6 +520,13 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
             "native_output_directory": str(native_output_dir),
             "native_results_file": str(native_output_dir / "results.json"),
             "condition": "official-solo-telecom; no external user simulator",
+            "verbose_logs": False,
+            "verbose_logs_reason": "disabled because τ³-bench v1.0.1 constructs Windows artifact directories from telecom task IDs containing '|'; native results.json and launcher process/adapter logs remain preserved",
+        },
+        "runner_wrapper": {
+            "source": _file_record(runner_wrapper),
+            "delegates_to": "tau2.cli.main",
+            "compatibility": compatibility,
         },
         "adapter": {
             "source": _file_record(adapter),

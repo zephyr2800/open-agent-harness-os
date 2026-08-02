@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from experiments.data_split_audit import REQUIRED_FROZEN_FIXTURE_HASHES, validate_required_audit_manifest
-from experiments.tau2_native_launcher import Tau2NativeRunConfig, _assert_port_available, build_plan
+from experiments.tau2_native_launcher import REPO_ROOT, Tau2NativeRunConfig, _assert_port_available, build_plan
 
 
 def _audit(path: Path) -> Path:
@@ -67,6 +67,18 @@ def _selector_catalog() -> dict[str, object]:
     }
 
 
+def _compatibility_probe() -> dict[str, object]:
+    return {
+        "id": "tau2-dummy-user-constructor-v1",
+        "constructor_signature": "(self)",
+        "required_kwargs": ["instructions", "llm", "llm_args", "persona_config", "tools"],
+        "accepted_kwargs": [],
+        "missing_kwargs": ["instructions", "llm", "llm_args", "persona_config", "tools"],
+        "required": True,
+        "scope": "in-memory compatibility only",
+    }
+
+
 class Tau2NativeLauncherTests(unittest.TestCase):
     def _config(self, root: Path, *, variant: str = "model-only") -> Tau2NativeRunConfig:
         audit = _audit(root / "audit.json")
@@ -105,6 +117,7 @@ class Tau2NativeLauncherTests(unittest.TestCase):
             mock.patch("experiments.tau2_native_launcher._git", side_effect=["b" * 40, ""]),
             mock.patch("experiments.tau2_native_launcher._runtime_probe", return_value=_runtime_probe()),
             mock.patch("experiments.tau2_native_launcher._selector_catalog", return_value=_selector_catalog()),
+            mock.patch("experiments.tau2_native_launcher._compatibility_probe", return_value=_compatibility_probe()),
         ):
             return build_plan(config)
 
@@ -115,11 +128,19 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         self.assertEqual(plan["tau2"]["commit"], "b" * 40)
         self.assertTrue(plan["checkpoint"]["training_binding"]["passed"])
         self.assertEqual(plan["tau2"]["condition"], "official-solo-telecom; no external user simulator")
+        self.assertFalse(plan["tau2"]["verbose_logs"])
+        self.assertTrue(plan["runner_wrapper"]["compatibility"]["required"])
+        self.assertEqual(plan["runner_wrapper"]["compatibility"]["id"], "tau2-dummy-user-constructor-v1")
         self.assertEqual(plan["tau2"]["selector_catalog"]["sha256"], "e" * 64)
         self.assertTrue(plan["runtime"]["source_bound"])
         self.assertEqual(plan["environment"]["PYTHONUTF8"], "1")
+        entries = plan["runtime"]["pythonpath_entries"]
+        self.assertLess(
+            entries.index(str(REPO_ROOT)),
+            entries.index(str(Path(plan["checkpoint"]["directory"]).parent / "project1")),
+        )
         benchmark = plan["commands"]["benchmark"]
-        self.assertIn("tau2.cli", benchmark)
+        self.assertIn("experiments.tau2_native_runner", benchmark)
         self.assertIn("llm_agent_solo", benchmark)
         self.assertIn("dummy_user", benchmark)
         self.assertIn("openai/local-action-policy", benchmark)
@@ -140,6 +161,7 @@ class Tau2NativeLauncherTests(unittest.TestCase):
                 mock.patch("experiments.tau2_native_launcher._git", side_effect=["c" * 40, ""]),
                 mock.patch("experiments.tau2_native_launcher._runtime_probe", return_value=_runtime_probe()),
                 mock.patch("experiments.tau2_native_launcher._selector_catalog", return_value=_selector_catalog()),
+                mock.patch("experiments.tau2_native_launcher._compatibility_probe", return_value=_compatibility_probe()),
             ):
                 with self.assertRaisesRegex(ValueError, "unknown"):
                     build_plan(config)
@@ -149,6 +171,7 @@ class Tau2NativeLauncherTests(unittest.TestCase):
                 mock.patch("experiments.tau2_native_launcher._git", side_effect=["d" * 40, ""]),
                 mock.patch("experiments.tau2_native_launcher._runtime_probe", return_value=_runtime_probe()),
                 mock.patch("experiments.tau2_native_launcher._selector_catalog", return_value=_selector_catalog()),
+                mock.patch("experiments.tau2_native_launcher._compatibility_probe", return_value=_compatibility_probe()),
             ):
                 with self.assertRaisesRegex(ValueError, "must be unique"):
                     build_plan(config)
@@ -158,6 +181,7 @@ class Tau2NativeLauncherTests(unittest.TestCase):
                 mock.patch("experiments.tau2_native_launcher._git", side_effect=["f" * 40, ""]),
                 mock.patch("experiments.tau2_native_launcher._runtime_probe", return_value=_runtime_probe()),
                 mock.patch("experiments.tau2_native_launcher._selector_catalog", return_value=_selector_catalog()),
+                mock.patch("experiments.tau2_native_launcher._compatibility_probe", return_value=_compatibility_probe()),
             ):
                 with self.assertRaisesRegex(ValueError, "not valid"):
                     build_plan(config)

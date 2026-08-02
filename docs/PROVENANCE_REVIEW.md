@@ -65,3 +65,31 @@ and dependency notices, and the intended adapter/merged-weight distribution
 boundary. Public wording may describe an internal research checkpoint and
 developer-preview experiment; it must not promise commercial model-weight
 redistribution yet.
+
+## Current source and model-card boundary — 2026-08-02
+
+The fresh public-harness evidence is
+`experiments/results/launch-preflight-v33.json` with its paired
+`clean-wheel-smoke-v33.json`. It records a clean-source, dependency-free wheel
+build with 89 archive entries, a 208,672-byte wheel, matching source/package
+and archive-manifest fingerprints, extracted-install import verification, and
+the verified demo. The build deliberately excludes the repository's `work`
+tree; `pyproject.toml` disables package data and declares no third-party
+runtime dependency for the core harness. This is evidence for the harness-only
+distribution boundary, not a clearance for any optional model stack.
+
+The upstream [Qwopus3.5-9B-v3 model card](https://huggingface.co/Jackrong/Qwopus3.5-9B-v3)
+was rechecked on 2026-08-02. It displays an Apache-2.0 label, but describes the
+checkpoint as a test version intended solely for learning, demonstration,
+academic research, and technical exploration. Its card describes a broadly
+curated mixture of open-source Hugging Face data rather than a complete
+machine-readable dataset/license ledger. The Apache label therefore does not
+resolve the model card's stated intended-use boundary or establish commercial
+redistribution rights for the base, derivative, adapter, tokenizer, training
+sources, or any merged export.
+
+Release decision: the public artifact may be the Apache-2.0 harness source and
+v33 wheel only. Keep the Qwopus base, local adapter, merged checkpoint,
+training mixtures, raw traces, external benchmark assets, and any hosted
+Qwopus endpoint outside that distribution until human legal/provenance sign-off
+exists.

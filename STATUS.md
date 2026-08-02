@@ -102,6 +102,8 @@ gate, native external diagnostic, or verifier-backed RL gate.
 ## Pointers
 
 - `docs/RESEARCH_LAUNCH_BRIEF.md` -- thesis, evidence tiers, and claim limits.
+- `docs/HARNESS_SCALING_PAPER_DRAFT.md` -- paper-structured methods,
+  preregistration, current evidence boundary, and publication criteria.
 - `docs/RESEARCH_ABLATION_SPEC_V2.md` -- controlled model/harness and sampling
   ablations.
 - `docs/CORPUS_QUALITY_AUDIT.md` -- raw-content-free corpus integrity audit.

@@ -19,6 +19,9 @@
   certification.
 - Refreshed the research and investor materials with source-backed Kimi K3,
   Inkling/Tinker, and adaptive-injection context.
+- Added a paper-structured Project 2 methods/preregistration draft that keeps
+  the runnable developer-preview result distinct from the pending empirical
+  model–harness interaction claim.
 - Refreshed developer-preview release evidence to v34 (16/16 preflight,
   210 Project 2 tests with one Windows capability skip, and 47/47 companion
   tests), and made public wheel-smoke sidecars use repository-relative or

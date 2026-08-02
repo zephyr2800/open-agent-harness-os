@@ -1,6 +1,6 @@
 # Verified Action Policies: research and launch brief
 
-Status: active research / developer-preview candidate, 2026-07-27
+Status: active research / developer-preview candidate, 2026-08-02
 
 ## One-sentence thesis
 
@@ -95,26 +95,32 @@ than one aggregate success number.
 | 7B v6 industry proxy v1 | 48/48 verified, zero unsafe attempts | Stronger state/injection proxy result; still offline |
 | 7B v7 external-gap revision | 39/48; policy sequence 3/12 | Not promoted; repeated narrow data caused regression |
 | 7B verifier-backed RL smoke | neutral reward before/after | Undirected RL is not a valid improvement strategy |
-| Project 2 test suite | 214 total: 213 passed, one Windows symlink-capability skip | Harness/evaluator regression control |
-| Qwopus3.5-9B rank-64 QLoRA | Historical SFT, merge, and 9-run matrix complete on RTX 5090 | 483/552 independently verified (87.5%), zero unsafe attempts, perfect trace/replay checks; context only because source-corpus isolation was not recorded |
+| Developer-preview evidence v36 | 16/16 launch-preflight checks; 214 Project 2 tests (213 passed, one expected Windows symlink-capability skip); 47/47 Project 1 tests | Current public developer-preview evidence; harness/evaluator regression control, not an external capability score |
+| Historical Qwopus3.5-9B rank-64 QLoRA | Historical SFT, merge, and 9-run matrix complete on RTX 5090 | 483/552 independently verified (87.5%), zero unsafe attempts, perfect trace/replay checks; context only because source-corpus isolation was not recorded |
+| Clean-source Qwopus3.5-9B candidate | Audited SFT completed in 808 steps on 3,232 rows; merged checkpoint handoff exists | Frozen promotion matrix intentionally paused at 96/480 task-seed attempts; it is not a decision artifact and cannot authorize native evaluation or RL |
 
 Data-isolation addendum: the later targeted 9B curriculum was found to overlap
 with frozen proxy contracts and its matrix was stopped at a 441-row saved
 partial, so it is diagnostic only. The older 483/552 matrix remains context-
 only as well: its original SFT manifest does not record an auditable source-
-corpus split. Neither result supports a held-out-performance, causal,
-breakthrough, or promotion claim.
+corpus split. The clean-source candidate is distinct: its SFT provenance is
+audited, but its intentionally paused 96/480 promotion matrix is non-decisional.
+None of these results supports a held-out-performance, causal, breakthrough,
+or promotion claim.
 
 The Qwopus-compatible verifier-backed REINFORCE path also passes a local
 dry-run on the disjoint 24-task Action IR specification after sharing the same
 thinking-disabled chat serializer as SFT and inference. This validates the RL
-entry point, not an RL improvement claim. The rank-64 adapter and merged
-checkpoint now exist; the frozen matrix is complete but rejected, so RL waits
-for a failure-targeted remediation ablation and fresh external evidence.
+entry point, not an RL improvement claim. The clean candidate's rank-64 adapter
+and merged checkpoint now exist, but RL remains blocked: its promotion matrix
+is paused at 96/480 and has no decision artifact. Even after a local promotion
+decision, the verifier-backed RL gate requires complete checkpoint- and
+fixture-bound external diagnostics across distinct seeds 0, 1, and 2.
 
-The promotion runner records per-task latency and peak CUDA allocation for
-each frozen checkpoint matrix. The 9B report therefore includes a real local
-deployment-cost measurement rather than pass rate alone.
+The promotion runner can record per-task latency and peak CUDA allocation for
+each frozen checkpoint matrix. No deployment-cost result is claimed for the
+paused clean-source candidate; its partial matrix cannot be promoted into a
+performance or cost artifact.
 
 Promotion is now a separate machine-readable gate in
 `experiments/promotion_decision.py`: it rejects missing slices, unknown task
@@ -167,10 +173,11 @@ replays. ([model card](https://huggingface.co/Jackrong/Qwopus3.5-9B-v3),
 The local product surface has a CLI, loopback HTTP API, MCP stdio server,
 typed Action IR, allowlisted tools, default high-risk denial, independent
 verification, bounded budgets, and replayable JSONL traces. The current
-210-test suite (one Windows symlink-capability skip),
-offline demo, replay smoke, explicit concurrent-retention preflight, and
-bearer-authentication plus tenant-isolation checks support a technically
-capable local preview.
+public developer-preview evidence is v36: 16/16 launch-preflight checks,
+214 Project 2 tests (213 passed and one expected Windows symlink-capability
+skip), and 47/47 companion Project 1 tests. The offline demo, replay smoke,
+explicit concurrent-retention preflight, and bearer-authentication plus
+tenant-isolation checks support a technically capable local preview.
 Non-loopback serving now requires both bearer authentication and TLS 1.2+;
 plain HTTP remains available only for explicit loopback development.
 
@@ -193,7 +200,13 @@ A checkpoint can replace v6 only if it has:
 4. 100% independent trace validity and runtime/replay agreement;
 5. no high-risk state mutation under injected untrusted content;
 6. held-out tasks authored independently from training generators; and
-7. one external AgentDojo, τ-bench/τ³-bench, ToolSandbox, or equivalent run.
+7. a complete machine-readable promotion decision artifact.
+
+Only a local decision of `promote` can unlock the separately registered Phase A
+AgentDojo and τ³-bench diagnostics. Those native results are required for an
+external or research-breakthrough claim, not retroactive substitutes for a
+local promotion decision. Verifier-backed RL additionally requires complete,
+checkpoint- and fixture-bound external diagnostics across seeds 0, 1, and 2.
 
 ## Investor-safe framing
 

@@ -30,7 +30,7 @@ from app.cli import _load_auth_tokens, _optional_local_adapter, _server, _valida
 from app.storage import TraceStore
 from experiments.verify_checkpoint_run import verify as verify_checkpoint_run
 from experiments.run_promotion_matrix import _run_report, _write_heartbeat, main as promotion_matrix_main
-from experiments.release_readiness import _preflight_is_current, build_readiness
+from experiments.release_readiness import _current_preflight, _preflight_is_current, build_readiness
 from experiments.data_split_audit import (
     REQUIRED_FROZEN_FIXTURE_HASHES,
     audit,
@@ -244,9 +244,38 @@ class ExperimentTests(unittest.TestCase):
         report = build_readiness(ROOT)
         expected_wheel = f"open_agent_harness_os-{report['package_version']}-py3-none-any.whl"
         gate = report["gates"]["clean_wheel_smoke"]
-        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v7.json"))
+        self.assertIn("clean-wheel-smoke-v", Path(gate["evidence"]).name)
         self.assertIn(expected_wheel, gate["detail"])
         self.assertEqual(gate["status"], "passed")
+
+    def test_preflight_selection_requires_the_current_source_fingerprint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            results = Path(directory)
+            matching = {
+                "passed": True,
+                "source_package_sha256": "a" * 64,
+                "checks": [
+                    {"id": "unit_tests", "passed": True},
+                    {
+                        "id": "wheel_install_smoke",
+                        "passed": True,
+                        "detail": {
+                            "source_package_sha256": "a" * 64,
+                            "wheel_package_sha256": "a" * 64,
+                            "source_matches_wheel": True,
+                            "console_scripts_match": True,
+                            "wheel_manifest_matches_reference": True,
+                            "wheel_manifest_sha256": "a" * 64,
+                            "reference_wheel_manifest_sha256": "a" * 64,
+                        },
+                    },
+                ],
+            }
+            (results / "launch-preflight-v2.json").write_text(json.dumps(matching), encoding="utf-8")
+            (results / "launch-preflight-v12.json").write_text(json.dumps(matching), encoding="utf-8")
+            path, report = _current_preflight(results, "a" * 64)
+        self.assertEqual(path.name, "launch-preflight-v12.json")
+        self.assertIsNotNone(report)
 
     def test_readiness_requires_completed_source_bound_preflight(self) -> None:
         fingerprint = "a" * 64

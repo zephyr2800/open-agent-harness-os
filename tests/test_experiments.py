@@ -238,6 +238,24 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual(exited.exception.code, 2)
         self.assertIn("require --do-sample", stderr.getvalue())
 
+    def test_promotion_matrix_v2_requires_stochastic_decoding_before_model_load(self) -> None:
+        missing_audit = ROOT / "work" / "missing-train-holdout-audit.json"
+        missing_novelty = ROOT / "work" / "missing-holdout-novelty-audit.json"
+        research = ROOT / "benchmarks" / "fixtures" / "task-spec-research-v4.json"
+        active_proxy = ROOT / "benchmarks" / "fixtures" / "task-spec-industry-proxy-v2.json"
+        author_holdout = ROOT / "benchmarks" / "fixtures" / "task-spec-author-holdout-v1.json"
+        with mock.patch.object(sys, "argv", [
+            "run_promotion_matrix", "--project1-root", "missing-project", "--checkpoint", "missing-checkpoint",
+            "--output", "missing-output.json", "--train-holdout-audit", str(missing_audit),
+            "--holdout-novelty-audit", str(missing_novelty), "--promotion-protocol", "v2",
+            "--task-spec", str(research), "--task-spec", str(active_proxy), "--task-spec", str(author_holdout),
+        ]):
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as exited:
+                promotion_matrix_main()
+        self.assertEqual(exited.exception.code, 2)
+        self.assertIn("requires --do-sample", stderr.getvalue())
+
     def test_promotion_matrix_heartbeat_is_claim_safe_and_timestamped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "matrix.heartbeat.json"

@@ -108,25 +108,29 @@ def _decision(
         expected_training_sources=audit_gate["training_sources"],
         expected_task_spec_hashes=protocol_task_spec_hashes(promotion_protocol),
     )
+    gates = {
+        "valid_seed_declaration": True,
+        "expected_run_count": 9,
+        "required_slices_present": True,
+        "all_required_seeds_present": True,
+        "no_duplicate_seeds": True,
+        "no_unknown_task_specs": True,
+        "all_frozen_runs_pass": promoted,
+        "required_train_holdout_audit": True,
+        "holdout_template_novelty": True,
+        "pinned_task_spec_hashes": True,
+        "promotion_protocol_binding": True,
+        "runtime_source_tree_binding": True,
+        "checkpoint_training_binding": True,
+    }
+    if promotion_protocol == "v2":
+        gates["stochastic_decoding"] = True
     path.write_text(json.dumps({
         "schema": "promotion-decision/v1",
         "promotion_protocol": promotion_protocol,
         "decision": "promote" if promoted else "reject",
         "passed": promoted,
-        "gates": {
-            "valid_seed_declaration": True,
-            "expected_run_count": 9,
-            "required_slices_present": True,
-            "all_required_seeds_present": True,
-            "no_duplicate_seeds": True,
-            "no_unknown_task_specs": True,
-            "all_frozen_runs_pass": promoted,
-            "required_train_holdout_audit": True,
-            "holdout_template_novelty": True,
-            "pinned_task_spec_hashes": True,
-            "promotion_protocol_binding": True,
-            "checkpoint_training_binding": True,
-        },
+        "gates": gates,
         "train_holdout_audit": {**audit_gate, "linked_to_matrix": True},
         "holdout_novelty_audit": {**novelty_gate, "linked_to_matrix": True},
         "checkpoint_training_binding": {**validate_checkpoint_training_binding(checkpoint, audit_gate), "linked_to_matrix": True},

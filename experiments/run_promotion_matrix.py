@@ -27,9 +27,13 @@ from experiments.data_split_audit import (
 )
 from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
 from experiments.promotion_protocols import protocol_names, validate_protocol_task_specs
+from experiments.source_tree import record_source_tree
 from runtime.orchestrator import Harness, HarnessConfig, TaskRequest
 from tools.memory_workspace import make_memory_registry
 from verify.independent import verify_trace
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _runtime_manifest() -> dict[str, Any]:
@@ -422,6 +426,8 @@ def main() -> int:
             "--task-spec must name each pinned fixture exactly once and match its fixed hash "
             f"for promotion protocol {args.promotion_protocol}"
         )
+    if args.promotion_protocol == "v2" and not args.do_sample:
+        parser.error("promotion protocol v2 requires --do-sample with recorded stochastic decoding settings")
     protocol_metadata = (
         {
             "promotion_protocol": args.promotion_protocol,
@@ -447,6 +453,10 @@ def main() -> int:
     checkpoint_training_binding = validate_checkpoint_training_binding(checkpoint, audit_gate)
     if not checkpoint_training_binding["passed"]:
         parser.error("--checkpoint must carry a merge/training manifest bound to the audited training-data hashes")
+    source_trees = {
+        "project1": record_source_tree(project1_root),
+        "harness": record_source_tree(REPO_ROOT),
+    }
     partial = output.with_name(output.name + ".partial.json")
     heartbeat_output = Path(args.heartbeat_output) if args.heartbeat_output else output.with_name(output.name + ".heartbeat.json")
     runs: list[dict[str, Any]] = []
@@ -468,6 +478,7 @@ def main() -> int:
                 and saved.get("train_holdout_audit", {}).get("sha256") == audit_gate["sha256"]
                 and saved.get("holdout_novelty_audit", {}).get("sha256") == novelty_gate["sha256"]
                 and saved.get("checkpoint_training_binding") == checkpoint_training_binding
+                and saved.get("source_trees") == source_trees
                 and saved.get("task_spec_hashes") == task_spec_hashes
                 and saved.get("promotion_protocol") == args.promotion_protocol
                 and saved.get("promotion_protocol_task_spec_gate") == protocol_task_spec_gate
@@ -504,6 +515,7 @@ def main() -> int:
             "train_holdout_audit": audit_gate,
             "holdout_novelty_audit": novelty_gate,
             "checkpoint_training_binding": checkpoint_training_binding,
+            "source_trees": source_trees,
             "task_spec_hashes": task_spec_hashes,
             **protocol_metadata,
             "heartbeat_output": str(heartbeat_output),
@@ -593,6 +605,7 @@ def main() -> int:
         "train_holdout_audit": audit_gate,
         "holdout_novelty_audit": novelty_gate,
         "checkpoint_training_binding": checkpoint_training_binding,
+        "source_trees": source_trees,
         "task_spec_hashes": task_spec_hashes,
         **protocol_metadata,
         "runs": runs,

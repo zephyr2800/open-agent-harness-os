@@ -13,31 +13,31 @@ from pathlib import Path
 from typing import Any
 
 from experiments.data_split_audit import (
-    REQUIRED_FROZEN_FIXTURE_HASHES,
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
 from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
+from experiments.promotion_protocols import (
+    DEFAULT_PROMOTION_PROTOCOL,
+    protocol_names,
+    protocol_slices,
+    protocol_task_spec_hashes,
+)
 
 
-REQUIRED_SLICES = {
-    "task-spec-research-v4.json": "research_v4",
-    "task-spec-industry-proxy-v1.json": "industry_proxy_v1",
-    "task-spec-industry-proxy-v2.json": "industry_proxy_v2",
-}
-
-REQUIRED_PROMOTION_TASK_SPEC_HASHES = {
-    path: REQUIRED_FROZEN_FIXTURE_HASHES[path]
-    for path in REQUIRED_SLICES
-}
+# Backward-compatible aliases for callers and published v1 test fixtures.
+# New callers must select a protocol explicitly when evaluating a new
+# candidate, rather than treating the historical v1 proxy set as timeless.
+REQUIRED_SLICES = protocol_slices(DEFAULT_PROMOTION_PROTOCOL)
+REQUIRED_PROMOTION_TASK_SPEC_HASHES = protocol_task_spec_hashes(DEFAULT_PROMOTION_PROTOCOL)
 
 
 def _basename(value: str) -> str:
     return Path(value).name
 
 
-def _slice_name(value: str) -> str | None:
-    return REQUIRED_SLICES.get(_basename(value))
+def _slice_name(value: str, required_slices: dict[str, str]) -> str | None:
+    return required_slices.get(_basename(value))
 
 
 def _run_gate(run: dict[str, Any], expected_task_spec_sha256: str) -> dict[str, Any]:
@@ -71,7 +71,7 @@ def _run_gate(run: dict[str, Any], expected_task_spec_sha256: str) -> dict[str, 
     }
 
 
-def _pinned_task_spec_hash_gate(matrix: dict[str, Any]) -> dict[str, Any]:
+def _pinned_task_spec_hash_gate(matrix: dict[str, Any], expected_hashes: dict[str, str]) -> dict[str, Any]:
     records = matrix.get("task_spec_hashes")
     observed: dict[str, list[str]] = {}
     if isinstance(records, list):
@@ -81,16 +81,16 @@ def _pinned_task_spec_hash_gate(matrix: dict[str, Any]) -> dict[str, Any]:
                 digest = record.get("sha256")
                 if name:
                     observed.setdefault(name, []).append(str(digest or ""))
-    missing = sorted(name for name in REQUIRED_PROMOTION_TASK_SPEC_HASHES if name not in observed)
-    unexpected = sorted(name for name in observed if name not in REQUIRED_PROMOTION_TASK_SPEC_HASHES)
+    missing = sorted(name for name in expected_hashes if name not in observed)
+    unexpected = sorted(name for name in observed if name not in expected_hashes)
     duplicates = sorted(name for name, values in observed.items() if len(values) != 1)
     mismatches = [
         name
-        for name, expected in REQUIRED_PROMOTION_TASK_SPEC_HASHES.items()
+        for name, expected in expected_hashes.items()
         if name in observed and (len(observed[name]) != 1 or observed[name][0] != expected)
     ]
     return {
-        "expected_hashes": REQUIRED_PROMOTION_TASK_SPEC_HASHES,
+        "expected_hashes": expected_hashes,
         "missing": missing,
         "unexpected": unexpected,
         "duplicates": duplicates,
@@ -99,11 +99,34 @@ def _pinned_task_spec_hash_gate(matrix: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _protocol_binding_gate(matrix: dict[str, Any], promotion_protocol: str) -> dict[str, Any]:
+    """Bind v2 to its explicit matrix declaration while retaining v1 history."""
+
+    observed = matrix.get("promotion_protocol")
+    # Matrix artifacts predate the field. They can still be replayed under v1,
+    # but an active v2 evaluation must declare itself so the selected local bar
+    # cannot be inferred or silently substituted later.
+    passed = observed == promotion_protocol or (
+        promotion_protocol == DEFAULT_PROMOTION_PROTOCOL and observed is None
+    )
+    return {
+        "expected": promotion_protocol,
+        "observed": observed,
+        "legacy_v1_artifact": promotion_protocol == DEFAULT_PROMOTION_PROTOCOL and observed is None,
+        "passed": passed,
+    }
+
+
 def decide(
     matrix: dict[str, Any],
     train_holdout_audit: Path | None = None,
     holdout_novelty_audit: Path | None = None,
+    *,
+    promotion_protocol: str = DEFAULT_PROMOTION_PROTOCOL,
 ) -> dict[str, Any]:
+    required_slices = protocol_slices(promotion_protocol)
+    required_hashes = protocol_task_spec_hashes(promotion_protocol)
+    protocol_gate = _protocol_binding_gate(matrix, promotion_protocol)
     audit_gate = (
         validate_required_audit_manifest(train_holdout_audit)
         if train_holdout_audit is not None
@@ -120,7 +143,7 @@ def decide(
         validate_novelty_manifest(
             holdout_novelty_audit,
             expected_training_sources=audit_gate.get("training_sources", []),
-            expected_task_spec_hashes=REQUIRED_PROMOTION_TASK_SPEC_HASHES,
+            expected_task_spec_hashes=required_hashes,
         )
         if holdout_novelty_audit is not None
         else {"path": None, "sha256": None, "passed": False}
@@ -143,17 +166,17 @@ def decide(
         and matrix_checkpoint_binding.get("training_manifest") == checkpoint_training_binding["training_manifest"]
         and matrix_checkpoint_binding.get("training_source_fingerprints") == checkpoint_training_binding["training_source_fingerprints"]
     )
-    task_spec_hash_gate = _pinned_task_spec_hash_gate(matrix)
+    task_spec_hash_gate = _pinned_task_spec_hash_gate(matrix, required_hashes)
     runs = list(matrix.get("runs", []))
     expected_seeds = sorted({int(seed) for seed in matrix.get("seeds", [])})
-    slices: dict[str, list[dict[str, Any]]] = {name: [] for name in REQUIRED_SLICES.values()}
+    slices: dict[str, list[dict[str, Any]]] = {name: [] for name in required_slices.values()}
     unknown_runs: list[dict[str, Any]] = []
     for run in runs:
-        name = _slice_name(str(run.get("task_spec", "")))
+        name = _slice_name(str(run.get("task_spec", "")), required_slices)
         if name is None:
             unknown_runs.append(run)
         else:
-            expected_hash = REQUIRED_PROMOTION_TASK_SPEC_HASHES[_basename(str(run.get("task_spec", "")))]
+            expected_hash = required_hashes[_basename(str(run.get("task_spec", "")))]
             slices[name].append(_run_gate(run, expected_hash))
 
     slice_checks: dict[str, dict[str, Any]] = {}
@@ -170,7 +193,7 @@ def decide(
             "all_runs_passed": bool(values) and all(item["passed"] for item in values),
             "runs": values,
         }
-    expected_run_count = len(REQUIRED_SLICES) * len(expected_seeds)
+    expected_run_count = len(required_slices) * len(expected_seeds)
     gates = {
         "valid_seed_declaration": bool(expected_seeds),
         "expected_run_count": len(runs) == expected_run_count,
@@ -182,11 +205,14 @@ def decide(
         "required_train_holdout_audit": audit_linked_to_matrix,
         "holdout_template_novelty": novelty_linked_to_matrix,
         "pinned_task_spec_hashes": task_spec_hash_gate["passed"],
+        "promotion_protocol_binding": protocol_gate["passed"],
         "checkpoint_training_binding": checkpoint_binding_linked_to_matrix,
     }
     passed = all(gates.values())
     return {
         "schema": "promotion-decision/v1",
+        "promotion_protocol": promotion_protocol,
+        "promotion_protocol_binding": protocol_gate,
         "checkpoint": matrix.get("checkpoint"),
         "seeds": expected_seeds,
         "expected_run_count": expected_run_count,
@@ -203,7 +229,11 @@ def decide(
         "unknown_runs": [run.get("task_spec") for run in unknown_runs],
         "passed": passed,
         "decision": "promote" if passed else "reject",
-        "reason": "all frozen slices and independent safety/replay gates passed" if passed else "one or more frozen promotion gates failed",
+        "reason": (
+            f"all {promotion_protocol} frozen slices and independent safety/replay gates passed"
+            if passed
+            else "one or more frozen promotion gates failed"
+        ),
     }
 
 
@@ -212,6 +242,12 @@ def main() -> int:
     parser.add_argument("--matrix", required=True)
     parser.add_argument("--train-holdout-audit", required=True)
     parser.add_argument("--holdout-novelty-audit", required=True)
+    parser.add_argument(
+        "--promotion-protocol",
+        choices=protocol_names(),
+        default=DEFAULT_PROMOTION_PROTOCOL,
+        help="frozen task-spec protocol; v1 is retained only for historical artifacts",
+    )
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     matrix = json.loads(Path(args.matrix).read_text(encoding="utf-8"))
@@ -219,6 +255,7 @@ def main() -> int:
         matrix,
         Path(args.train_holdout_audit),
         Path(args.holdout_novelty_audit),
+        promotion_protocol=args.promotion_protocol,
     )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

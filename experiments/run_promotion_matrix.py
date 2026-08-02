@@ -26,6 +26,7 @@ from experiments.data_split_audit import (
     validate_required_audit_manifest,
 )
 from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
+from experiments.promotion_protocols import protocol_names, validate_protocol_task_specs
 from runtime.orchestrator import Harness, HarnessConfig, TaskRequest
 from tools.memory_workspace import make_memory_registry
 from verify.independent import verify_trace
@@ -368,6 +369,11 @@ def main() -> int:
         help="passing template-affinity audit bound to the training data and supplied task specs",
     )
     parser.add_argument("--task-spec", action="append", required=True)
+    parser.add_argument(
+        "--promotion-protocol",
+        choices=protocol_names(),
+        help="require exactly one named frozen task-spec protocol",
+    )
     parser.add_argument("--seeds", default="0,1,2")
     parser.add_argument("--do-sample", action="store_true")
     parser.add_argument("--repair", action="store_true")
@@ -386,6 +392,24 @@ def main() -> int:
     task_specs = [Path(item) for item in args.task_spec]
     seeds = [int(item.strip()) for item in args.seeds.split(",") if item.strip()]
     output = Path(args.output)
+    protocol_task_spec_gate = (
+        validate_protocol_task_specs(task_specs, args.promotion_protocol)
+        if args.promotion_protocol is not None
+        else None
+    )
+    if protocol_task_spec_gate is not None and not protocol_task_spec_gate["passed"]:
+        parser.error(
+            "--task-spec must name each pinned fixture exactly once and match its fixed hash "
+            f"for promotion protocol {args.promotion_protocol}"
+        )
+    protocol_metadata = (
+        {
+            "promotion_protocol": args.promotion_protocol,
+            "promotion_protocol_task_spec_gate": protocol_task_spec_gate,
+        }
+        if args.promotion_protocol is not None
+        else {}
+    )
     audit_gate = validate_required_audit_manifest(Path(args.train_holdout_audit))
     if not audit_gate["passed"]:
         parser.error("--train-holdout-audit must be a clean audit of every pinned fixture at its fixed hash")
@@ -423,6 +447,8 @@ def main() -> int:
                 and saved.get("holdout_novelty_audit", {}).get("sha256") == novelty_gate["sha256"]
                 and saved.get("checkpoint_training_binding") == checkpoint_training_binding
                 and saved.get("task_spec_hashes") == task_spec_hashes
+                and saved.get("promotion_protocol") == args.promotion_protocol
+                and saved.get("promotion_protocol_task_spec_gate") == protocol_task_spec_gate
             )
             if compatible:
                 runs = list(saved.get("runs", []))
@@ -455,6 +481,7 @@ def main() -> int:
             "holdout_novelty_audit": novelty_gate,
             "checkpoint_training_binding": checkpoint_training_binding,
             "task_spec_hashes": task_spec_hashes,
+            **protocol_metadata,
             "heartbeat_output": str(heartbeat_output),
             "heartbeat_seconds": args.heartbeat_seconds,
             "completed_runs": sum(bool(item.get("complete", True)) for item in runs),
@@ -537,6 +564,7 @@ def main() -> int:
         "holdout_novelty_audit": novelty_gate,
         "checkpoint_training_binding": checkpoint_training_binding,
         "task_spec_hashes": task_spec_hashes,
+        **protocol_metadata,
         "runs": runs,
     }
     output.parent.mkdir(parents=True, exist_ok=True)

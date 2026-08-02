@@ -10,7 +10,7 @@ from experiments.data_split_audit import (
     validate_required_audit_manifest,
 )
 from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
-from experiments.promotion_decision import REQUIRED_PROMOTION_TASK_SPEC_HASHES
+from experiments.promotion_protocols import DEFAULT_PROMOTION_PROTOCOL, protocol_slices, protocol_task_spec_hashes
 from experiments.verified_rl_gate import check_gate
 
 
@@ -60,7 +60,12 @@ def _checkpoint(path: Path, audit: Path) -> Path:
     return checkpoint
 
 
-def _novelty(path: Path, audit: Path) -> Path:
+def _novelty(
+    path: Path,
+    audit: Path,
+    *,
+    promotion_protocol: str = DEFAULT_PROMOTION_PROTOCOL,
+) -> Path:
     audit_gate = validate_required_audit_manifest(audit)
     path.write_text(json.dumps({
         "schema": "holdout-novelty-audit/v1",
@@ -68,13 +73,21 @@ def _novelty(path: Path, audit: Path) -> Path:
         "train": audit_gate["training_sources"],
         "task_specs": [
             {"path": f"C:/fixtures/{name}", "sha256": digest}
-            for name, digest in REQUIRED_PROMOTION_TASK_SPEC_HASHES.items()
+            for name, digest in protocol_task_spec_hashes(promotion_protocol).items()
         ],
     }), encoding="utf-8")
     return path
 
 
-def _decision(path: Path, *, promoted: bool, audit: Path, novelty: Path, checkpoint: Path) -> None:
+def _decision(
+    path: Path,
+    *,
+    promoted: bool,
+    audit: Path,
+    novelty: Path,
+    checkpoint: Path,
+    promotion_protocol: str = DEFAULT_PROMOTION_PROTOCOL,
+) -> None:
     checks = {
         "run_complete": True,
         "all_task_rows_present": True,
@@ -87,16 +100,17 @@ def _decision(path: Path, *, promoted: bool, audit: Path, novelty: Path, checkpo
     }
     slices = {
         name: {"runs": [{"checks": checks} for _ in range(3)]}
-        for name in ("research_v4", "industry_proxy_v1", "industry_proxy_v2")
+        for name in protocol_slices(promotion_protocol).values()
     }
     audit_gate = validate_required_audit_manifest(audit)
     novelty_gate = validate_novelty_manifest(
         novelty,
         expected_training_sources=audit_gate["training_sources"],
-        expected_task_spec_hashes=REQUIRED_PROMOTION_TASK_SPEC_HASHES,
+        expected_task_spec_hashes=protocol_task_spec_hashes(promotion_protocol),
     )
     path.write_text(json.dumps({
         "schema": "promotion-decision/v1",
+        "promotion_protocol": promotion_protocol,
         "decision": "promote" if promoted else "reject",
         "passed": promoted,
         "gates": {
@@ -110,6 +124,7 @@ def _decision(path: Path, *, promoted: bool, audit: Path, novelty: Path, checkpo
             "required_train_holdout_audit": True,
             "holdout_template_novelty": True,
             "pinned_task_spec_hashes": True,
+            "promotion_protocol_binding": True,
             "checkpoint_training_binding": True,
         },
         "train_holdout_audit": {**audit_gate, "linked_to_matrix": True},
@@ -165,6 +180,99 @@ class VerifiedRLGateTests(unittest.TestCase):
             self.assertTrue(report["passed"])
             self.assertFalse(report["promotion"]["passed"])
             self.assertTrue(report["frozen_evidence"]["passed"])
+
+    def test_v2_requires_a_matching_protocol_bound_decision(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            decision = root / "decision.json"
+            audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit, promotion_protocol="v2")
+            checkpoint = _checkpoint(root, audit)
+            _decision(
+                decision,
+                promoted=False,
+                audit=audit,
+                novelty=novelty,
+                checkpoint=checkpoint,
+                promotion_protocol="v2",
+            )
+            external_v1 = root / "external-v1.json"
+            external_v2 = root / "external-v2.json"
+            _matrix(external_v1, 20)
+            _matrix(external_v2, 32)
+            report = check_gate(
+                decision_path=decision,
+                external_v1_path=external_v1,
+                external_v2_path=external_v2,
+                checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
+                promotion_protocol="v2",
+            )
+        self.assertTrue(report["passed"])
+        self.assertTrue(report["frozen_evidence"]["promotion_protocol_bound"])
+
+    def test_v2_rejects_a_protocol_mismatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            decision = root / "decision.json"
+            audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit, promotion_protocol="v2")
+            checkpoint = _checkpoint(root, audit)
+            _decision(
+                decision,
+                promoted=False,
+                audit=audit,
+                novelty=novelty,
+                checkpoint=checkpoint,
+                promotion_protocol="v2",
+            )
+            payload = json.loads(decision.read_text(encoding="utf-8"))
+            payload["promotion_protocol"] = "v1"
+            payload["gates"]["promotion_protocol_binding"] = False
+            decision.write_text(json.dumps(payload), encoding="utf-8")
+            external_v1 = root / "external-v1.json"
+            external_v2 = root / "external-v2.json"
+            _matrix(external_v1, 20)
+            _matrix(external_v2, 32)
+            report = check_gate(
+                decision_path=decision,
+                external_v1_path=external_v1,
+                external_v2_path=external_v2,
+                checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
+                promotion_protocol="v2",
+            )
+        self.assertFalse(report["passed"])
+        self.assertFalse(report["frozen_evidence"]["promotion_protocol_bound"])
+
+    def test_historical_v1_decision_without_the_protocol_field_still_replays(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            decision = root / "decision.json"
+            audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=False, audit=audit, novelty=novelty, checkpoint=checkpoint)
+            payload = json.loads(decision.read_text(encoding="utf-8"))
+            payload.pop("promotion_protocol")
+            payload["gates"].pop("promotion_protocol_binding")
+            decision.write_text(json.dumps(payload), encoding="utf-8")
+            external_v1 = root / "external-v1.json"
+            external_v2 = root / "external-v2.json"
+            _matrix(external_v1, 20)
+            _matrix(external_v2, 32)
+            report = check_gate(
+                decision_path=decision,
+                external_v1_path=external_v1,
+                external_v2_path=external_v2,
+                checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
+            )
+        self.assertTrue(report["passed"])
+        self.assertTrue(report["frozen_evidence"]["legacy_v1_decision"])
 
     def test_per_run_task_spec_hash_mismatch_blocks_research_rl(self):
         with tempfile.TemporaryDirectory() as directory:

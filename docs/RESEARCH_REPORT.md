@@ -253,7 +253,7 @@ The targeted state/evidence run is no longer live. It was stopped at a saved
 441-row partial after the data-split audit found 216 overlaps between its
 training curriculum and frozen proxy contracts. The partial artifact is useful
 for failure taxonomy only; it is neither a complete matrix nor independent
-holdout evidence. A fresh clean-split candidate must pass the six-fixture
+holdout evidence. A fresh clean-split candidate must pass the seven-fixture
 manifest gate before a new matrix can be evaluated.
 
 The historical partial showed trace-valid, replay-consistent behavior on the

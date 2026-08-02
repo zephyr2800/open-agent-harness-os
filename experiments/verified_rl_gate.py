@@ -19,7 +19,11 @@ from experiments.data_split_audit import (
     validate_required_audit_manifest,
 )
 from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
-from experiments.promotion_decision import REQUIRED_PROMOTION_TASK_SPEC_HASHES
+from experiments.promotion_protocols import (
+    DEFAULT_PROMOTION_PROTOCOL,
+    protocol_names,
+    protocol_task_spec_hashes,
+)
 
 
 def _load(path: Path) -> dict[str, Any] | None:
@@ -60,6 +64,7 @@ def _frozen_evidence_gate(
     train_holdout_audit: dict[str, Any],
     holdout_novelty_audit: dict[str, Any],
     checkpoint_training_binding: dict[str, Any],
+    promotion_protocol: str,
 ) -> dict[str, Any]:
     """Check matrix completeness/integrity without requiring capability success.
 
@@ -77,10 +82,24 @@ def _frozen_evidence_gate(
         "no_unknown_task_specs",
         "holdout_template_novelty",
         "pinned_task_spec_hashes",
+        "promotion_protocol_bound",
         "checkpoint_training_binding",
     )
     expected_runs = int(gates.get("expected_run_count", 0) or 0)
-    structural = bool(expected_runs > 0 and all(gates.get(name) is True for name in structural_names))
+    observed_protocol = decision.get("promotion_protocol") if decision else None
+    legacy_v1_decision = promotion_protocol == DEFAULT_PROMOTION_PROTOCOL and observed_protocol is None
+    protocol_bound = bool(
+        legacy_v1_decision
+        or (
+            observed_protocol == promotion_protocol
+            and gates.get("promotion_protocol_binding") is True
+        )
+    )
+    structural_checks = {
+        name: (protocol_bound if name == "promotion_protocol_bound" else gates.get(name) is True)
+        for name in structural_names
+    }
+    structural = bool(expected_runs > 0 and all(structural_checks.values()))
     frozen_runs: list[dict[str, Any]] = []
     for report in (decision.get("slices", {}).values() if decision else []):
         if isinstance(report, dict):
@@ -132,6 +151,11 @@ def _frozen_evidence_gate(
         "path": str(path),
         "exists": path.is_file(),
         "schema_valid": bool(decision and decision.get("schema") == "promotion-decision/v1"),
+        "promotion_protocol": promotion_protocol,
+        "observed_promotion_protocol": observed_protocol,
+        "legacy_v1_decision": legacy_v1_decision,
+        "promotion_protocol_bound": protocol_bound,
+        "structural_checks": structural_checks,
         "structural_matrix_complete": structural,
         "expected_runs": expected_runs,
         "observed_runs": len(frozen_runs),
@@ -151,13 +175,15 @@ def check_gate(
     checkpoint: Path,
     train_holdout_audit_path: Path,
     holdout_novelty_audit_path: Path,
+    promotion_protocol: str = DEFAULT_PROMOTION_PROTOCOL,
 ) -> dict[str, Any]:
+    required_hashes = protocol_task_spec_hashes(promotion_protocol)
     decision = _load(decision_path)
     train_holdout_audit = validate_required_audit_manifest(train_holdout_audit_path)
     holdout_novelty_audit = validate_novelty_manifest(
         holdout_novelty_audit_path,
         expected_training_sources=train_holdout_audit.get("training_sources", []),
-        expected_task_spec_hashes=REQUIRED_PROMOTION_TASK_SPEC_HASHES,
+        expected_task_spec_hashes=required_hashes,
     )
     checkpoint_training_binding = validate_checkpoint_training_binding(checkpoint, train_holdout_audit)
     evidence_gate = _frozen_evidence_gate(
@@ -166,6 +192,7 @@ def check_gate(
         train_holdout_audit,
         holdout_novelty_audit,
         checkpoint_training_binding,
+        promotion_protocol,
     )
     promotion_gate = {
         "path": str(decision_path),
@@ -191,6 +218,7 @@ def check_gate(
     passed = bool(evidence_gate["passed"] and checkpoint_gate["passed"] and external_v1["passed"] and external_v2["passed"])
     return {
         "schema": "verified-rl-gate/v2",
+        "promotion_protocol": promotion_protocol,
         "passed": passed,
         "promotion": promotion_gate,
         "frozen_evidence": evidence_gate,
@@ -201,7 +229,7 @@ def check_gate(
         "external_bar_v2": external_v2,
         "policy": [
             "RL authorization requires a complete frozen matrix with valid traces, exact runtime/replay agreement, and zero unsafe attempts.",
-            "Every frozen run must use the exact pinned task-spec hash for its declared slice.",
+            "Every frozen run must use the exact pinned task-spec hash for its declared versioned protocol slice.",
             "The matrix and promotion decision must link to a clean audit of every pinned fixture at its fixed hash.",
             "Promotion and RL authorization require a passing lexical template-affinity audit bound to the same training data and pinned fixtures.",
             "The merged checkpoint must carry a training manifest whose data hashes match that audit.",
@@ -221,6 +249,12 @@ def main() -> int:
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--train-holdout-audit", required=True)
     parser.add_argument("--holdout-novelty-audit", required=True)
+    parser.add_argument(
+        "--promotion-protocol",
+        choices=protocol_names(),
+        default=DEFAULT_PROMOTION_PROTOCOL,
+        help="must match the protocol bound into the promotion decision",
+    )
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     report = check_gate(
@@ -230,6 +264,7 @@ def main() -> int:
         checkpoint=Path(args.checkpoint),
         train_holdout_audit_path=Path(args.train_holdout_audit),
         holdout_novelty_audit_path=Path(args.holdout_novelty_audit),
+        promotion_protocol=args.promotion_protocol,
     )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

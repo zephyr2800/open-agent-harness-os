@@ -12,7 +12,8 @@ from experiments.data_split_audit import (
     validate_required_audit_manifest,
 )
 from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
-from experiments.promotion_decision import REQUIRED_PROMOTION_TASK_SPEC_HASHES, decide
+from experiments.promotion_decision import decide
+from experiments.promotion_protocols import DEFAULT_PROMOTION_PROTOCOL, protocol_task_spec_hashes
 
 
 def _run(task_spec: str, seed: int, *, passed: bool = True) -> dict:
@@ -67,7 +68,12 @@ def _bound_checkpoint(path: Path, audit: Path, *, training_digest: str | None = 
     return checkpoint
 
 
-def _write_required_novelty_audit(path: Path, audit: Path) -> Path:
+def _write_required_novelty_audit(
+    path: Path,
+    audit: Path,
+    *,
+    promotion_protocol: str = DEFAULT_PROMOTION_PROTOCOL,
+) -> Path:
     audit_gate = validate_required_audit_manifest(audit)
     path.write_text(json.dumps({
         "schema": "holdout-novelty-audit/v1",
@@ -75,19 +81,30 @@ def _write_required_novelty_audit(path: Path, audit: Path) -> Path:
         "train": audit_gate["training_sources"],
         "task_specs": [
             {"path": f"C:/fixtures/{name}", "sha256": digest}
-            for name, digest in REQUIRED_PROMOTION_TASK_SPEC_HASHES.items()
+            for name, digest in protocol_task_spec_hashes(promotion_protocol).items()
         ],
     }), encoding="utf-8")
     return path
 
 
-def _attach_audit(matrix: dict, path: Path, checkpoint: Path) -> Path:
+def _attach_audit(
+    matrix: dict,
+    path: Path,
+    checkpoint: Path,
+    *,
+    promotion_protocol: str = DEFAULT_PROMOTION_PROTOCOL,
+) -> Path:
     audit_gate = validate_required_audit_manifest(path)
-    novelty = _write_required_novelty_audit(path.with_name("holdout-novelty.json"), path)
+    required_hashes = protocol_task_spec_hashes(promotion_protocol)
+    novelty = _write_required_novelty_audit(
+        path.with_name("holdout-novelty.json"),
+        path,
+        promotion_protocol=promotion_protocol,
+    )
     novelty_gate = validate_novelty_manifest(
         novelty,
         expected_training_sources=audit_gate["training_sources"],
-        expected_task_spec_hashes=REQUIRED_PROMOTION_TASK_SPEC_HASHES,
+        expected_task_spec_hashes=required_hashes,
     )
     matrix["checkpoint"] = str(checkpoint)
     matrix["train_holdout_audit"] = audit_gate
@@ -95,12 +112,7 @@ def _attach_audit(matrix: dict, path: Path, checkpoint: Path) -> Path:
     matrix["checkpoint_training_binding"] = validate_checkpoint_training_binding(checkpoint, audit_gate)
     matrix["task_spec_hashes"] = [
         {"path": f"C:/fixtures/{name}", "sha256": digest}
-        for name, digest in REQUIRED_FROZEN_FIXTURE_HASHES.items()
-        if name in {
-            "task-spec-research-v4.json",
-            "task-spec-industry-proxy-v1.json",
-            "task-spec-industry-proxy-v2.json",
-        }
+        for name, digest in required_hashes.items()
     ]
     return novelty
 
@@ -131,6 +143,70 @@ class PromotionDecisionTests(unittest.TestCase):
         self.assertEqual(result["decision"], "promote")
         self.assertTrue(result["gates"]["required_train_holdout_audit"])
         self.assertTrue(result["gates"]["holdout_template_novelty"])
+
+    def test_v2_requires_the_post_freeze_author_holdout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audit = _write_required_audit(root / "audit.json")
+            checkpoint = _bound_checkpoint(root, audit)
+            matrix = {
+                "schema": "promotion-matrix/v1",
+                "promotion_protocol": "v2",
+                "seeds": [0],
+                "runs": [
+                    _run("task-spec-research-v4.json", 0),
+                    _run("task-spec-industry-proxy-v2.json", 0),
+                    _run("task-spec-author-holdout-v1.json", 0),
+                ],
+            }
+            novelty = _attach_audit(matrix, audit, checkpoint, promotion_protocol="v2")
+            result = decide(matrix, audit, novelty, promotion_protocol="v2")
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["promotion_protocol"], "v2")
+        self.assertTrue(result["gates"]["promotion_protocol_binding"])
+        self.assertIn("author_holdout_v1", result["slices"])
+
+    def test_v2_rejects_the_legacy_high_affinity_proxy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audit = _write_required_audit(root / "audit.json")
+            checkpoint = _bound_checkpoint(root, audit)
+            matrix = {
+                "schema": "promotion-matrix/v1",
+                "promotion_protocol": "v2",
+                "seeds": [0],
+                "runs": [
+                    _run("task-spec-research-v4.json", 0),
+                    _run("task-spec-industry-proxy-v1.json", 0),
+                    _run("task-spec-industry-proxy-v2.json", 0),
+                ],
+            }
+            novelty = _attach_audit(matrix, audit, checkpoint, promotion_protocol="v2")
+            result = decide(matrix, audit, novelty, promotion_protocol="v2")
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["gates"]["required_slices_present"])
+        self.assertFalse(result["gates"]["no_unknown_task_specs"])
+        self.assertEqual(result["task_spec_hash_gate"]["expected_hashes"], protocol_task_spec_hashes("v2"))
+
+    def test_v2_rejects_a_matrix_declared_under_another_protocol(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audit = _write_required_audit(root / "audit.json")
+            checkpoint = _bound_checkpoint(root, audit)
+            matrix = {
+                "schema": "promotion-matrix/v1",
+                "promotion_protocol": "v1",
+                "seeds": [0],
+                "runs": [
+                    _run("task-spec-research-v4.json", 0),
+                    _run("task-spec-industry-proxy-v2.json", 0),
+                    _run("task-spec-author-holdout-v1.json", 0),
+                ],
+            }
+            novelty = _attach_audit(matrix, audit, checkpoint, promotion_protocol="v2")
+            result = decide(matrix, audit, novelty, promotion_protocol="v2")
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["gates"]["promotion_protocol_binding"])
 
     def test_rejects_incomplete_matrix_even_if_present_rows_pass(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

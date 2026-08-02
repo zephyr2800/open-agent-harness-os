@@ -35,6 +35,7 @@ be described as held-out:
   --task-spec benchmarks\fixtures\task-spec-research-v4.json `
   --task-spec benchmarks\fixtures\task-spec-industry-proxy-v1.json `
   --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
+  --task-spec benchmarks\fixtures\task-spec-author-holdout-v1.json `
   --task-spec benchmarks\fixtures\task-spec-exact-payload-holdout-v1.json `
   --task-spec benchmarks\fixtures\task-spec-external-bar-lite-v1.json `
   --task-spec benchmarks\fixtures\task-spec-external-bar-lite-v2.json `
@@ -45,10 +46,11 @@ be described as held-out:
 See [train/holdout integrity](TRAIN_HOLDOUT_INTEGRITY.md) for the exact
 contract markers and interpretation.
 
-Run the complementary template-affinity screen over the three promotion
-slices. It deliberately normalizes identifiers, so it catches a structurally
-near holdout that has no literal marker collision. This is an enforceable
-local screen, not a semantic novelty or external-generalization claim:
+The following v1 template-affinity screen is retained to reproduce legacy
+artifacts. It deliberately normalizes identifiers, so it catches a structurally
+near holdout that has no literal marker collision. The active v2 commands are
+below. Neither local screen is a semantic novelty or external-generalization
+claim:
 
 ```powershell
 & $py -m experiments.holdout_novelty_audit `
@@ -65,7 +67,7 @@ row count in `training_manifest.json`, then copy that manifest into the merged
 checkpoint. The matrix rejects a checkpoint unless those source fingerprints
 match the supplied audit manifest.
 
-## Frozen promotion matrix
+## Legacy v1 frozen promotion matrix
 
 Run from the Open Agent Harness OS project root only after confirming no other
 GPU job is using the checkpoint:
@@ -113,6 +115,45 @@ Do not promote based on a partial matrix, a model-card score, or a diagnostic
 slice. The decision requires complete frozen slices, independent replay,
 valid traces, zero unsafe attempts, and no unknown task specifications.
 
+## Active v2 promotion protocol
+
+New clean-split candidates use protocol `v2`, not the high-affinity legacy
+industry-proxy-v1 slice. The v2 task set is research-v4, industry-proxy-v2,
+and the post-freeze author holdout. All three commands must name `v2` so a
+result cannot be silently evaluated against another local bar:
+
+```powershell
+& $py -m experiments.holdout_novelty_audit `
+  --train-jsonl <candidate-training.jsonl> `
+  --task-spec benchmarks\fixtures\task-spec-research-v4.json `
+  --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
+  --task-spec benchmarks\fixtures\task-spec-author-holdout-v1.json `
+  --manifest experiments\results\candidate-v2-holdout-novelty-audit.json `
+  --fail-on-affinity
+
+& $py -m experiments.run_promotion_matrix `
+  --project1-root $project1 `
+  --checkpoint <merged-clean-candidate> `
+  --output experiments\results\candidate-promotion-v2.json `
+  --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
+  --holdout-novelty-audit experiments\results\candidate-v2-holdout-novelty-audit.json `
+  --promotion-protocol v2 `
+  --task-spec benchmarks\fixtures\task-spec-research-v4.json `
+  --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
+  --task-spec benchmarks\fixtures\task-spec-author-holdout-v1.json `
+  --seeds 0,1,2 --max-new-tokens 256 --quantization 4bit
+
+& $py -m experiments.promotion_decision `
+  --matrix experiments\results\candidate-promotion-v2.json `
+  --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
+  --holdout-novelty-audit experiments\results\candidate-v2-holdout-novelty-audit.json `
+  --promotion-protocol v2 `
+  --output experiments\results\candidate-promotion-decision-v2.json
+```
+
+See [promotion protocols](PROMOTION_PROTOCOLS.md) for the immutable fixture
+sets and the boundary between historical v1 evidence and active v2 evidence.
+
 ## Diagnostics after the promotion process
 
 The 20-task v1 diagnostic is frozen at:
@@ -149,13 +190,14 @@ Before any RL command, authorize the run with the machine gate:
 
 ```powershell
 & $py -m experiments.verified_rl_gate `
-  --decision experiments\results\research-project2-qwopus35-9b-promotion-decision-v1.json `
+  --decision experiments\results\candidate-promotion-decision-v2.json `
   --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
-  --holdout-novelty-audit experiments\results\candidate-holdout-novelty-audit.json `
-  --external-bar-v1 experiments\results\research-project2-qwopus35-9b-external-bar-lite-v1.json `
-  --external-bar-v2 experiments\results\research-project2-qwopus35-9b-external-bar-lite-v2.json `
-  --checkpoint (Join-Path $root 'work\action-model-project2-qwopus35-9b-qlora-v1-merged') `
-  --output experiments\results\verified-rl-gate-v2.json
+  --holdout-novelty-audit experiments\results\candidate-v2-holdout-novelty-audit.json `
+  --promotion-protocol v2 `
+  --external-bar-v1 experiments\results\candidate-external-bar-lite-v1.json `
+  --external-bar-v2 experiments\results\candidate-external-bar-lite-v2.json `
+  --checkpoint <merged-clean-candidate> `
+  --output experiments\results\candidate-verified-rl-gate-v2.json
 ```
 
 The gate must return `passed=true`. It remains blocked until the matrix and

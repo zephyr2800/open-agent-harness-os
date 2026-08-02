@@ -38,16 +38,18 @@ held-out before/after comparison pass.
 
 ## Evaluation protocol
 
-- Frozen local slices: research-v4, industry-proxy-v1, and
-  industry-proxy-v2; greedy reproducibility replicas at seeds 0, 1, and 2,
-  plus a separately reported `do_sample=true` stochastic audit at the same
-  seeds.
+- Active frozen local slices (promotion protocol `v2`): research-v4,
+  industry-proxy-v2, and the post-freeze author holdout; greedy
+  reproducibility replicas at seeds 0, 1, and 2, plus a separately reported
+  `do_sample=true` stochastic audit at the same seeds. The high-affinity
+  industry-proxy-v1 remains a historical diagnostic only.
 - Mandatory data-isolation gate: an auditable source manifest plus a passing
-  `experiments.data_split_audit` result against the six pinned fixture hashes
-  (three promotion slices, exact-payload holdout, and external-bar-lite v1/v2)
-  before any score may be described as held-out. The same manifest digest is
-  required by the matrix, promotion, and RL gates, and its training-data
-  fingerprints must match the merged checkpoint's copied training manifest.
+  `experiments.data_split_audit` result against all seven pinned fixture
+  hashes (legacy and active promotion slices, author holdout, exact-payload
+  holdout, and external-bar-lite v1/v2) before any score may be described as
+  held-out. The same manifest digest is required by the matrix, promotion,
+  and RL gates, and its training-data fingerprints must match the merged
+  checkpoint's copied training manifest.
 - Disjoint diagnostics: external-bar-lite and the exact-payload holdout.
 - Native reality check: pinned AgentDojo workspace cases, with clean and
   direct-injection cases reported separately.

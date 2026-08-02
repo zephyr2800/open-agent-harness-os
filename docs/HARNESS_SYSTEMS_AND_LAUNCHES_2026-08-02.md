@@ -18,6 +18,10 @@ capability, evaluation score, scale, or deployment posture.
 | [TUA-Bench](https://github.com/facebookresearch/TUA-Bench) | It publishes 120 real-world execution-based terminal tasks and a reproducible runner that requires Docker or Podman, `uv`, downloaded/generated assets, and an LLM-provider account. | It is CC BY-NC and has runtime/dependency prerequisites absent on this machine; no TUA score can be implied from local proxy or tau2 results. | Use it only after an isolated runtime is available. Report its native metric and full environment rather than converting it into an Action IR score. |
 | [Thinking Machines Inkling and Tinker](https://thinkingmachines.ai/news/introducing-inkling/) | Inkling is presented as an open-weights customization base and Tinker as a post-training surface; the launch describes staged SFT and large-scale RL as distinct steps. | The vendor's scale, training data, and results are not reproducible on one consumer GPU and do not validate local results. | Preserve distinct SFT, remediation, and RL gates. Publish data provenance, rollout/reward definitions, failures, and held-out measurements alongside any local customization claim. |
 | [Moonshot Kimi K3](https://github.com/MoonshotAI/Kimi-K3) | The official repository/technical report documents a 2.8T-parameter, 104B-active MoE, Kimi Delta Attention, Attention Residuals, and quantization-aware MXFP4/MXFP8 deployment details. | Its reported evaluation table is vendor-reported and harness-sensitive; the system is not a direct 32 GB GPU target. | Quantization and scale are separate variables. The local 27B NF4 QLoRA track is a staged feasibility experiment, not a basis for claiming a frontier scaling law. |
+| [Harness-Bench](https://arxiv.org/abs/2605.27922) | It evaluates configuration-level harness effects with shared task environments, budgets, and protocols while retaining artifacts, traces, usage records, and validator outputs. | A diagnostic benchmark does not transfer a score or an individual harness effect to this repository; it does, however, make the experimental unit explicit. | Keep model, harness, environment, task selector, source revision, decoding, and budget bound in every factorial row. Do not attribute a result to the checkpoint alone. |
+| [VeRO](https://arxiv.org/abs/2602.22480) | It provides versioned agent snapshots, budget-controlled evaluation, structured execution traces, and reference procedures for agent-optimization studies. | Its target-agent benchmark is not a validation of this runtime's bounded H4 proposal loop or of a local post-training result. | A harness-evolution result must bind the editable snapshot, evaluator snapshot, budget, trace, and promotion decision. Compare proposals only on held-out tasks under matched budgets. |
+| [AgentS4D](https://arxiv.org/abs/2607.27294) | It evaluates lifecycle-wide agent-runtime safety using multiple risk-entry sources, induction strategies, target harms, and post-run evidence checkpoints. | Its risk taxonomy and reported model/harness outcomes are configuration-specific; a fixed prompt-injection score is not a substitute for lifecycle safety evidence. | Treat native AgentDojo as a narrow Phase A diagnostic. Before a production-safety claim, preregister a separate lifecycle risk suite with entry path, induction, harm, and evidence checkpoint recorded per run. |
+| [AsyncFC](https://arxiv.org/abs/2605.15077) | It studies dependency-aware asynchronous function calling as an execution-layer method for overlapping model decoding and tool execution without changing model weights. | Its latency results do not establish correctness or safety for arbitrary concurrent tool calls in this harness. | Any asynchronous executor branch must be an isolated H2/H3 ablation with declared read/write dependencies, deterministic replay, race checks, and the same verified-success and safety budget as the synchronous control. |
 
 ## Design consequences
 
@@ -37,6 +41,20 @@ capability, evaluation score, scale, or deployment posture.
    used for reproducible constrained experiments, deployment-budget Pareto
    measurements, and failure localization; it is not a proxy for frontier
    pretraining scale.
+6. **Harness evolution is a versioned experiment.** A safe self-improvement
+   proposal is not evidence until the editable snapshot, protected evaluator,
+   trace, budget, and held-out promotion decision are all reproducible.
+7. **Safety must cover the execution lifecycle.** A static injection score can
+   be useful failure localization, but it cannot establish runtime safety
+   across different entry paths, induced behaviors, or persisted side effects.
+8. **Performance work must remain causal.** Future asynchronous tool execution
+   may improve latency, but it must not be credited to a model or training
+   intervention unless the synchronous control shares the same policy,
+   dependencies, tasks, and verification rules.
+
+These additions raise the follow-up evidence bar only. They do not change the
+frozen clean-9B training source, promotion matrix, registered native selector,
+or authorization for post-training/RL.
 
 ## Investor-safe interpretation
 

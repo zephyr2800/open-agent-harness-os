@@ -25,6 +25,16 @@ Start only on loopback by default:
 & $py -m app.cli serve --host 127.0.0.1 --port 8787
 ```
 
+For HTTP clients, configure the model endpoint at server startup rather than
+in a `/run` request. The endpoint must be a canonical loopback HTTP(S) root or
+`/v1` URL; request URLs with credentials, queries, fragments, or other paths
+are rejected, and adapter redirects are not followed.
+
+```powershell
+& $py -m app.cli serve --host 127.0.0.1 --port 8787 `
+  --model-endpoint http://127.0.0.1:11434 --model <model-name>
+```
+
 Non-loopback binding is rejected unless `--allow-non-loopback` is explicit and
 an at-least-16-character bearer token is supplied with `--auth-token` or
 `HARNESS_AUTH_TOKEN`, together with `--tls-certfile` and `--tls-keyfile`.
@@ -59,12 +69,19 @@ the limit is exceeded. This is a local protection against accidental or
 unbounded use, not a replacement for production API-gateway quotas,
 distributed rate limiting, or account-level abuse monitoring.
 
+The listener also applies a 10-second header/body/TLS-read deadline and admits
+at most 64 concurrent connections by default; excess sockets are closed before
+they reach authentication or request handling. Operators can tune these local
+limits with `--connection-timeout-seconds` and `--max-connections`. They are
+containment controls, not a substitute for a production API gateway.
+
 Endpoints are `GET /health`, `GET /tools`, `GET /traces`, `GET /traces/<sha256>`,
 `POST /run`, and `POST /replay`.
 The API is intentionally small: `/run` accepts a named registered tool and
 arguments, then returns verified status plus the replayable JSONL trace.
-`POST /run` may also include `model_endpoint` and `model` for a loopback
-OpenAI-compatible model, and `initial_files` for a bounded workspace fixture.
+`POST /run` cannot choose or override `model_endpoint` or `model`; those are
+operator-owned `serve` settings. It may include `initial_files` for a bounded
+workspace fixture.
 Start the server with `--trace-dir <directory>` to enable bounded,
 content-addressed trace retention. `/run` accepts `max_steps` 1â€“8,
 `timeout_seconds` 0.1â€“30, and `token_budget` 64â€“10,000; every JSON response
@@ -83,7 +100,10 @@ header.
   writer coverage passes in the source test suite.
 - Token-file tenants receive isolated trace namespaces, with cross-tenant read
   rejection covered by the launch preflight.
-- Run budgets and request bodies are bounded before execution.
+- Run budgets and request bodies are bounded before execution; connection
+  count and read deadlines are bounded before authentication.
+- HTTP callers cannot select model routes, and the local model adapter refuses
+  redirects outside its configured endpoint.
 - The demo policy is an offline smoke path, not a claim of autonomous model
   capability; connect `adapters.http.OpenAICompatibleAdapter` only when a
   local model endpoint is explicitly configured.
@@ -95,7 +115,7 @@ authentication-plus-TLS gate.
 
 Run the consolidated source-checkout gate with
 `python -m experiments.launch_preflight --with-tests`. Its recorded result is
-`experiments/results/launch-preflight-v32.json`; it verifies the local preview
+`experiments/results/launch-preflight-v36.json`; it verifies the local preview
 surface and intentionally does not certify public multi-user deployment.
 
 ## MCP stdio integration

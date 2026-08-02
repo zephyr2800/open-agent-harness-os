@@ -56,11 +56,52 @@ def _rate_limited(handler: BaseHTTPRequestHandler, retry_after: int) -> None:
     handler.wfile.write(payload)
 
 
+class BoundedThreadingHTTPServer(ThreadingHTTPServer):
+    """Threaded HTTP listener with a bounded pre-auth connection surface."""
+
+    daemon_threads = True
+
+    def __init__(
+        self,
+        *args: Any,
+        connection_timeout_seconds: float = 10.0,
+        max_connections: int = 64,
+        **kwargs: Any,
+    ) -> None:
+        if not 0.1 <= connection_timeout_seconds <= 300.0:
+            raise ValueError("connection_timeout_seconds must be between 0.1 and 300 seconds")
+        if not 1 <= max_connections <= 4_096:
+            raise ValueError("max_connections must be between 1 and 4,096")
+        super().__init__(*args, **kwargs)
+        self.connection_timeout_seconds = float(connection_timeout_seconds)
+        self.max_connections = max_connections
+        self._connection_slots = threading.BoundedSemaphore(max_connections)
+
+    def process_request(self, request: Any, client_address: Any) -> None:
+        if not self._connection_slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._connection_slots.release()
+            raise
+
+    def process_request_thread(self, request: Any, client_address: Any) -> None:
+        try:
+            request.settimeout(self.connection_timeout_seconds)
+            super().process_request_thread(request, client_address)
+        finally:
+            self._connection_slots.release()
+
+
 def _server(
     trace_dir: str | None = None,
     auth_token: str | None = None,
     auth_tokens: Mapping[str, str] | None = None,
     rate_limit_per_minute: int = 120,
+    model_endpoint: str | None = None,
+    model: str | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     if auth_token is not None and auth_tokens is not None:
         raise ValueError("auth_token and auth_tokens are mutually exclusive")
@@ -68,6 +109,11 @@ def _server(
         raise ValueError("rate_limit_per_minute must be between 1 and 100,000")
     request_times: dict[str, deque[float]] = {}
     request_times_lock = threading.Lock()
+    configured_adapter, configured_model_name = (
+        _optional_local_adapter({"model_endpoint": model_endpoint, "model": model})
+        if model_endpoint is not None or model is not None
+        else (None, "local-service-policy")
+    )
 
     def trace_root(principal: str) -> str | None:
         if trace_dir is None:
@@ -155,8 +201,9 @@ def _server(
                     required = {"task_id", "prompt", "tool", "arguments"}
                     if not isinstance(body, dict) or not required.issubset(body):
                         raise ValueError("/run requires task_id, prompt, tool, and arguments")
-                    adapter, model_name = _optional_local_adapter(body)
-                    result = run_action(body["task_id"], body["prompt"], body["tool"], body["arguments"], variant=body.get("variant", "H1"), adapter=adapter, model_name=model_name, initial_files=body.get("initial_files"), max_steps=int(body.get("max_steps", 4)), timeout_seconds=float(body.get("timeout_seconds", 5.0)), token_budget=int(body.get("token_budget", 1800)), trace_dir=trace_root(principal))
+                    if "model_endpoint" in body or "model" in body:
+                        raise ValueError("/run model_endpoint and model are configured by the server operator")
+                    result = run_action(body["task_id"], body["prompt"], body["tool"], body["arguments"], variant=body.get("variant", "H1"), adapter=configured_adapter, model_name=configured_model_name, initial_files=body.get("initial_files"), max_steps=int(body.get("max_steps", 4)), timeout_seconds=float(body.get("timeout_seconds", 5.0)), token_budget=int(body.get("token_budget", 1800)), trace_dir=trace_root(principal))
                     _json_response(self, 200, result)
                     return
                 if self.path == "/replay":
@@ -178,9 +225,24 @@ def _optional_local_adapter(value: dict[str, Any]) -> tuple[Any, str]:
     if not isinstance(endpoint, str) or not isinstance(model, str) or not endpoint or not model:
         raise ValueError("model_endpoint and model must be provided together")
     parsed = urlparse(endpoint)
-    if parsed.scheme not in {"http", "https"} or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
-        raise ValueError("model_endpoint must target localhost, 127.0.0.1, or ::1")
-    return OpenAICompatibleAdapter(endpoint, model), model
+    try:
+        _ = parsed.port
+    except ValueError as exc:
+        raise ValueError("model_endpoint must use a valid port") from exc
+    path = parsed.path.rstrip("/")
+    if (
+        parsed.scheme not in {"http", "https"}
+        or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+        or path not in {"", "/v1"}
+    ):
+        raise ValueError("model_endpoint must be a canonical localhost HTTP(S) root or /v1 URL")
+    canonical_endpoint = f"{parsed.scheme}://{parsed.netloc}{'/v1' if path == '/v1' else ''}"
+    return OpenAICompatibleAdapter(canonical_endpoint, model), model
 
 
 def _validate_bind_host(host: str, allow_non_loopback: bool = False) -> None:
@@ -196,6 +258,8 @@ def _validate_server_security(
     auth_tokens: Mapping[str, str] | None = None,
     tls_certfile: str | None,
     tls_keyfile: str | None,
+    connection_timeout_seconds: float = 10.0,
+    max_connections: int = 64,
 ) -> None:
     """Validate the deployment boundary before opening a listening socket."""
     _validate_bind_host(host, allow_non_loopback)
@@ -214,6 +278,10 @@ def _validate_server_security(
         raise ValueError("--allow-non-loopback requires --auth-token or HARNESS_AUTH_TOKEN")
     if allow_non_loopback and not (tls_certfile and tls_keyfile):
         raise ValueError("--allow-non-loopback requires --tls-certfile and --tls-keyfile")
+    if not 0.1 <= connection_timeout_seconds <= 300.0:
+        raise ValueError("--connection-timeout-seconds must be between 0.1 and 300")
+    if not 1 <= max_connections <= 4_096:
+        raise ValueError("--max-connections must be between 1 and 4,096")
 
 
 def _load_auth_tokens(path: str | Path) -> dict[str, str]:
@@ -257,6 +325,10 @@ def main() -> int:
     serve.add_argument("--auth-token", help="Bearer token required for every HTTP request; may also be set with HARNESS_AUTH_TOKEN")
     serve.add_argument("--auth-token-file", help="JSON object mapping principal names to bearer tokens for isolated trace tenants")
     serve.add_argument("--rate-limit-per-minute", type=int, default=120, help="maximum authenticated requests per principal per rolling minute")
+    serve.add_argument("--model-endpoint", help="operator-owned loopback OpenAI-compatible endpoint; HTTP callers cannot override it")
+    serve.add_argument("--model", help="model identifier paired with --model-endpoint")
+    serve.add_argument("--connection-timeout-seconds", type=float, default=10.0, help="per-connection header/body/TLS-read deadline")
+    serve.add_argument("--max-connections", type=int, default=64, help="maximum concurrent HTTP connections before excess sockets are closed")
     serve.add_argument("--tls-certfile", help="PEM certificate chain for HTTPS serving")
     serve.add_argument("--tls-keyfile", help="PEM private key for HTTPS serving")
     sub.add_parser("mcp", help="serve the verification kernel over MCP stdio")
@@ -313,22 +385,36 @@ def main() -> int:
             auth_tokens=auth_tokens,
             tls_certfile=args.tls_certfile,
             tls_keyfile=args.tls_keyfile,
+            connection_timeout_seconds=args.connection_timeout_seconds,
+            max_connections=args.max_connections,
         )
     except ValueError as exc:
         parser.error(str(exc))
     try:
-        handler = _server(args.trace_dir, auth_token, auth_tokens, args.rate_limit_per_minute)
+        handler = _server(
+            args.trace_dir,
+            auth_token,
+            auth_tokens,
+            args.rate_limit_per_minute,
+            args.model_endpoint,
+            args.model,
+        )
     except ValueError as exc:
         parser.error(str(exc))
-    server = ThreadingHTTPServer((args.host, args.port), handler)
+    server = BoundedThreadingHTTPServer(
+        (args.host, args.port),
+        handler,
+        connection_timeout_seconds=args.connection_timeout_seconds,
+        max_connections=args.max_connections,
+    )
     scheme = "http"
     if args.tls_certfile and args.tls_keyfile:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(certfile=args.tls_certfile, keyfile=args.tls_keyfile)
-        server.socket = context.wrap_socket(server.socket, server_side=True)
+        server.socket = context.wrap_socket(server.socket, server_side=True, do_handshake_on_connect=False)
         scheme = "https"
-    print(json.dumps({"listening": f"{scheme}://{args.host}:{args.port}", "tls": scheme == "https", "tenant_isolation": auth_tokens is not None, "endpoints": ["/health", "/tools", "/run", "/replay", "/traces"]}))
+    print(json.dumps({"listening": f"{scheme}://{args.host}:{args.port}", "tls": scheme == "https", "tenant_isolation": auth_tokens is not None, "connection_timeout_seconds": args.connection_timeout_seconds, "max_connections": args.max_connections, "endpoints": ["/health", "/tools", "/run", "/replay", "/traces"]}))
     try:
         server.serve_forever()
     except KeyboardInterrupt:

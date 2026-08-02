@@ -18,6 +18,12 @@ experiments/results/
 experiments/results/*
 !experiments/results/clean-wheel-smoke-v4.json
 !experiments/results/launch-preflight-v6.json
+!experiments/results/clean-wheel-smoke-v34.json
+!experiments/results/launch-preflight-v34.json
+!experiments/results/clean-wheel-smoke-v35.json
+!experiments/results/launch-preflight-v35.json
+!experiments/results/clean-wheel-smoke-v36.json
+!experiments/results/launch-preflight-v36.json
 work/*
 !work/.gitkeep
 *.partial.json

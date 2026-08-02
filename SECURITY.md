@@ -12,12 +12,19 @@ The supported security boundary is the local developer-preview surface:
 - bearer authentication plus TLS 1.2+ before non-loopback serving;
 - per-principal trace namespaces and rolling request limits when token-file
   tenants are configured;
+- bounded concurrent HTTP connections and per-connection read deadlines before
+  authentication or request parsing;
+- operator-owned canonical loopback model endpoints; HTTP callers cannot
+  select model routing and adapter redirects are refused;
 - replay validation that does not call a model or execute a tool handler.
 
 This file does not certify a production deployment. Reverse-proxy policy,
 identity lifecycle, secret rotation, distributed quotas, monitoring, network
 segmentation, dependency updates, and a deployment-specific security review
 remain the operator's responsibility.
+
+The focused HTTP review and its fixed findings are recorded in
+`docs/SECURITY_REVIEW_2026-08-02.md`.
 
 ## Reporting a vulnerability
 

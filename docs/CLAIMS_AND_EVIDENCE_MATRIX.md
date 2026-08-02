@@ -12,22 +12,23 @@ metadata.
 
 | Claim | Status | Authoritative evidence | Allowed wording now |
 |---|---|---|---|
-| A local developer preview exists | Supported | `experiments/results/launch-preflight-v9.json` | “The local developer preview passes its documented smoke, safety, auth/TLS, isolation, replay, source-bound packaging, security-metadata, and test gates.” |
+| A local developer preview exists | Supported | `experiments/results/launch-preflight-v36.json` | “The local developer preview passes its documented smoke, safety, auth/TLS, isolation, replay, source-bound packaging, security-metadata, and test gates.” |
 | The harness executes typed actions with independent verification and replay | Supported | source tests, product smoke, MCP replay artifact, trace schemas | “The harness provides a deterministic authority/evidence/replay plane.” |
 | The local policy learned the Action IR task family | Supported only on local fixtures | completed 7B v6/v6 proxy reports and independent replay reports | “Protocol specialization improves these frozen local tasks.” |
 | The system is generally capable on terminal or computer-use work | Not supported | TUA-Bench/OSWorld 2.0 run is still absent | Do not make this claim. |
 | The system beats frontier agents | Not supported | no native external benchmark comparison | Do not make this claim. |
 
-| Qwopus3.5-9B is a better action policy than the promoted 7B | Not supported | frozen 9B matrix is complete but promotion decision is reject | Do not make this claim; use the 483/552 failure-localization result instead. |
-| Qwopus3.5-9B SFT completed | Supported | adapter manifest and merged checkpoint manifest | “The 9B scale branch completed QLoRA SFT and merge.” |
+| Qwopus3.5-9B is a better action policy than the promoted 7B | Not supported | historical 9B matrix: 483/552 with promotion rejected; clean-source candidate: promotion matrix paused at 96/480 with no decision artifact | Do not make this claim; use the historical 483/552 result only as failure-localization context. |
+| The historical Qwopus3.5-9B scale branch completed QLoRA SFT and merge | Supported as historical context only | historical adapter and merged-checkpoint manifests; its source-corpus isolation was not auditable and the promotion decision was reject | “A prior 9B scale branch completed SFT and merge, but it is failure-localization context rather than a promoted model result.” |
+| The active clean-source Qwopus3.5-9B candidate completed SFT or passed promotion | SFT supported; promotion not supported | auditable 3,232-row training manifest and merged checkpoint exist; its matrix is intentionally paused at 96/480 and has no decision artifact | “The clean-source candidate completed audited SFT; it is not promoted.” |
 | Verifier-backed RL improves the policy | Not supported | prior 7B RL was neutral/negative; 9B RL has not run | Do not make this claim. |
 | The harness prevents all unsafe actions | Not supported | only registered-tool and local-scope safety evidence exists | Say “configured high-risk actions are denied by the tested policy boundary.” |
 | The product is public-launch ready | Not supported | public identity/operations, usability, security review, licensing, and external benchmark gates remain | Say “developer-preview candidate,” not “production-ready.” |
 
 Evidence freshness: `launch-preflight-v9.json` and
 `experiments/results/launch-preflight-v32.json` remain valid historical
-artifacts. `experiments/results/launch-preflight-v33.json` is the current
-developer-preview evidence: 16/16 checks, 202 total Project 2 tests (201
+artifacts. `experiments/results/launch-preflight-v36.json` is the current
+developer-preview evidence: 16/16 checks, 214 total Project 2 tests (213
 passed; one Windows symlink-capability skip), and 47/47 companion-project
 tests.
 
@@ -38,7 +39,9 @@ machine-readable decision gate reports `decision=promote`. It must include all
 three frozen slices, seeds 0/1/2, 100% verified success, 100% independent
 replay agreement, valid traces, zero unsafe attempts, and no unknown task
 specifications. The external-bar-lite fixture is diagnostic and remains
-separate from this promotion rule.
+separate from this promotion rule. The clean-source candidate's paused 96/480
+matrix is not a decision artifact and cannot be treated as a failed or passed
+promotion result.
 
 ## Research-breakthrough rule
 

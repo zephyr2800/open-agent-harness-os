@@ -8,8 +8,9 @@ Project 2 is a runnable local developer-preview harness and an active research
 prototype. It is **not** a public-production agent service or a completed
 research-breakthrough result. The paired Project 1 clean 9B Action IR SFT
 candidate has completed its audited training and merged-checkpoint handoff;
-the frozen promotion matrix is active. No new checkpoint has passed the
-promotion gate, native external diagnostic, or verifier-backed RL gate.
+the frozen promotion matrix was intentionally paused at 96 of 480 task-seed
+attempts. No new checkpoint has passed the promotion gate, native external
+diagnostic, or verifier-backed RL gate.
 
 ## Facts
 
@@ -26,18 +27,20 @@ promotion gate, native external diagnostic, or verifier-backed RL gate.
   successes with zero unsafe attempts and complete trace/replay checks, but it
   was rejected and remains context-only because its training-source isolation
   was not auditable.
-- The active clean 9B branch binds 3,232 audited training rows to a frozen
+- The clean 9B candidate binds 3,232 audited training rows to a frozen
   promotion protocol with genuinely stochastic decoding seeds, source-tree
   records, independent replay, safety accounting, and a decision artifact.
 - The clean 9B SFT completed 808 optimizer steps. Its training-corpus SHA-256
   is `d226a3246cd646ce1b1e7d1350d665749f4a986ec854d4314a885e12702d5ed6`;
   the merged checkpoint is content-fingerprinted separately from the base
   checkpoint. Completion is an eligibility milestone, not a quality result.
-- The active promotion gate is 160 frozen tasks across stochastic seeds 0, 1,
-  and 2 (480 task-seed attempts). A Windows native-stderr handling fault in the
-  original watcher was recovered with selector-identical local orchestration;
-  it changes only error handling, not the task surface, model, decoding flags,
-  acceptance rule, or RL authorization.
+- The frozen promotion gate is 160 tasks across stochastic seeds 0, 1, and 2
+  (480 task-seed attempts). It was intentionally paused at 96/480 attempts at
+  operator direction; the partial matrix is not a decision artifact and cannot
+  authorize native evaluation or RL. A Windows native-stderr handling fault in
+  the original watcher was recovered with selector-identical local
+  orchestration; it changed only error handling, not the task surface, model,
+  decoding flags, acceptance rule, or RL authorization.
 - The active local v2 promotion surface is structurally bounded: every
   `finish` task offers only reference-contract tool types, and no finish
   contract exceeds three required actions. The tracked evaluation-surface
@@ -65,8 +68,8 @@ promotion gate, native external diagnostic, or verifier-backed RL gate.
   result or a change to promotion v2.
 - Future checkpoint, native, and factorial runs can preserve a raw sampled
   whole-GPU-energy sidecar (`gpu-energy/v1`). No energy value is claimed for
-  the live clean 9B training job; the sampler cannot retroactively observe it
-  and is not a per-process or wall-socket meter.
+  the completed clean 9B training job or paused matrix; the sampler cannot
+  retroactively observe either and is not a per-process or wall-socket meter.
 - Adaptive AutoDojo evaluation is a separate conditional Phase B protocol.
   It has not run, generated attack data is excluded from training/public
   artifacts, and no current result is a security certification.
@@ -78,9 +81,9 @@ promotion gate, native external diagnostic, or verifier-backed RL gate.
 - The research claim is still empirical: local fixture scores and a source
   bound native diagnostic alone cannot establish broad agent capability,
   robust security, or model-harness superadditivity.
-- The next valid intervention depends on the frozen clean-candidate evidence.
-  A failed gate is useful failure localization, not justification to loosen the
-  evaluator or start RL.
+- Any resumed evaluation must preserve the frozen clean-candidate evidence and
+  requires explicit operator direction. A failed gate is useful failure
+  localization, not justification to loosen the evaluator or start RL.
 
 ## Hypotheses under test
 
@@ -96,10 +99,12 @@ promotion gate, native external diagnostic, or verifier-backed RL gate.
 
 ## Next gates
 
-1. Let the frozen three-seed promotion matrix complete, then validate its
-   manifest, content identity, independent replays, and decision artifact.
-2. Publish either its promotion decision or its rejection evidence. Neither a
-   partial matrix nor completed SFT authorizes native evaluation or RL.
+1. Resume or restart the frozen three-seed promotion matrix only with explicit
+   operator direction, then validate its manifest, content identity,
+   independent replays, and decision artifact.
+2. Publish either its promotion decision or its rejection evidence. The
+   intentionally preserved partial matrix and completed SFT do not authorize
+   native evaluation or RL.
 3. If promoted, run the registered native AgentDojo and tau3-bench diagnostics,
    then validate their native artifacts before describing any external result.
 4. Only then choose a failure-targeted remediation, the preregistered
@@ -114,6 +119,8 @@ promotion gate, native external diagnostic, or verifier-backed RL gate.
 ## Pointers
 
 - `docs/RESEARCH_LAUNCH_BRIEF.md` -- thesis, evidence tiers, and claim limits.
+- `docs/HARNESS_SCALING_PAPER_DRAFT.md` -- paper-structured methods,
+  preregistration, current evidence boundary, and publication criteria.
 - `docs/RESEARCH_ABLATION_SPEC_V2.md` -- controlled model/harness and sampling
   ablations.
 - `docs/CORPUS_QUALITY_AUDIT.md` -- raw-content-free corpus integrity audit.

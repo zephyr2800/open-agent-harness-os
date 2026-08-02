@@ -125,7 +125,7 @@ $py = 'python'
 & $py -m compileall -q .
 ```
 
-Current result: 202 Project 2 tests total (201 passed; one Windows
+Current result: 214 Project 2 tests total (213 passed; one Windows
 symlink-capability skip). The current suite includes the
 external-adapter, preregistration, evidence/replay, and loopback
 OpenAI-transport regressions.
@@ -159,16 +159,18 @@ model claim.
 - `python -m app.cli replay <trace>` validates the trace offline;
 - loopback API smoke test passes `/health`, `/tools`, and `/run`;
 - high-risk delete is denied by default;
+- the focused HTTP review has regressions for operator-owned model routing,
+  redirect refusal, connection caps, and read deadlines;
 - wheel build plus clean extracted-package demo succeeds.
 - `experiments/results/product-smoke-v0.json` covers six workflows with 1.0
   protocol validity, 0.833333 verified-success rate, and a deliberate safety
   denial for high-risk delete.
-- `experiments/results/launch-preflight-v33.json` is the current local developer-
+- `experiments/results/launch-preflight-v36.json` is the current local developer-
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 202-test source suite completed with 201 passes and one Windows
+  the 214-test source suite completed with 213 passes and one Windows
   symlink-capability skip at artifact creation. It builds from a
   clean source copy, binds the complete wheel archive, modules, and console
   scripts to a fresh source-derived reference, and rejects Python bytecode
@@ -403,13 +405,13 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite has 202 total tests (201 passed; one Windows
+- The current project test suite has 214 total tests (213 passed; one Windows
   symlink-capability skip) after evaluator hardening,
   dense-reliability, atomic concurrent trace-retention, HTTP bearer-auth, and
   loopback OpenAI-transport coverage.
 - Current wheel/preflight evidence is
-  `experiments/results/clean-wheel-smoke-v32.json` and
-  `experiments/results/launch-preflight-v32.json`; the source/package and
+  `experiments/results/clean-wheel-smoke-v36.json` and
+  `experiments/results/launch-preflight-v36.json`; the source/package and
   wheel-manifest fingerprints are recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 - `experiments/gpu_energy.py` provides a raw-sample, whole-GPU-energy sidecar
   for future exclusive evaluation windows; `docs/GPU_ENERGY_MEASUREMENT.md`

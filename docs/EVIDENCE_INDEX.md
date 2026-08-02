@@ -14,6 +14,10 @@ variance without weakening the strict promotion gate.
 Lilian Wengâ€™s harness/self-improvement posts, action-model papers, security and
 stateful-agent benchmarks, and current model/harness launches.
 
+`docs/INVESTOR_READINGS_AND_THESIS.md` turns that material into the merged
+policy-plus-harness thesis, an investor-ready 90-minute reading order, and
+claim-safe language for the active 9B scale branch.
+
 `docs/EXTERNAL_BAR_UPDATE_2026-07-26.md` records the newly checked TUA-Bench
 and OSWorld 2.0 bar and translates their failure modes into the next local
 evaluation gate.

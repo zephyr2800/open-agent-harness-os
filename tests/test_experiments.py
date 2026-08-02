@@ -226,7 +226,7 @@ class ExperimentTests(unittest.TestCase):
         report = build_readiness(ROOT)
         expected_wheel = f"open_agent_harness_os-{report['package_version']}-py3-none-any.whl"
         gate = report["gates"]["clean_wheel_smoke"]
-        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v5.json"))
+        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v6.json"))
         self.assertIn(expected_wheel, gate["detail"])
         self.assertEqual(gate["status"], "passed")
 

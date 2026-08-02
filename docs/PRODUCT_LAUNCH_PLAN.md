@@ -58,7 +58,9 @@ external-evaluation gates; the split is not a waiver of those requirements.
 - token-principal trace namespace isolation;
 - performance/resource report under a real local model;
 - usability testing with at least three representative workflows;
-- security review of every enabled tool and adapter.
+- security review of every enabled tool and adapter. The focused HTTP review
+  fixed client-selected model routing and pre-auth connection-exhaustion paths;
+  it does not replace deployment-specific review.
 
 The current slice is therefore launch-candidate infrastructure, not a public
 product launch. It is intentionally honest about the remaining gates.
@@ -78,7 +80,7 @@ developer preview; it does not close multi-user isolation, production
 operational, security-review, or external-agent benchmark gates.
 
 The current consolidated source-checkout preflight is recorded at
-`experiments/results/launch-preflight-v34.json`. It passes the six-case product
+`experiments/results/launch-preflight-v36.json`. It passes the six-case product
  smoke, MCP contract and replay, local-only endpoint policy, bearer
  authentication, high-risk denial, persistence, wheel integrity,
 launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
@@ -89,14 +91,16 @@ The historical source-bound v9 preflight contains a 137-test subcheck; the
 historical v11 preflight contains a 150-test subcheck; the historical v12
 preflight contains a 151-test subcheck; the historical v13 preflight contains
 a 154-test subcheck; the historical v32 preflight contains a 191-test subcheck;
-the current v34 preflight contains a 210-test subcheck (one Windows
+the historical v34 preflight contains a 210-test subcheck; the historical v35
+preflight contains a 211-test subcheck; the current v36 preflight contains a
+214-test subcheck (one Windows
 symlink-capability skip). The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
 The 2026-07-27 timeout-boundary artifact recorded Project 2 source tests at
 81/81 and Project 1 source tests at 47/47; those are historical artifact
-counts. The current suites are 210 total (209 passed; one Windows
+counts. The current suites are 214 total (213 passed; one Windows
 symlink-capability skip) and 47/47, respectively, and the
 consolidated launch preflight remains green. This closes the adapter-level
 budget-enforcement regression; it does not by itself close real-model

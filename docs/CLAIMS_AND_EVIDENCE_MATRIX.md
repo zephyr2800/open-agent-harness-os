@@ -12,7 +12,7 @@ metadata.
 
 | Claim | Status | Authoritative evidence | Allowed wording now |
 |---|---|---|---|
-| A local developer preview exists | Supported | `experiments/results/launch-preflight-v34.json` | “The local developer preview passes its documented smoke, safety, auth/TLS, isolation, replay, source-bound packaging, security-metadata, and test gates.” |
+| A local developer preview exists | Supported | `experiments/results/launch-preflight-v36.json` | “The local developer preview passes its documented smoke, safety, auth/TLS, isolation, replay, source-bound packaging, security-metadata, and test gates.” |
 | The harness executes typed actions with independent verification and replay | Supported | source tests, product smoke, MCP replay artifact, trace schemas | “The harness provides a deterministic authority/evidence/replay plane.” |
 | The local policy learned the Action IR task family | Supported only on local fixtures | completed 7B v6/v6 proxy reports and independent replay reports | “Protocol specialization improves these frozen local tasks.” |
 | The system is generally capable on terminal or computer-use work | Not supported | TUA-Bench/OSWorld 2.0 run is still absent | Do not make this claim. |
@@ -27,8 +27,8 @@ metadata.
 
 Evidence freshness: `launch-preflight-v9.json` and
 `experiments/results/launch-preflight-v32.json` remain valid historical
-artifacts. `experiments/results/launch-preflight-v34.json` is the current
-developer-preview evidence: 16/16 checks, 210 total Project 2 tests (209
+artifacts. `experiments/results/launch-preflight-v36.json` is the current
+developer-preview evidence: 16/16 checks, 214 total Project 2 tests (213
 passed; one Windows symlink-capability skip), and 47/47 companion-project
 tests.
 

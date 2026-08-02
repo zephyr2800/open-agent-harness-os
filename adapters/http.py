@@ -15,6 +15,13 @@ class LocalModelHTTPError(RuntimeError):
     pass
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Do not let a local model endpoint redirect a harness request elsewhere."""
+
+    def redirect_request(self, request: urllib.request.Request, fp: Any, code: int, message: str, headers: Any, newurl: str) -> None:
+        return None
+
+
 class OpenAICompatibleAdapter:
     """Call a local `/v1/chat/completions` endpoint and enforce Action IR."""
 
@@ -24,6 +31,7 @@ class OpenAICompatibleAdapter:
         self.api_key = api_key
         self.timeout_seconds = timeout_seconds
         self.requests: list[ModelRequest] = []
+        self._opener = urllib.request.build_opener(_NoRedirectHandler())
 
     @staticmethod
     def parse_content(content: Any) -> Mapping[str, Any]:
@@ -64,7 +72,7 @@ class OpenAICompatibleAdapter:
             request_timeout = min(request_timeout, float(budget_seconds))
         request_timeout = max(0.1, request_timeout)
         try:
-            with urllib.request.urlopen(http_request, timeout=request_timeout) as response:
+            with self._opener.open(http_request, timeout=request_timeout) as response:
                 document = json.loads(response.read().decode("utf-8"))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise LocalModelHTTPError(f"local model request failed: {exc}") from exc

@@ -57,6 +57,8 @@ class LaunchPreflightTests(unittest.TestCase):
                     "experiments/launch_preflight.py",
                     "demo-0.0.0.dist-info/METADATA",
                     "demo-0.0.0.dist-info/WHEEL",
+                    "demo-0.0.0.dist-info/licenses/LICENSE",
+                    "demo-0.0.0.dist-info/licenses/NOTICE",
                 )
                 for name in members:
                     archive.writestr(name, "")
@@ -71,7 +73,34 @@ class LaunchPreflightTests(unittest.TestCase):
             result = _wheel_check(path)
         self.assertTrue(result["passed"])
         self.assertTrue(result["detail"]["wheel_metadata_present"])
+        self.assertTrue(result["detail"]["license_notice_present"])
         self.assertTrue(result["detail"]["record_hashes_valid"])
+
+    def test_wheel_check_requires_license_and_notice_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "missing-license.whl"
+            with zipfile.ZipFile(path, "w") as archive:
+                members = (
+                    "app/__init__.py",
+                    "app/cli.py",
+                    "experiments/agentdojo_adapter_server.py",
+                    "experiments/launch_preflight.py",
+                    "demo-0.0.0.dist-info/METADATA",
+                    "demo-0.0.0.dist-info/WHEEL",
+                )
+                for name in members:
+                    archive.writestr(name, "")
+                record_name = "demo-0.0.0.dist-info/RECORD"
+                record = io.StringIO()
+                writer = csv.writer(record, lineterminator="\n")
+                encoded = base64.urlsafe_b64encode(hashlib.sha256(b"").digest()).rstrip(b"=").decode("ascii")
+                for name in members:
+                    writer.writerow((name, f"sha256={encoded}", "0"))
+                writer.writerow((record_name, "", ""))
+                archive.writestr(record_name, record.getvalue())
+            result = _wheel_check(path)
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["detail"]["license_notice_present"])
 
     def test_wheel_check_rejects_bytecode_entries(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

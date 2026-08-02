@@ -2,6 +2,17 @@
 
 ## Unreleased - source-bound evaluation and research-control hardening (2026-08-02)
 
+- Hardened the HTTP developer-preview boundary: model routing is operator-owned,
+  endpoints are canonical loopback root or `/v1` URLs, redirects are refused,
+  and the listener has bounded pre-auth connections and read deadlines.
+- Added a focused security-review record and refreshed developer-preview release
+  evidence to v36 (16/16 preflight, 214 Project 2 tests with one Windows
+  capability skip, and 47/47 companion tests).
+- Made the wheel-integrity gate fail closed unless the built artifact carries
+  its Apache LICENSE and NOTICE entries, with a missing-notice regression test.
+- Refreshed developer-preview release evidence to v35 (16/16 preflight,
+  211 Project 2 tests with one Windows capability skip, and 47/47 companion
+  tests).
 - Added a checked-in native-evaluation preregistration, source-bound
   AgentDojo/tau2 launchers, immutable artifact validators, and regression
   coverage for the local OpenAI-compatible adapter transport.

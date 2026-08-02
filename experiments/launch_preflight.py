@@ -59,6 +59,7 @@ REQUIRED_DOCS = (
     "docs/NATIVE_EVALUATION_REGISTRATION_2026-08-01.md",
     "docs/PUBLIC_RELEASE_CHECKLIST.md",
     "docs/PROVENANCE_REVIEW.md",
+    "docs/SECURITY_REVIEW_2026-08-02.md",
     "benchmarks/fixtures/task-spec-external-bar-lite-v1.json",
     "benchmarks/fixtures/task-spec-external-bar-lite-v2.json",
     "benchmarks/fixtures/native-external-registration-v1.json",
@@ -434,6 +435,12 @@ def _wheel_check(wheel: Path) -> dict[str, Any]:
                 "experiments/launch_preflight.py",
             }
             required_metadata = {name for name in dist_info if name.endswith(("/METADATA", "/WHEEL", "/RECORD"))}
+            required_legal = {
+                name
+                for name in names
+                if name.endswith((".dist-info/licenses/LICENSE", ".dist-info/licenses/NOTICE"))
+            }
+            legal_notices_present = len(required_legal) == 2
             record_paths = [name for name in names if name.endswith("/.dist-info/RECORD") or name.endswith(".dist-info/RECORD")]
             record_valid = len(record_paths) == 1 and len(names) == len(set(names))
             record_entries = 0
@@ -473,10 +480,18 @@ def _wheel_check(wheel: Path) -> dict[str, Any]:
                 "bytecode_entries": len(bytecode_entries),
                 "required_modules_present": required.issubset(names),
                 "wheel_metadata_present": len(required_metadata) == 3,
+                "license_notice_present": legal_notices_present,
                 "record_entries": record_entries,
                 "record_hashes_valid": record_valid,
             })
-            passed = bool(safe_names and not bytecode_entries and required.issubset(names) and len(required_metadata) == 3 and record_valid)
+            passed = bool(
+                safe_names
+                and not bytecode_entries
+                and required.issubset(names)
+                and len(required_metadata) == 3
+                and legal_notices_present
+                and record_valid
+            )
     except (OSError, zipfile.BadZipFile) as exc:
         detail.update({"zipfile": False, "reason": str(exc)})
         passed = False

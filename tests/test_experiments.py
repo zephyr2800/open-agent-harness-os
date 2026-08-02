@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import io
+import socket
 import sys
 import threading
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
@@ -15,7 +17,7 @@ from pathlib import Path
 
 from experiments.factorial import run_factorial
 from improve.promotion import PromotionGate, Proposal
-from adapters.base import ScriptedModel
+from adapters.base import ModelRequest, ScriptedModel
 from runtime.orchestrator import Harness, HarnessConfig
 from tools.memory_workspace import make_memory_registry
 from experiments.project1_integration import run as run_project1_integration
@@ -24,9 +26,9 @@ from benchmarks.tasks import load_tasks
 from verify.independent import verify_factorial_report
 from verify.real import verify_real_report
 from adapters.project1_transformers import Project1TransformersAdapter
-from adapters.http import OpenAICompatibleAdapter
+from adapters.http import LocalModelHTTPError, OpenAICompatibleAdapter
 from app.service import run_action
-from app.cli import _load_auth_tokens, _optional_local_adapter, _server, _validate_bind_host, _validate_server_security
+from app.cli import BoundedThreadingHTTPServer, _load_auth_tokens, _optional_local_adapter, _server, _validate_bind_host, _validate_server_security
 from app.storage import TraceStore
 from experiments.verify_checkpoint_run import verify as verify_checkpoint_run
 from experiments.run_promotion_matrix import _run_report, _write_heartbeat, main as promotion_matrix_main
@@ -629,8 +631,18 @@ class ExperimentTests(unittest.TestCase):
         adapter, model_name = _optional_local_adapter({"model_endpoint": "http://127.0.0.1:11434", "model": "demo"})
         self.assertEqual(model_name, "demo")
         self.assertEqual(adapter.model, "demo")
-        with self.assertRaises(ValueError):
-            _optional_local_adapter({"model_endpoint": "https://example.com", "model": "demo"})
+        self.assertEqual(adapter.base_url, "http://127.0.0.1:11434")
+        versioned, _ = _optional_local_adapter({"model_endpoint": "http://localhost:11434/v1/", "model": "demo"})
+        self.assertEqual(versioned.base_url, "http://localhost:11434/v1")
+        for endpoint in (
+            "https://example.com",
+            "http://127.0.0.1:11434/internal",
+            "http://127.0.0.1:11434/v1?target=internal",
+            "http://user:secret@127.0.0.1:11434",
+            "http://127.0.0.1:99999",
+        ):
+            with self.subTest(endpoint=endpoint), self.assertRaises(ValueError):
+                _optional_local_adapter({"model_endpoint": endpoint, "model": "demo"})
         _validate_bind_host("127.0.0.1")
         with self.assertRaises(ValueError):
             _validate_bind_host("0.0.0.0")
@@ -668,6 +680,24 @@ class ExperimentTests(unittest.TestCase):
             tls_certfile=None,
             tls_keyfile=None,
         )
+        with self.assertRaisesRegex(ValueError, "connection-timeout-seconds"):
+            _validate_server_security(
+                "127.0.0.1",
+                allow_non_loopback=False,
+                auth_token=None,
+                tls_certfile=None,
+                tls_keyfile=None,
+                connection_timeout_seconds=0.01,
+            )
+        with self.assertRaisesRegex(ValueError, "max-connections"):
+            _validate_server_security(
+                "127.0.0.1",
+                allow_non_loopback=False,
+                auth_token=None,
+                tls_certfile=None,
+                tls_keyfile=None,
+                max_connections=0,
+            )
 
     def test_product_auth_token_file_parser_is_strict(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", encoding="utf-8", delete=False) as handle:
@@ -706,6 +736,89 @@ class ExperimentTests(unittest.TestCase):
             self.assertEqual(json.loads(authorized.read())["status"], "ok")
             connection.close()
         finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_product_http_rejects_client_selected_model_routing(self) -> None:
+        token = "launch-preview-token-2026"
+        server = ThreadingHTTPServer(
+            ("127.0.0.1", 0),
+            _server(
+                auth_token=token,
+                model_endpoint="http://127.0.0.1:11434/v1",
+                model="operator-model",
+            ),
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            body = {
+                "task_id": "routing-reject",
+                "prompt": "Write a harmless file.",
+                "tool": "write_file",
+                "arguments": {"path": "safe.txt", "content": "ok"},
+                "model_endpoint": "http://127.0.0.1:1/internal",
+                "model": "caller-selected",
+            }
+            connection = HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            payload = json.dumps(body).encode("utf-8")
+            connection.request("POST", "/run", body=payload, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "Content-Length": str(len(payload))})
+            response = connection.getresponse()
+            self.assertEqual(response.status, 400)
+            self.assertIn("configured by the server operator", json.loads(response.read())["error"])
+            connection.close()
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_product_http_connection_cap_and_deadline_release_capacity(self) -> None:
+        server = BoundedThreadingHTTPServer(
+            ("127.0.0.1", 0),
+            _server(),
+            connection_timeout_seconds=0.15,
+            max_connections=1,
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        stalled = socket.create_connection(("127.0.0.1", server.server_port), timeout=2)
+        stalled.settimeout(2)
+        try:
+            stalled.sendall(b"GET /health HTTP/1.1\r\nHost: localhost\r\n")
+            deadline = time.monotonic() + 1.0
+            saturated = False
+            while time.monotonic() < deadline:
+                if server._connection_slots.acquire(blocking=False):
+                    server._connection_slots.release()
+                    time.sleep(0.01)
+                else:
+                    saturated = True
+                    break
+            self.assertTrue(saturated)
+
+            overflow = socket.create_connection(("127.0.0.1", server.server_port), timeout=2)
+            overflow.settimeout(1)
+            try:
+                self.assertEqual(overflow.recv(1), b"")
+            finally:
+                overflow.close()
+
+            deadline = time.monotonic() + 2.0
+            released = False
+            while time.monotonic() < deadline:
+                if server._connection_slots.acquire(blocking=False):
+                    server._connection_slots.release()
+                    released = True
+                    break
+                time.sleep(0.02)
+            self.assertTrue(released)
+            connection = HTTPConnection("127.0.0.1", server.server_port, timeout=2)
+            connection.request("GET", "/health")
+            response = connection.getresponse()
+            self.assertEqual(response.status, 200)
+            response.read()
+            connection.close()
+        finally:
+            stalled.close()
             server.shutdown()
             server.server_close()
 
@@ -831,6 +944,28 @@ class ExperimentTests(unittest.TestCase):
             result = run_action("endpoint-test", "Write endpoint.txt", "write_file", {"path": "endpoint.txt", "content": "hello"}, variant="H0", adapter=adapter, model_name="fake-local")
             self.assertTrue(result["verified_success"])
             self.assertTrue(result["protocol_valid"])
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_product_model_adapter_refuses_redirects(self) -> None:
+        class RedirectHandler(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802
+                self.send_response(302)
+                self.send_header("Location", "http://127.0.0.1:1/internal")
+                self.end_headers()
+
+            def log_message(self, format, *args):
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), RedirectHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            adapter = OpenAICompatibleAdapter(f"http://127.0.0.1:{server.server_port}", "fake-local")
+            request = ModelRequest("redirect-test", "prompt", "context", {}, ("abstain",), (), "sandbox", {"tokens": 50}, "H1", 0)
+            with self.assertRaisesRegex(LocalModelHTTPError, "local model request failed"):
+                adapter.decide(request)
         finally:
             server.shutdown()
             server.server_close()

@@ -84,8 +84,8 @@ middleware surfaces. It cannot rewrite evaluators, traces, authorization,
 promotion policy, hidden tasks, or model identity.
 
 The public package currently demonstrates this boundary through local CLI,
-loopback HTTP, and MCP interfaces. Fresh v34 evidence records 16/16
-developer-preview checks, 210 Project 2 tests (209 passed and one Windows
+loopback HTTP, and MCP interfaces. Fresh v36 evidence records 16/16
+developer-preview checks, 214 Project 2 tests (213 passed and one Windows
 symlink-capability skip), and 47/47 companion-project tests. This is
 reproducibility/product-control evidence, not a model-capability result.
 

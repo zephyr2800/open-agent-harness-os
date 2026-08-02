@@ -16,8 +16,8 @@ gate, native external diagnostic, or verifier-backed RL gate.
   gates, registered tools, deterministic verification, an evidence ledger,
   replayable JSONL traces, checkpoint/recovery machinery, loopback HTTP, and
   MCP stdio surfaces.
-- The current Project 2 regression suite has 210 tests total (209 passed; one
-  Windows symlink-capability skip), and fresh release preflight v34 is 16/16.
+- The current Project 2 regression suite has 214 tests total (213 passed; one
+  Windows symlink-capability skip), and fresh release preflight v36 is 16/16.
   These are developer-preview regression controls, not an external capability
   score.
 - A historical 9B matrix completed at 483/552 independently verified local

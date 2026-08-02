@@ -79,12 +79,12 @@ class ProtocolTests(unittest.TestCase):
             def read(self):
                 return json.dumps({"choices": [{"message": {"content": json.dumps(valid_decision("t1"))}}]}).encode()
 
-        def fake_urlopen(request, timeout):
+        def fake_open(request, timeout):
             seen["timeout"] = timeout
             return Response()
 
         request = ModelRequest("t1", "prompt", "context", {}, ("abstain",), (), "sandbox", {"tokens": 64, "seconds": 2}, "H1", 0)
         adapter = OpenAICompatibleAdapter("http://127.0.0.1:1", "test-model", timeout_seconds=30)
-        with patch("urllib.request.urlopen", fake_urlopen):
+        with patch.object(adapter._opener, "open", fake_open):
             self.assertEqual(adapter.decide(request)["task_id"], "t1")
         self.assertEqual(seen["timeout"], 2.0)

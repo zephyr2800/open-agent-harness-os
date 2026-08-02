@@ -1,27 +1,28 @@
 # Public Release Checklist
 
-Status: 0.1.8 developer-preview release candidate with version-aware readiness evidence, 2026-08-01
+Status: 0.1.8 developer-preview release candidate with fresh v33 readiness evidence, 2026-08-02
 
 This checklist records the evidence attached to the current public repository snapshot. It is deliberately separate from model-quality claims: the repository is a reproducible harness and research package, not a claim that a checkpoint has been promoted.
 
 ## Verified locally
 
-- Open Agent Harness OS unit and integration suite: 137/137 passing, including
-  dense-reliability, source-bound wheel integrity, claim-safe scorecard, promotion-protocol, and native-evaluation-launcher checks.
+- Open Agent Harness OS unit and integration suite: 202 total (201 passed;
+  one Windows symlink-capability skip), including dense-reliability, source-bound
+  wheel integrity, claim-safe scorecard, promotion-protocol,
+  native-evaluation-launcher, energy-measurement, and action-surface-stress
+  checks.
 - Local Action Model companion suite: 47/47 passing.
-- Launch preflight v9: 16/16 checks passing, including a fresh
+- Launch preflight v33: 16/16 checks passing, including a fresh
   clean-source wheel build, extracted-wheel install smoke, bytecode
   exclusion, complete archive-manifest, package-digest, and console-script
-  binding to a fresh reference wheel, and the companion suite; the historical
-  v5 artifact records an 83-test source suite,
-  while v6 records 110.
+  binding to a fresh reference wheel and the companion suite.
 - Wheel build: `open_agent_harness_os-0.1.8-py3-none-any.whl` (no Python
-  bytecode caches; 74 archive entries; source/package fingerprint
-  `22395cbc393edbddf5cdf2e59f12955731b6d5f906d14fe8ccb56e3fa5385b15`).
-- Paired clean-wheel candidate SHA-256 (recorded in the smoke artifact):
-  `5b452350a4805cb115056777f54ffe052219e72bed7e370d07600c2b2e61b364`.
-- Wheel archive-manifest SHA-256 (identical across the paired clean builds):
-  `5362689f614cbf173e21ff8a4e8c158665e39997465c16ea77c8c2783d7c33b5`.
+  bytecode caches; 89 archive entries; source/package fingerprint
+  `eb423768a0469fdbbd6b03412194898f7b6de49dd28a01280d454e2c8a09b401`).
+- Clean-source wheel SHA-256 (recorded in the v33 smoke artifact):
+  `6eb30aa8bff5ca8d59428a8e0e1bf741c9407d396e0738fb1fc4e0b6bd871041`.
+- Source-derived wheel archive-manifest SHA-256:
+  `38326a46d3c4ce08156fd17f1395f2fd05fa8f7780e04add7f6e0dba46ecf370`.
 - The release gate rebuilds from a clean source copy and records each raw
   wheel hash in its evidence; the archive-manifest hash is the cross-build
   provenance binding.

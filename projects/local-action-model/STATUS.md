@@ -1,5 +1,38 @@
 # Status
 
+## Current clean 9B research branch - 2026-08-02
+
+State: the Project 1 prototype remains complete at smoke level, while its
+first clean, source-audited 9B QLoRA candidate is actively training. This is
+an evidence-gathering branch, not a promoted checkpoint or a research result.
+
+### Facts
+
+- The active candidate uses 3,232 audited rows, one uniform full-coverage
+  epoch, rank-128 4-bit QLoRA, gradient checkpointing, and a frozen evaluation
+  protocol. Row weights exist in the curriculum but are intentionally inactive
+  in this uniform baseline.
+- The historical 9B matrix is context-only: it was rejected despite strong
+  local trace/replay/safety checks because its source-corpus split was not
+  auditable.
+- The clean candidate must first complete a train/holdout audit and a
+  three-seed stochastic promotion matrix. Native AgentDojo/tau2 evaluation and
+  any verifier-backed RL are gated on that decision.
+- A 27B NF4 QLoRA staged feasibility smoke is documented for the RTX 5090 but
+  is queued behind the clean 9B chain. It must consume audited clean data and
+  cannot be used to bypass an invalid or rejected baseline.
+
+### Next steps
+
+1. Preserve the active trainer source, dataset, and frozen evaluator until its
+   manifest is emitted.
+2. Record the promotion decision and failure-family evidence.
+3. If rejected, choose a named remediation or the full-coverage
+   uniform-versus-weighted order ablation; if promoted, run the registered
+   native diagnostics before considering RL.
+4. Only after a credible checkpoint result, run the real four-cell
+   model-by-harness experiment with deployment and energy measurements.
+
 ## Current checkpoint — 2026-07-25
 
 State: Project 1 prototype is complete at reproducible smoke level. M0 and the
@@ -53,6 +86,9 @@ project.
 - Research inputs now include Karpathy's `nanochat` stage separation,
   `autoresearch` fixed-time single-GPU loop, Hugging Face TRL/PEFT/data
   streaming, and the OpenAI Parameter Golf constraint track.
+- The Parameter Golf track is explicitly local and non-leaderboard: its
+  official 16 MB, 10-minute-on-8xH100, FineWeb bits-per-byte benchmark is
+  distinct from this RTX 5090 Action IR deployment-Pareto objective.
 - The first real RTX 5090 sweep is recorded in
   `experiments/results/qwen2.5-0.5b-5090-zero-shot-v0.{json,md}`: PyTorch
   2.11.0+cu128/CUDA 12.8/BF16, 4,737.1 ms load, 3,440.3 ms mean task wall

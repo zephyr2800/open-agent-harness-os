@@ -29,6 +29,8 @@ from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
+from experiments.native_evaluation_registration import validate_agentdojo_registration
+from experiments.source_tree import record_source_tree
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -83,6 +85,7 @@ class NativeRunConfig:
     max_new_tokens: int
     quantization: str | None
     port: int
+    registration: Path | None = None
 
 
 def _sha256(path: Path) -> str:
@@ -100,6 +103,22 @@ def _file_record(path: Path) -> dict[str, Any]:
         "path": str(path),
         "sha256": _sha256(path),
         "bytes": path.stat().st_size,
+    }
+
+
+def _native_log_records(log_directory: Path) -> dict[str, Any]:
+    """Bind every official AgentDojo JSON log emitted by a completed run."""
+
+    native_logs = log_directory.resolve()
+    if not native_logs.is_dir():
+        raise ValueError(f"native AgentDojo log directory does not exist: {native_logs}")
+    records = [_file_record(path) for path in sorted(native_logs.rglob("*.json")) if path.is_file()]
+    if not records:
+        raise ValueError(f"native AgentDojo log directory contains no JSON task results: {native_logs}")
+    return {
+        "schema": "agentdojo-native-logs/v1",
+        "directory": str(native_logs),
+        "records": records,
     }
 
 
@@ -316,8 +335,27 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
     environment, pythonpath = _agentdojo_environment(config)
     selector_catalog = _selector_catalog(config, environment)
     _validate_selectors(config, selector_catalog)
+    registration = (
+        validate_agentdojo_registration(
+            config.registration,
+            training_sources=audit_gate["training_sources"],
+            variant=config.variant,
+            source_commit=agentdojo_commit,
+            benchmark_version=config.benchmark_version,
+            suite=config.suite,
+            user_tasks=config.user_tasks,
+            injection_tasks=config.injection_tasks,
+            attack=config.attack,
+            defense=config.defense,
+            seed=config.seed,
+            max_new_tokens=config.max_new_tokens,
+            quantization=config.quantization,
+        )
+        if config.registration is not None
+        else None
+    )
     adapter = REPO_ROOT / "experiments" / "agentdojo_adapter_server.py"
-    return {
+    plan = {
         "schema": "agentdojo-native-run/v1",
         "status": "planned",
         "created_at_unix": time.time(),
@@ -334,6 +372,7 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
         "agentdojo": {
             "root": str(config.agentdojo_root),
             "commit": agentdojo_commit,
+            "source_tree": record_source_tree(config.agentdojo_root),
             "benchmark_version": config.benchmark_version,
             "suite": config.suite,
             "user_tasks": list(config.user_tasks),
@@ -345,6 +384,10 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
         },
         "adapter": {
             "source": _file_record(adapter),
+            "source_trees": {
+                "project1": record_source_tree(config.project1_root),
+                "harness": record_source_tree(REPO_ROOT),
+            },
             "host": "127.0.0.1",
             "port": config.port,
             "harness_variant": VARIANTS[config.variant]["harness_variant"],
@@ -371,6 +414,9 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
         },
         "environment": environment,
     }
+    if registration is not None:
+        plan["registration"] = registration
+    return plan
 
 
 def _assert_port_available(port: int) -> None:
@@ -469,6 +515,7 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
                     check=False,
                     creationflags=creationflags,
                 )
+        native_output = _native_log_records(run_dir / "native-logs") if benchmark.returncode == 0 else None
         result = {
             **running,
             "status": "completed" if benchmark.returncode == 0 else "failed",
@@ -476,6 +523,8 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
             "adapter_health": health,
             "benchmark_returncode": benchmark.returncode,
         }
+        if native_output is not None:
+            result["native_output"] = native_output
     except Exception as error:
         result = {
             **running,
@@ -486,6 +535,11 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
     finally:
         if process is not None:
             result["adapter_process"] = _stop(process)
+        if result.get("status") == "completed":
+            try:
+                result["adapter_log"] = _file_record(run_dir / "adapter.jsonl")
+            except (OSError, ValueError) as error:
+                result = {**result, "status": "failed", "error": repr(error)}
     _write_json_atomic(run_dir / "run_manifest.json", result)
     return result
 
@@ -510,6 +564,7 @@ def _config_from_args(args: argparse.Namespace) -> NativeRunConfig:
         max_new_tokens=args.max_new_tokens,
         quantization=args.quantization,
         port=args.port,
+        registration=Path(args.registration).expanduser().resolve() if args.registration else None,
     )
 
 
@@ -533,10 +588,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"), default="4bit")
     parser.add_argument("--port", type=int, default=8089)
+    parser.add_argument("--registration", help="checked-in preregistration required with --execute")
     parser.add_argument("--execute", action="store_true", help="start the adapter and invoke AgentDojo; omit to write only a validated plan")
     args = parser.parse_args(argv)
     try:
         config = _config_from_args(args)
+        if args.execute and config.registration is None:
+            raise ValueError("--execute requires --registration so external task selection and budgets are precommitted")
         plan = build_plan(config)
         config.run_dir.mkdir(parents=True, exist_ok=False)
         _write_json_atomic(config.run_dir / "run_manifest.json", plan)

@@ -163,14 +163,43 @@ reported together. A compressed 0.5B adapter or quantized deployment artifact
 can be compared on the practical local Pareto frontier without pretending it
 is a compliant Parameter Golf submission.
 
+### Parameter Golf boundary (source refresh: 2026-08-02)
+
+The official [OpenAI Parameter Golf](https://github.com/openai/parameter-golf)
+challenge is a distinct language-model compression benchmark: a complete
+artifact must fit in 16 MB, leaderboard training is limited to 10 minutes on
+8xH100s, and the score is tokenizer-agnostic bits-per-byte on FineWeb
+validation. Our single-RTX-5090 Action IR work has a different hardware budget,
+task distribution, and verified-action objective. It can therefore be
+**Parameter Golf-inspired**, but is not a leaderboard-compliant submission or
+a comparable Parameter Golf score.
+
+The transfer is methodological, not a claim transfer:
+
+1. Record total deployable artifact bytes (including tokenizer and required
+   sidecars), parameter count, deployment precision, latency, peak VRAM, and
+   energy alongside verified Action IR results.
+2. Keep compression validation separate from the frozen Action IR holdouts;
+   never substitute a FineWeb bits-per-byte result for an action-capability or
+   safety result.
+3. Treat architecture, quantization, tokenizer, or test-time-training ideas
+   from the leaderboard as hypotheses. They require a preregistered ablation
+   with fixed seeds and the same holdout/verifier gates before they can affect
+   a promoted Action IR policy.
+4. Call a result an official Parameter Golf submission only after a separate
+   run satisfies its then-current artifact, compute, data, and evaluation
+   rules; otherwise report it as a local deployment-Pareto point.
+
 ## Research references used for this plan
 
 - [Karpathy nanochat](https://github.com/karpathy/nanochat): cohesive
   tokenization, pretraining, SFT, evaluation, inference, and RL pipeline.
 - [Karpathy autoresearch](https://github.com/karpathy/autoresearch): fixed-time,
   single-GPU, one-metric, reviewable experiment loop.
-- [OpenAI Parameter Golf](https://github.com/openai/parameter-golf): hard
-  artifact/compute constraint and tokenizer-agnostic bits-per-byte evaluation.
+- [OpenAI Parameter Golf](https://github.com/openai/parameter-golf): a 16 MB
+  artifact challenge with a 10-minute 8xH100 leaderboard budget and
+  tokenizer-agnostic FineWeb bits-per-byte evaluation; used here only as a
+  constraint-discipline reference.
 - [Hugging Face TRL](https://huggingface.co/docs/trl/en/index): SFT, DPO, GRPO,
   reward, and other post-training trainers.
 - [Hugging Face PEFT LoRA](https://huggingface.co/docs/peft/main/package_reference/lora):

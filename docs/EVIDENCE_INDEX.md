@@ -14,6 +14,17 @@ variance without weakening the strict promotion gate.
 Lilian Wengâ€™s harness/self-improvement posts, action-model papers, security and
 stateful-agent benchmarks, and current model/harness launches.
 
+`docs/INVESTOR_READINGS_AND_THESIS.md` turns that material into the merged
+policy-plus-harness thesis, an investor-ready 90-minute reading order, and
+claim-safe language for the active 9B scale branch.
+
+`docs/HARNESS_SYSTEMS_AND_LAUNCHES_2026-08-02.md` consolidates the current
+primary-source Pi, Agents SDK, AgentDojo, AutoDojo, TUA-Bench, Inkling/Tinker,
+and Kimi K3 comparison into observed facts, limitations, and experiments.
+It also records the tau3-bench v1.0.1 version boundary and the false-success
+monitoring consequence: state/replay verification, not an LLM judge, is the
+evidence source for a completion claim.
+
 `docs/EXTERNAL_BAR_UPDATE_2026-07-26.md` records the newly checked TUA-Bench
 and OSWorld 2.0 bar and translates their failure modes into the next local
 evaluation gate.
@@ -26,6 +37,17 @@ public-launch readiness.
 `docs/RESEARCH_LAUNCH_UPDATE_2026-08-01.md` refreshes the external bar with
 TUA-Bench, OSWorld 2.0, OpenComputer, current verifier-grounded research,
 Inkling/Tinker, Kimi K3, and the current claim-safe launch consequences.
+
+`docs/NATIVE_EVALUATION_REGISTRATION_2026-08-01.md` and
+`benchmarks/fixtures/native-external-registration-v1.json` freeze the first
+checkpoint-bound native AgentDojo and tau2 diagnostics. Their launchers bind
+the registration hash into each run manifest; this is a reproducibility gate,
+not an external score or security certification.
+
+`docs/ADAPTIVE_EXTERNAL_EVALUATION_2026-08-02.md` records the separate,
+conditional AutoDojo Phase B protocol: adaptive attack caches are
+configuration-specific, local-only evidence and are not training data or a
+security certification.
 
 `docs/SCALE_CONTROL_NOTE_2026-07-27.md` records the interim same-task-hash
 7B-versus-9B comparison and the parameter-scaling caveats; it is evidence for
@@ -103,8 +125,10 @@ $py = 'python'
 & $py -m compileall -q .
 ```
 
-Current result: 95 Project 2 tests pass. The latest delta includes the
-external-adapter and evidence/replay regressions.
+Current result: 202 Project 2 tests total (201 passed; one Windows
+symlink-capability skip). The current suite includes the
+external-adapter, preregistration, evidence/replay, and loopback
+OpenAI-transport regressions.
 
 ## Independent research fixture
 
@@ -139,12 +163,13 @@ model claim.
 - `experiments/results/product-smoke-v0.json` covers six workflows with 1.0
   protocol validity, 0.833333 verified-success rate, and a deliberate safety
   denial for high-risk delete.
-- `experiments/results/launch-preflight-v9.json` is a fresh local developer-
+- `experiments/results/launch-preflight-v33.json` is the current local developer-
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 137-test source suite passed at artifact creation. It builds from a
+  the 202-test source suite completed with 201 passes and one Windows
+  symlink-capability skip at artifact creation. It builds from a
   clean source copy, binds the complete wheel archive, modules, and console
   scripts to a fresh source-derived reference, and rejects Python bytecode
   caches. It
@@ -363,6 +388,12 @@ available.
 - `experiments/holdout_novelty_audit.py`: identifier-normalized lexical
   template-affinity screen. It binds its report to the exact training-source
   and task-spec hashes, but is explicitly not a semantic-novelty claim.
+- `experiments/corpus_quality_audit.py` and
+  `experiments/results/clean-9b-corpus-quality-audit-v2.json`: a
+  raw-content-free, source-hash-bound audit of the clean 9B corpus. It records
+  structural distributions and duplicate statistics; 3,232 rows, zero exact
+  row/input duplicates, and the expected source hash passed. This is a data
+  integrity control, not a generalization score.
 - `experiments/promotion_decision.py`: separate frozen promotion gate that
   requires all three slices, all recorded runs, independent replay agreement,
   zero unsafe attempts, no unknown task specifications, and a bound passing
@@ -372,14 +403,20 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 115/115 after evaluator hardening, dense-reliability,
-  atomic concurrent
-  trace-retention coverage, and HTTP bearer-auth coverage.
-- Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,
-  SHA-256 is recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`;
-  it contains the explicit non-loopback authentication-plus-TLS gate.
+- The current project test suite has 202 total tests (201 passed; one Windows
+  symlink-capability skip) after evaluator hardening,
+  dense-reliability, atomic concurrent trace-retention, HTTP bearer-auth, and
+  loopback OpenAI-transport coverage.
+- Current wheel/preflight evidence is
+  `experiments/results/clean-wheel-smoke-v32.json` and
+  `experiments/results/launch-preflight-v32.json`; the source/package and
+  wheel-manifest fingerprints are recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`.
+- `experiments/gpu_energy.py` provides a raw-sample, whole-GPU-energy sidecar
+  for future exclusive evaluation windows; `docs/GPU_ENERGY_MEASUREMENT.md`
+  records its explicit per-process and wall-socket limits.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout
-  command `python -m experiments.launch_preflight --with-tests`; the artifact
+  command `python -m experiments.launch_preflight --with-tests --output
+  experiments/results/launch-preflight-local.json`; the artifact
   explicitly records 12 concurrent writes, 12 valid traces after a fresh
   store restart, and is scoped to the local developer preview; it does not
   claim public authentication, multi-user isolation, or external-benchmark

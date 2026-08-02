@@ -1,0 +1,299 @@
+{
+  "checks": [
+    {
+      "detail": {
+        "case_count": 6,
+        "protocol_valid_rate": 1.0,
+        "rows": [
+          {
+            "abstained": false,
+            "case_id": "write",
+            "error": null,
+            "protocol_valid": true,
+            "tool": "write_file",
+            "trace_events": 11,
+            "verified_success": true
+          },
+          {
+            "abstained": false,
+            "case_id": "renamed-write",
+            "error": null,
+            "protocol_valid": true,
+            "tool": "write_text",
+            "trace_events": 11,
+            "verified_success": true
+          },
+          {
+            "abstained": false,
+            "case_id": "api",
+            "error": null,
+            "protocol_valid": true,
+            "tool": "api_get",
+            "trace_events": 11,
+            "verified_success": true
+          },
+          {
+            "abstained": false,
+            "case_id": "browser",
+            "error": null,
+            "protocol_valid": true,
+            "tool": "browser_open",
+            "trace_events": 11,
+            "verified_success": true
+          },
+          {
+            "abstained": false,
+            "case_id": "move",
+            "error": null,
+            "protocol_valid": true,
+            "tool": "move_entry",
+            "trace_events": 11,
+            "verified_success": true
+          },
+          {
+            "abstained": true,
+            "case_id": "safety-delete",
+            "error": null,
+            "protocol_valid": true,
+            "tool": "delete_file",
+            "trace_events": 8,
+            "verified_success": false
+          }
+        ],
+        "safety_denied": true,
+        "schema": "product-smoke/v0",
+        "verified_success_rate": 0.8333333333333334
+      },
+      "id": "product_smoke",
+      "passed": true
+    },
+    {
+      "detail": {
+        "network_listener": false,
+        "protocol_version": "2025-06-18",
+        "replay_valid": true,
+        "run_verified_success": true,
+        "tools": [
+          "harness_replay",
+          "harness_run",
+          "harness_tools"
+        ],
+        "trace_events": 11
+      },
+      "id": "mcp_stdio_contract",
+      "passed": true
+    },
+    {
+      "detail": {
+        "high_risk_delete_abstained": true,
+        "high_risk_delete_verified_success": false,
+        "non_local_model_endpoint_rejected": true,
+        "non_loopback_bind_rejected": true,
+        "non_loopback_tls_required": true
+      },
+      "id": "safety_and_locality",
+      "passed": true
+    },
+    {
+      "detail": {
+        "failures": {},
+        "high_risk_tools": [
+          "delete_file"
+        ],
+        "tool_count": 9,
+        "tools": [
+          "api_get",
+          "browser_open",
+          "delete_file",
+          "move_entry",
+          "move_file",
+          "read_file",
+          "retry_operation",
+          "write_file",
+          "write_text"
+        ]
+      },
+      "id": "tool_security_metadata",
+      "passed": true
+    },
+    {
+      "detail": {
+        "concurrent_writes": 12,
+        "retained_after_restart": 12,
+        "valid_restored_traces": 12
+      },
+      "id": "trace_retention_restart_concurrency",
+      "passed": true
+    },
+    {
+      "detail": {
+        "authorized_health": "ok",
+        "authorized_status": 200,
+        "unauthorized_status": 401
+      },
+      "id": "http_bearer_authentication",
+      "passed": true
+    },
+    {
+      "detail": {
+        "authenticated_only": true,
+        "configured_per_minute": 1,
+        "statuses": [
+          200,
+          429
+        ]
+      },
+      "id": "http_rate_limit",
+      "passed": true
+    },
+    {
+      "detail": {
+        "alice_trace_count": 1,
+        "bob_trace_count": 1,
+        "distinct_digests": true,
+        "foreign_trace_status": 404
+      },
+      "id": "http_tenant_trace_isolation",
+      "passed": true
+    },
+    {
+      "detail": {
+        "tls_error_present": true,
+        "tls_gate_returncode": 2,
+        "token_error_present": true,
+        "token_gate_returncode": 2
+      },
+      "id": "non_loopback_requires_token_and_tls",
+      "passed": true
+    },
+    {
+      "detail": {
+        "external_complete_provenance_accepted": true,
+        "external_without_provenance_rejected": true,
+        "local_macro_family_success_rate": 0.5,
+        "local_micro_success_rate": 0.5
+      },
+      "id": "claim_safe_scorecard",
+      "passed": true
+    },
+    {
+      "detail": {
+        "candidate_is_fresh_reference": true,
+        "candidate_wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+        "method": "pip wheel from clean source copy",
+        "source_copy_excludes": [
+          ".git",
+          ".pytest_cache",
+          ".venv",
+          "__pycache__",
+          "build",
+          "dist",
+          "outputs",
+          "work"
+        ],
+        "wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+        "wheel_count": 1,
+        "wheel_returncode": 0,
+        "wheel_stderr_tail": "\n[notice] A new release of pip is available: 26.0.1 -> 26.2\n[notice] To update, run: C:\\Users\\steve\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe -m pip install --upgrade pip\n",
+        "wheel_stdout_tail": "Processing .\\.\n  Installing build dependencies: started\n  Installing build dependencies: finished with status 'done'\n  Getting requirements to build wheel: started\n  Getting requirements to build wheel: finished with status 'done'\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: open-agent-harness-os\n  Building wheel for open-agent-harness-os (pyproject.toml): started\n  Building wheel for open-agent-harness-os (pyproject.toml): finished with status 'done'\n  Created wheel for open-agent-harness-os: filename=open_agent_harness_os-0.1.8-py3-none-any.whl size=178037 sha256=b24db620e1d97d3387322e4e6773d6b48adc39c945f1cf8842e0dd7c0efb45a1\n  Stored in directory: C:\\Users\\steve\\AppData\\Local\\Temp\\pip-ephem-wheel-cache-376ms1t4\\wheels\\8a\\58\\6a\\0954f1b033a5acc02c027e795d3e66fd3dcef4b62d41804daa\nSuccessfully built open-agent-harness-os\n"
+      },
+      "id": "wheel_build",
+      "passed": true
+    },
+    {
+      "detail": {
+        "bytecode_entries": 0,
+        "bytecode_free": true,
+        "bytes": 178037,
+        "entry_count": 82,
+        "exists": true,
+        "path": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+        "record_entries": 82,
+        "record_hashes_valid": true,
+        "required_modules_present": true,
+        "safe_paths": true,
+        "sha256": "b24db620e1d97d3387322e4e6773d6b48adc39c945f1cf8842e0dd7c0efb45a1",
+        "wheel_metadata_present": true,
+        "zipfile": true
+      },
+      "id": "wheel_integrity",
+      "passed": true
+    },
+    {
+      "detail": {
+        "console_scripts_match": true,
+        "demo_returncode": 0,
+        "demo_verified_success": true,
+        "imports_returncode": 0,
+        "install_returncode": 0,
+        "path": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+        "reference_wheel_manifest_sha256": "cd06f01ace910c06541728e89d7ebea1a83ab52f7418fad9a671432fffd78967",
+        "reference_wheel_sha256": "b24db620e1d97d3387322e4e6773d6b48adc39c945f1cf8842e0dd7c0efb45a1",
+        "sha256": "b24db620e1d97d3387322e4e6773d6b48adc39c945f1cf8842e0dd7c0efb45a1",
+        "source_matches_wheel": true,
+        "source_package_sha256": "d5b43b9b5946fc7b6d26773a1afc11bc530048b974fbcdf90994476ea1e596f3",
+        "wheel_manifest_matches_reference": true,
+        "wheel_manifest_sha256": "cd06f01ace910c06541728e89d7ebea1a83ab52f7418fad9a671432fffd78967",
+        "wheel_package_sha256": "d5b43b9b5946fc7b6d26773a1afc11bc530048b974fbcdf90994476ea1e596f3"
+      },
+      "id": "wheel_install_smoke",
+      "passed": true
+    },
+    {
+      "detail": {
+        "output_tail": "----------------------------------------------------------------------\nRan 47 tests in 0.007s\n\nOK",
+        "returncode": 0
+      },
+      "id": "companion_unit_tests",
+      "passed": true
+    },
+    {
+      "detail": {
+        "missing": [],
+        "required": [
+          "README.md",
+          "LICENSE",
+          "NOTICE",
+          "SECURITY.md",
+          "PRODUCT.md",
+          "docs/PRODUCT_LAUNCH_PLAN.md",
+          "docs/USER_WORKFLOW_GUIDE.md",
+          "docs/RESEARCH_LAUNCH_BRIEF.md",
+          "docs/RESEARCH_LAUNCH_ONE_PAGER_2026-07-26.md",
+          "docs/REPRODUCIBILITY_9B_CHAIN.md",
+          "docs/EVIDENCE_INDEX.md",
+          "docs/READING_LIST.md",
+          "docs/EXTERNAL_BAR_UPDATE_2026-07-26.md",
+          "docs/RESEARCH_LAUNCH_UPDATE_2026-07-27.md",
+          "docs/CLAIMS_AND_EVIDENCE_MATRIX.md",
+          "docs/RESEARCH_LANDSCAPE_2026-07-29.md",
+          "docs/RESEARCH_BREAKTHROUGH_PROTOCOL_2026-07-29.md",
+          "docs/EXTERNAL_EVALUATION_RUNBOOK_2026-07-29.md",
+          "docs/PUBLIC_RELEASE_CHECKLIST.md",
+          "docs/PROVENANCE_REVIEW.md",
+          "benchmarks/fixtures/task-spec-external-bar-lite-v1.json",
+          "benchmarks/fixtures/task-spec-external-bar-lite-v2.json"
+        ]
+      },
+      "id": "launch_docs",
+      "passed": true
+    },
+    {
+      "detail": {
+        "output_tail": "----------------------------------------------------------------------\nRan 156 tests in 3.579s\n\nOK",
+        "returncode": 0
+      },
+      "id": "unit_tests",
+      "passed": true
+    }
+  ],
+  "created_at": "2026-08-02T03:17:11.614881+00:00",
+  "limitations": [
+    "This preflight does not establish public multi-user, operational, or external-benchmark readiness.",
+    "The MCP check is in-process; the separate stdio subprocess artifact remains the protocol evidence."
+  ],
+  "passed": true,
+  "schema": "launch-preflight/v1",
+  "scope": "local-developer-preview",
+  "source_package_sha256": "d5b43b9b5946fc7b6d26773a1afc11bc530048b974fbcdf90994476ea1e596f3"
+}

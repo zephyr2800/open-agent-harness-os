@@ -12,6 +12,8 @@ IR-aware harness produce a superadditive gain for the paired small model?
 - same task specification, tool implementation, and output budget;
 - evaluator, trace recorder, authority boundary, and hidden holdout immutable;
 - independent artifact/state verification;
+- source-hash-bound corpus audit with raw examples excluded from public audit
+  artifacts;
 - renamed tool and schema perturbations;
 - at least two task families and multiple seeds;
 - raw traces plus replay validation for every reported success.
@@ -24,6 +26,11 @@ IR-aware harness produce a superadditive gain for the paired small model?
 - latency, tool time, memory, energy, and cost;
 - recovery success, unnecessary calls, state loss, escalation precision;
 - evaluator-gaming rate and held-out regression.
+
+For GPU energy, use `harness-gpu-energy` during an exclusive, bounded
+evaluation window and preserve its `gpu-energy/v1` sidecar with the evaluation
+artifact. This is sampled whole-device energy, not per-process or wall-socket
+energy; see `docs/GPU_ENERGY_MEASUREMENT.md`.
 
 ## Interaction estimate
 

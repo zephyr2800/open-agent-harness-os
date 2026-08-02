@@ -39,6 +39,8 @@ from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
+from experiments.native_evaluation_registration import validate_tau2_registration
+from experiments.source_tree import record_source_tree
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +69,9 @@ import json
 import pathlib
 import sys
 
+import experiments.agentdojo_adapter_server as adapter_server
+import experiments.tau2_native_runner as runner_wrapper
+
 import tau2
 
 try:
@@ -76,6 +81,10 @@ except importlib.metadata.PackageNotFoundError:
 
 print(json.dumps({
     "package_file": str(pathlib.Path(tau2.__file__).resolve()),
+    "module_files": {
+        "experiments.agentdojo_adapter_server": str(pathlib.Path(adapter_server.__file__).resolve()),
+        "experiments.tau2_native_runner": str(pathlib.Path(runner_wrapper.__file__).resolve()),
+    },
     "python_version": sys.version,
     "tau2_version": version,
 }, sort_keys=True))
@@ -108,6 +117,39 @@ print(json.dumps(compatibility_metadata(DummyUser), sort_keys=True))
 """
 
 
+_NATIVE_RESULT_SCHEMA_PROBE_SCRIPT = """
+import json
+import pathlib
+import sys
+
+import experiments.agentdojo_adapter_server as adapter_server
+import experiments.tau2_native_runner as runner_wrapper
+
+import tau2
+from tau2.data_model.simulation import Results
+
+results_path = pathlib.Path(sys.argv[1])
+try:
+    results = Results.model_validate_json(results_path.read_text(encoding="utf-8"))
+except Exception as error:
+    print(json.dumps({
+        "schema": "tau2-results-pydantic/v1",
+        "passed": False,
+        "error": repr(error),
+    }, sort_keys=True))
+    raise
+
+print(json.dumps({
+    "schema": "tau2-results-pydantic/v1",
+    "passed": True,
+    "result_model": f"{type(results).__module__}.{type(results).__name__}",
+    "tau2_package_file": str(pathlib.Path(tau2.__file__).resolve()),
+    "task_count": len(results.tasks),
+    "simulation_count": len(results.simulations),
+}, sort_keys=True))
+"""
+
+
 @dataclass(frozen=True)
 class Tau2NativeRunConfig:
     checkpoint: Path
@@ -129,6 +171,7 @@ class Tau2NativeRunConfig:
     max_new_tokens: int
     quantization: str | None
     port: int
+    registration: Path | None = None
 
 
 def _sha256(path: Path) -> str:
@@ -179,6 +222,8 @@ def _is_within(path: Path, root: Path) -> bool:
 def _tau2_environment(config: Tau2NativeRunConfig) -> tuple[dict[str, str], list[str]]:
     """Return a UTF-8-safe, source-bound environment for τ³-bench and the adapter."""
 
+    data_directory = (config.tau2_root / "data").resolve()
+    runtime_site_packages = config.tau2_runtime / "Lib" / "site-packages"
     pythonpath = [
         str(config.tau2_root / "src"),
         str(REPO_ROOT),
@@ -188,10 +233,16 @@ def _tau2_environment(config: Tau2NativeRunConfig) -> tuple[dict[str, str], list
     inherited_pythonpath = os.environ.get("PYTHONPATH")
     if inherited_pythonpath:
         pythonpath.append(inherited_pythonpath)
+    if runtime_site_packages.is_dir():
+        # Keep the active CUDA/transformers stack ahead of the benchmark venv.
+        # The venv contributes tau2's pinned LiteLLM dependencies without
+        # overriding a compatible local tokenizers/torch installation.
+        pythonpath.append(str(runtime_site_packages))
     return {
         "PYTHONUTF8": "1",
         "PYTHONIOENCODING": "utf-8",
         "PYTHONPATH": os.pathsep.join(pythonpath),
+        "TAU2_DATA_DIR": str(data_directory),
     }, pythonpath
 
 
@@ -228,11 +279,24 @@ def _runtime_probe(config: Tau2NativeRunConfig, environment: dict[str, str]) -> 
             "--python imports τ³-bench from outside --tau2-root; install the pinned checkout "
             "into the supplied runtime before evaluating"
         )
+    module_files = payload.get("module_files") if isinstance(payload, dict) else None
+    if not isinstance(module_files, dict):
+        raise ValueError("τ³-bench runtime probe did not return resolved local module paths")
+    normalized_module_files: dict[str, str] = {}
+    for module in ("experiments.agentdojo_adapter_server", "experiments.tau2_native_runner"):
+        module_file = module_files.get(module)
+        if not isinstance(module_file, str) or not module_file:
+            raise ValueError(f"τ³-bench runtime probe did not resolve {module}")
+        module_path = Path(module_file).expanduser().resolve()
+        if not _is_within(module_path, REPO_ROOT):
+            raise ValueError(f"τ³-bench runtime imports {module} from outside this harness checkout")
+        normalized_module_files[module] = str(module_path)
     return {
         "python": str(config.python),
         "python_version": payload.get("python_version"),
         "tau2_version": payload.get("tau2_version"),
         "package_file": str(package_path.resolve()),
+        "module_files": normalized_module_files,
         "source_bound": True,
     }
 
@@ -466,6 +530,9 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
         raise ValueError(f"--tau2-root is not a directory: {config.tau2_root}")
     if not config.tau2_runtime.is_dir():
         raise ValueError(f"--tau2-runtime is not a directory: {config.tau2_runtime}")
+    tau2_data_directory = config.tau2_root / "data"
+    if not tau2_data_directory.is_dir():
+        raise ValueError(f"--tau2-root does not contain the pinned task data directory: {tau2_data_directory}")
     cli_entrypoint = config.tau2_root / "src" / "tau2" / "cli.py"
     if not cli_entrypoint.is_file():
         raise ValueError(f"--tau2-root does not contain the official CLI entrypoint: {cli_entrypoint}")
@@ -492,9 +559,33 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
     selector_catalog = _selector_catalog(config, environment)
     _validate_selectors(config, selector_catalog)
     compatibility = _compatibility_probe(config, environment)
+    registration = (
+        validate_tau2_registration(
+            config.registration,
+            training_sources=audit_gate["training_sources"],
+            variant=config.variant,
+            source_commit=tau2_commit,
+            tau2_version=runtime.get("tau2_version") if isinstance(runtime.get("tau2_version"), str) else None,
+            python_version=runtime.get("python_version") if isinstance(runtime.get("python_version"), str) else None,
+            domain=config.domain,
+            task_set=config.task_set,
+            task_split=config.task_split,
+            task_ids=config.task_ids,
+            seed=config.seed,
+            max_new_tokens=config.max_new_tokens,
+            quantization=config.quantization,
+            num_trials=config.num_trials,
+            max_steps=config.max_steps,
+            max_errors=config.max_errors,
+            max_concurrency=1,
+            max_retries=0,
+        )
+        if config.registration is not None
+        else None
+    )
     adapter = REPO_ROOT / "experiments" / "agentdojo_adapter_server.py"
     runner_wrapper = REPO_ROOT / "experiments" / "tau2_native_runner.py"
-    return {
+    plan = {
         "schema": "tau2-native-run/v1",
         "status": "planned",
         "created_at_unix": time.time(),
@@ -511,6 +602,7 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
         "tau2": {
             "root": str(config.tau2_root),
             "commit": tau2_commit,
+            "source_tree": record_source_tree(config.tau2_root),
             "domain": config.domain,
             "task_set": config.task_set,
             "task_split": config.task_split,
@@ -530,6 +622,10 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
         },
         "adapter": {
             "source": _file_record(adapter),
+            "source_trees": {
+                "project1": record_source_tree(config.project1_root),
+                "harness": record_source_tree(REPO_ROOT),
+            },
             "host": "127.0.0.1",
             "port": config.port,
             "harness_variant": VARIANTS[config.variant]["harness_variant"],
@@ -563,6 +659,9 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
         },
         "environment": environment,
     }
+    if registration is not None:
+        plan["registration"] = registration
+    return plan
 
 
 def _assert_port_available(port: int) -> None:
@@ -636,6 +735,71 @@ def _preserve_native_output(plan: dict[str, Any], run_dir: Path) -> dict[str, An
     return record
 
 
+def _native_result_schema_validation(
+    *,
+    python: Path,
+    tau2_root: Path,
+    environment: dict[str, str],
+    native_results_file: Path,
+) -> dict[str, Any]:
+    """Use the pinned τ³ runtime's own Pydantic model to validate results.json."""
+
+    if not native_results_file.is_file():
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": f"native results file does not exist: {native_results_file}",
+        }
+    try:
+        completed = subprocess.run(
+            [str(python), "-c", _NATIVE_RESULT_SCHEMA_PROBE_SCRIPT, str(native_results_file)],
+            cwd=tau2_root,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": repr(error),
+        }
+    payload: dict[str, Any] | None = None
+    for line in reversed(completed.stdout.splitlines()):
+        try:
+            candidate = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(candidate, dict):
+            payload = candidate
+            break
+    if payload is None:
+        detail = completed.stderr.strip() or completed.stdout.strip() or "schema probe returned no JSON payload"
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": detail,
+        }
+    if completed.returncode != 0 or payload.get("passed") is not True:
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": str(payload.get("error") or completed.stderr.strip() or "τ³ Pydantic validation failed"),
+        }
+    if payload.get("schema") != "tau2-results-pydantic/v1":
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": "τ³ Pydantic validation returned an unexpected schema marker",
+        }
+    return {
+        **payload,
+        "results_record": _file_record(native_results_file),
+    }
+
+
 def execute(plan: dict[str, Any]) -> dict[str, Any]:
     """Run the official benchmark and stop only the adapter launched here."""
 
@@ -649,6 +813,7 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
     adapter_stderr = run_dir / "adapter.stderr.log"
     benchmark_stdout = run_dir / "benchmark.stdout.log"
     benchmark_stderr = run_dir / "benchmark.stderr.log"
+    adapter_log = run_dir / "adapter.jsonl"
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     process: subprocess.Popen[str] | None = None
     running = {**plan, "status": "running", "started_at_unix": time.time()}
@@ -682,9 +847,21 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
                     check=False,
                     creationflags=creationflags,
                 )
-        native_output = _preserve_native_output(plan, run_dir)
         native_results_file = Path(str(plan["tau2"]["native_results_file"]))
-        completed = benchmark.returncode == 0 and native_results_file.is_file()
+        native_schema_validation = _native_result_schema_validation(
+            python=Path(benchmark_command[0]),
+            tau2_root=tau2_root,
+            environment=environment,
+            native_results_file=native_results_file,
+        )
+        native_output = _preserve_native_output(plan, run_dir)
+        if native_output is not None:
+            native_output["schema_validation"] = native_schema_validation
+        completed = (
+            benchmark.returncode == 0
+            and native_results_file.is_file()
+            and native_schema_validation.get("passed") is True
+        )
         result = {
             **running,
             "status": "completed" if completed else "failed",
@@ -694,7 +871,7 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
             "native_output": native_output,
         }
         if not completed:
-            result["error"] = "τ³-bench did not return a successful native results.json artifact"
+            result["error"] = "τ³-bench did not return a successful, schema-valid native results.json artifact"
     except Exception as error:
         result = {
             **running,
@@ -705,6 +882,8 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
     finally:
         if process is not None:
             result["adapter_process"] = _stop(process)
+    if adapter_log.is_file():
+        result["adapter_log"] = _file_record(adapter_log)
     _write_json_atomic(run_dir / "run_manifest.json", result)
     return result
 
@@ -730,10 +909,24 @@ def _config_from_args(args: argparse.Namespace) -> Tau2NativeRunConfig:
         max_new_tokens=args.max_new_tokens,
         quantization=args.quantization,
         port=args.port,
+        registration=Path(args.registration).expanduser().resolve() if args.registration else None,
     )
 
 
+def _configure_utf8_console() -> None:
+    """Keep CLI help/errors usable on Windows legacy code pages."""
+
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8")
+            except (OSError, ValueError):
+                pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _configure_utf8_console()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--train-holdout-audit", required=True)
@@ -754,10 +947,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"), default="4bit")
     parser.add_argument("--port", type=int, default=8090)
+    parser.add_argument("--registration", help="checked-in preregistration required with --execute")
     parser.add_argument("--execute", action="store_true", help="start the adapter and invoke τ³-bench; omit to write only a validated plan")
     args = parser.parse_args(argv)
     try:
         config = _config_from_args(args)
+        if args.execute and config.registration is None:
+            raise ValueError("--execute requires --registration so external task selection and budgets are precommitted")
         plan = build_plan(config)
         config.run_dir.mkdir(parents=True, exist_ok=False)
         _write_json_atomic(config.run_dir / "run_manifest.json", plan)

@@ -83,6 +83,7 @@ def _frozen_evidence_gate(
         "holdout_template_novelty",
         "pinned_task_spec_hashes",
         "promotion_protocol_bound",
+        "runtime_source_tree_binding",
         "checkpoint_training_binding",
     )
     expected_runs = int(gates.get("expected_run_count", 0) or 0)
@@ -99,6 +100,8 @@ def _frozen_evidence_gate(
         name: (protocol_bound if name == "promotion_protocol_bound" else gates.get(name) is True)
         for name in structural_names
     }
+    if promotion_protocol == "v2":
+        structural_checks["stochastic_decoding"] = gates.get("stochastic_decoding") is True
     structural = bool(expected_runs > 0 and all(structural_checks.values()))
     frozen_runs: list[dict[str, Any]] = []
     for report in (decision.get("slices", {}).values() if decision else []):

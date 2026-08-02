@@ -1,8 +1,8 @@
 ﻿# Qwopus3.5-27B feasibility track
 
 This is the maximum-scale branch to attempt on the single RTX 5090 after the
-9B evaluation chain completes. It is a feasibility experiment, not a claim
-that a larger checkpoint will improve the action policy.
+clean 9B evaluation chain completes. It is a feasibility experiment, not a
+claim that a larger checkpoint will improve the action policy.
 
 ## Configuration
 
@@ -13,8 +13,9 @@ that a larger checkpoint will improve the action policy.
 - maximum sequence length 1,024 for the first memory probe;
 - eight optimizer steps for the smoke, then one controlled epoch only after
   memory and loss checks pass;
-- same Action IR curriculum, hidden holdout, independent replay, and safety
-  evaluator as the 7B/9B branches.
+- an audited clean Action IR curriculum with its SHA-256/row count recorded in
+  the training manifest, plus the same hidden holdout, independent replay, and
+  safety evaluator as the clean 9B branch.
 
 ## Staged run
 
@@ -25,7 +26,7 @@ has been reviewed:
 $py = 'python'
 $env:PYTHONPATH = '<workspace>\work\ml-runtime-cu128;<workspace>\work\ml-runtime-post'
 & $py -m train.transformers_lora_sft `
-  --train-jsonl work\action-harness-sft-v5-stratified-hidden.jsonl `
+  --train-jsonl <audited-clean-training-jsonl> `
   --model-id <local-qwopus35-27b-path> --revision main `
   --output-dir work\action-model-project2-qwopus35-27b-feasibility-r16 `
   --quantization 4bit --lora-r 16 --lora-alpha 32 `
@@ -37,10 +38,13 @@ $env:PYTHONPATH = '<workspace>\work\ml-runtime-cu128;<workspace>\work\ml-runtime
 
 The smoke is usable only if it has finite loss, no CUDA OOM, complete row
 coverage, stable checkpoint writes, and peak allocated VRAM below the machine
-budget with headroom for evaluation. A lower training loss alone is not a
-promotion signal. Any candidate must run the same frozen holdouts and
-independent replay used for 9B, with family-level failures and resource
-metrics, before a larger-model claim is made.
+budget with headroom for evaluation. The selected training file must first
+pass the same train/holdout audit as the clean 9B branch; the older 3,072-row
+`action-harness-sft-v5-stratified-hidden.jsonl` source is not an approved
+default for this run. A lower training loss alone is not a promotion signal.
+Any candidate must run the same frozen holdouts and independent replay used
+for 9B, with family-level failures and resource metrics, before a larger-model
+claim is made.
 
 The branch is intentionally not auto-started: the 9B promotion and external
 diagnostic chain has priority on the single GPU, and a larger model cannot

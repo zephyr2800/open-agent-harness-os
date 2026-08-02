@@ -14,11 +14,12 @@ from experiments.data_split_audit import (
 from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
 from experiments.promotion_decision import decide
 from experiments.promotion_protocols import DEFAULT_PROMOTION_PROTOCOL, protocol_task_spec_hashes
+from experiments.source_tree import record_source_tree
 
 
-def _run(task_spec: str, seed: int, *, passed: bool = True) -> dict:
+def _run(task_spec: str, seed: int, *, passed: bool = True, stochastic: bool = False) -> dict:
     rate = 1.0 if passed else 0.5
-    return {
+    report = {
         "task_spec": f"C:/fixtures/{task_spec}",
         "task_spec_sha256": REQUIRED_FROZEN_FIXTURE_HASHES.get(task_spec, "unknown"),
         "seed": seed,
@@ -33,6 +34,9 @@ def _run(task_spec: str, seed: int, *, passed: bool = True) -> dict:
         "elapsed_seconds": 1.0,
         "runtime": {"cuda_available": False},
     }
+    if stochastic:
+        report.update({"do_sample": True, "temperature": 0.7, "top_p": 0.9})
+    return report
 
 
 def _write_required_audit(path: Path) -> Path:
@@ -114,6 +118,17 @@ def _attach_audit(
         {"path": f"C:/fixtures/{name}", "sha256": digest}
         for name, digest in required_hashes.items()
     ]
+    if promotion_protocol == "v2":
+        project1_source = path.parent / "matrix-project1-source"
+        harness_source = path.parent / "matrix-harness-source"
+        project1_source.mkdir(exist_ok=True)
+        harness_source.mkdir(exist_ok=True)
+        (project1_source / "policy.py").write_text("POLICY = 'matrix-test'\n", encoding="utf-8")
+        (harness_source / "orchestrator.py").write_text("HARNESS = 'matrix-test'\n", encoding="utf-8")
+        matrix["source_trees"] = {
+            "project1": record_source_tree(project1_source),
+            "harness": record_source_tree(harness_source),
+        }
     return novelty
 
 
@@ -152,11 +167,18 @@ class PromotionDecisionTests(unittest.TestCase):
             matrix = {
                 "schema": "promotion-matrix/v1",
                 "promotion_protocol": "v2",
-                "seeds": [0],
+                "seeds": [0, 1, 2],
+                "do_sample": True,
+                "temperature": 0.7,
+                "top_p": 0.9,
                 "runs": [
-                    _run("task-spec-research-v4.json", 0),
-                    _run("task-spec-industry-proxy-v2.json", 0),
-                    _run("task-spec-author-holdout-v1.json", 0),
+                    _run(task_spec, seed, stochastic=True)
+                    for task_spec in (
+                        "task-spec-research-v4.json",
+                        "task-spec-industry-proxy-v2.json",
+                        "task-spec-author-holdout-v1.json",
+                    )
+                    for seed in (0, 1, 2)
                 ],
             }
             novelty = _attach_audit(matrix, audit, checkpoint, promotion_protocol="v2")
@@ -164,7 +186,71 @@ class PromotionDecisionTests(unittest.TestCase):
         self.assertTrue(result["passed"])
         self.assertEqual(result["promotion_protocol"], "v2")
         self.assertTrue(result["gates"]["promotion_protocol_binding"])
+        self.assertTrue(result["gates"]["runtime_source_tree_binding"])
+        self.assertTrue(result["gates"]["stochastic_decoding"])
         self.assertIn("author_holdout_v1", result["slices"])
+
+    def test_v2_rejects_missing_or_drifted_runtime_source_trees(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audit = _write_required_audit(root / "audit.json")
+            checkpoint = _bound_checkpoint(root, audit)
+            matrix = {
+                "schema": "promotion-matrix/v1",
+                "promotion_protocol": "v2",
+                "seeds": [0, 1, 2],
+                "do_sample": True,
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "runs": [
+                    _run(task_spec, seed, stochastic=True)
+                    for task_spec in (
+                        "task-spec-research-v4.json",
+                        "task-spec-industry-proxy-v2.json",
+                        "task-spec-author-holdout-v1.json",
+                    )
+                    for seed in (0, 1, 2)
+                ],
+            }
+            novelty = _attach_audit(matrix, audit, checkpoint, promotion_protocol="v2")
+            matrix.pop("source_trees")
+            missing = decide(matrix, audit, novelty, promotion_protocol="v2")
+            self.assertFalse(missing["passed"])
+            self.assertFalse(missing["gates"]["runtime_source_tree_binding"])
+
+            _attach_audit(matrix, audit, checkpoint, promotion_protocol="v2")
+            harness_root = Path(matrix["source_trees"]["harness"]["root"])
+            (harness_root / "orchestrator.py").write_text("HARNESS = 'changed'\n", encoding="utf-8")
+            drifted = decide(matrix, audit, novelty, promotion_protocol="v2")
+        self.assertFalse(drifted["passed"])
+        self.assertFalse(drifted["gates"]["runtime_source_tree_binding"])
+
+    def test_v2_rejects_missing_or_deterministic_sampling_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audit = _write_required_audit(root / "audit.json")
+            checkpoint = _bound_checkpoint(root, audit)
+            matrix = {
+                "schema": "promotion-matrix/v1",
+                "promotion_protocol": "v2",
+                "seeds": [0, 1, 2],
+                "do_sample": False,
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "runs": [
+                    _run(task_spec, seed)
+                    for task_spec in (
+                        "task-spec-research-v4.json",
+                        "task-spec-industry-proxy-v2.json",
+                        "task-spec-author-holdout-v1.json",
+                    )
+                    for seed in (0, 1, 2)
+                ],
+            }
+            novelty = _attach_audit(matrix, audit, checkpoint, promotion_protocol="v2")
+            result = decide(matrix, audit, novelty, promotion_protocol="v2")
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["gates"]["stochastic_decoding"])
 
     def test_v2_rejects_the_legacy_high_affinity_proxy(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -174,11 +260,18 @@ class PromotionDecisionTests(unittest.TestCase):
             matrix = {
                 "schema": "promotion-matrix/v1",
                 "promotion_protocol": "v2",
-                "seeds": [0],
+                "seeds": [0, 1, 2],
+                "do_sample": True,
+                "temperature": 0.7,
+                "top_p": 0.9,
                 "runs": [
-                    _run("task-spec-research-v4.json", 0),
-                    _run("task-spec-industry-proxy-v1.json", 0),
-                    _run("task-spec-industry-proxy-v2.json", 0),
+                    _run(task_spec, seed, stochastic=True)
+                    for task_spec in (
+                        "task-spec-research-v4.json",
+                        "task-spec-industry-proxy-v1.json",
+                        "task-spec-industry-proxy-v2.json",
+                    )
+                    for seed in (0, 1, 2)
                 ],
             }
             novelty = _attach_audit(matrix, audit, checkpoint, promotion_protocol="v2")
@@ -196,11 +289,18 @@ class PromotionDecisionTests(unittest.TestCase):
             matrix = {
                 "schema": "promotion-matrix/v1",
                 "promotion_protocol": "v1",
-                "seeds": [0],
+                "seeds": [0, 1, 2],
+                "do_sample": True,
+                "temperature": 0.7,
+                "top_p": 0.9,
                 "runs": [
-                    _run("task-spec-research-v4.json", 0),
-                    _run("task-spec-industry-proxy-v2.json", 0),
-                    _run("task-spec-author-holdout-v1.json", 0),
+                    _run(task_spec, seed, stochastic=True)
+                    for task_spec in (
+                        "task-spec-research-v4.json",
+                        "task-spec-industry-proxy-v2.json",
+                        "task-spec-author-holdout-v1.json",
+                    )
+                    for seed in (0, 1, 2)
                 ],
             }
             novelty = _attach_audit(matrix, audit, checkpoint, promotion_protocol="v2")

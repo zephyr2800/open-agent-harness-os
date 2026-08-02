@@ -32,3 +32,36 @@ model identity, sandbox, authority, and promotion logic are protected.
 The deterministic policies are useful for testing interaction arithmetic and
 trace completeness, but they cannot support a model capability claim. Real
 model, hidden-task, renamed-tool, and multi-seed evidence is required.
+
+## D7 - Freeze evaluation before post-training promotion
+
+The clean 9B candidate must pass a source-bound train/holdout audit and a
+frozen stochastic promotion matrix before native external evaluation or
+verifier-backed RL. A historical result whose source split cannot be audited
+remains diagnostic context, even if its local aggregate score is high.
+
+## D8 - Treat native external evaluation as a source-bound diagnostic
+
+AgentDojo and tau2 selectors, budgets, policy settings, benchmark commits,
+adapter source trees, and output artifacts are preregistered and validated.
+The resulting report is still a bounded native diagnostic: it does not prove
+general agent capability, independent cryptographic attestation, or a security
+certification. Adaptive injection evaluation is a separate Phase B.
+
+## D9 - Make curriculum order a measured intervention
+
+The active clean SFT uses a uniform full-coverage permutation. If the frozen
+baseline exposes an appropriate failure family, weighted ordering is tested as
+a separate full-coverage ablation with the same data hash and budget; it is
+not silently substituted for the baseline and it does not justify oversampling
+or evaluator changes.
+
+## D10 - Treat 27B scale as a feasibility branch, not a rescue claim
+
+The single RTX 5090 may be used for a staged 27B NF4 QLoRA memory/loss smoke
+only after the clean 9B evaluation chain frees the GPU. It begins with a small
+rank, short context, and fixed step budget, and proceeds only after finite
+loss, complete coverage, checkpoint integrity, and memory headroom are shown.
+It must consume an audited clean curriculum and pass the same held-out,
+replay, safety, and deployment measurements; a larger parameter count does
+not repair an invalid baseline or establish a scaling-law claim on its own.

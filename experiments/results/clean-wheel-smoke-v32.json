@@ -1,0 +1,15 @@
+{
+  "console_scripts_match": true,
+  "passed": true,
+  "preflight_artifact": "experiments\\results\\launch-preflight-v32.json",
+  "reference_wheel_manifest_sha256": "5145b3b7937e085e39edac0d872ddb634e7cfa845089c0f97036181155a6d6b2",
+  "reference_wheel_sha256": "af9ea18b14712fa5cde1209486e3a3b2057da50a7aab82fae76e88fe31e03c6d",
+  "schema": "clean-wheel-smoke/v1",
+  "source_matches_wheel": true,
+  "source_package_sha256": "064f9e59bbc12e963818d745bbe064ef022ec43ed2910b13e239781fb78a4259",
+  "wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+  "wheel_manifest_matches_reference": true,
+  "wheel_manifest_sha256": "5145b3b7937e085e39edac0d872ddb634e7cfa845089c0f97036181155a6d6b2",
+  "wheel_package_sha256": "064f9e59bbc12e963818d745bbe064ef022ec43ed2910b13e239781fb78a4259",
+  "wheel_sha256": "af9ea18b14712fa5cde1209486e3a3b2057da50a7aab82fae76e88fe31e03c6d"
+}

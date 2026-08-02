@@ -19,13 +19,27 @@ The launcher rejects a run unless all of these are true:
 
 - The checkpoint is a merged v2 checkpoint cryptographically bound to a passed clean train/holdout audit.
 - The official τ³-bench checkout is clean, its commit is recorded, and the selected Python runtime imports `tau2` from that checkout.
+- The launcher binds `TAU2_DATA_DIR` to the pinned checkout's `data` directory,
+  so task fixtures cannot silently come from another installation.
+- When `--tau2-runtime` is a Windows venv, its `Lib/site-packages` directory is
+  also supplied to the shared adapter/benchmark interpreter. This permits the
+  benchmark's pinned dependencies to coexist with the local CUDA/transformers
+  runtime without rebinding the `tau2` source package.
 - Requested task IDs exist in the pinned `telecom/base` catalog and are valid for τ³-bench solo mode.
 - The local run directory and τ³-bench output directory are both new, so the benchmark cannot resume or mix an earlier score.
 - The model is deterministic (`temperature=0`), uses one local worker, has explicit step/error/token limits, and disables benchmark retries.
 - The wrapper's in-memory `DummyUser` compatibility status is recorded. It does not modify τ³-bench source, task data, tool environment, or grader.
 - The adapter has a unique loopback port, a health check, and is stopped only if this launcher started it.
+- The adapter file plus the executable Project 1 and harness Python source trees are hashed and recorded. A later source change makes result validation fail rather than silently rebinding the policy implementation.
+- After execution, the pinned τ³ runtime validates results.json with its own Pydantic Results model before the native tree is preserved.
 
 Every plan records the selector-catalog hash, checkpoint and source hashes, τ³-bench commit/runtime details, commands, environment, and the exact adapter variant. Execution writes the official output to τ³-bench's native result directory and copies that tree into the immutable run directory alongside adapter and benchmark logs.
+
+The live runner requires the checked-in
+`benchmarks/fixtures/native-external-registration-v1.json` protocol. It freezes
+the source commit, six deterministic telecom selectors, runtime, policy,
+budget, variant order, and clean-SFT training source. See
+[`NATIVE_EVALUATION_REGISTRATION_2026-08-01.md`](NATIVE_EVALUATION_REGISTRATION_2026-08-01.md).
 
 ## Dry-plan example
 
@@ -40,10 +54,16 @@ python -m experiments.tau2_native_launcher `
   --tau2-runtime C:\path\to\tau2-runtime `
   --python C:\path\to\tau2-runtime\Scripts\python.exe `
   --run-dir C:\path\to\new-native-run `
+  --registration benchmarks/fixtures/native-external-registration-v1.json `
   --task-id "[mobile_data_issue]airplane_mode_on|user_abroad_roaming_enabled_off[PERSONA:None]"
 ```
 
 Use `--execute` only for the registered run. For evidence, retain `run_manifest.json`, `tau2-native-results`, `adapter.jsonl`, and both process logs. Do not describe a dry plan as a score.
+
+After a completed run, use the [native τ³ result validation guide](NATIVE_TAU2_RESULT_VALIDATION.md).
+The validator is deliberately strict about source and artifact binding and labels
+safety, independent replay, interactive user simulation, and calibrated cost as
+not measured rather than converting their absence into zeroes.
 
 ## Promotion use
 

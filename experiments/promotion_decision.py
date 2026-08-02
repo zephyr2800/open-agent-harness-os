@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
@@ -23,6 +23,7 @@ from experiments.promotion_protocols import (
     protocol_slices,
     protocol_task_spec_hashes,
 )
+from experiments.source_tree import verify_source_tree_record
 
 
 # Backward-compatible aliases for callers and published v1 test fixtures.
@@ -117,6 +118,89 @@ def _protocol_binding_gate(matrix: dict[str, Any], promotion_protocol: str) -> d
     }
 
 
+def _runtime_source_tree_gate(matrix: dict[str, Any], promotion_protocol: str) -> dict[str, Any]:
+    """Verify the executable policy and harness sources used for a matrix.
+
+    Historical, pre-protocol v1 artifacts did not record runtime source trees
+    and remain readable as history. Every explicit protocol run, including the
+    active v2 protocol, must fail closed on missing or drifted sources.
+    """
+
+    legacy_v1 = promotion_protocol == DEFAULT_PROMOTION_PROTOCOL and matrix.get("promotion_protocol") is None
+    required = not legacy_v1
+    records = matrix.get("source_trees")
+    if not isinstance(records, Mapping):
+        return {
+            "required": required,
+            "legacy_v1_without_source_trees": legacy_v1,
+            "records_present": False,
+            "trees": {},
+            "passed": legacy_v1,
+        }
+    trees: dict[str, dict[str, Any]] = {}
+    for name in ("project1", "harness"):
+        try:
+            current = verify_source_tree_record(records.get(name), field=f"source_trees.{name}")
+            trees[name] = {
+                "passed": True,
+                "root": current["root"],
+                "file_count": current["file_count"],
+                "sha256": current["sha256"],
+            }
+        except (OSError, ValueError) as exc:
+            trees[name] = {"passed": False, "error": str(exc)}
+    return {
+        "required": required,
+        "legacy_v1_without_source_trees": legacy_v1,
+        "records_present": True,
+        "trees": trees,
+        "passed": bool(trees) and all(tree["passed"] for tree in trees.values()),
+    }
+
+
+def _stochastic_decoding_gate(matrix: dict[str, Any], runs: list[dict[str, Any]], promotion_protocol: str) -> dict[str, Any]:
+    """Require the registered v2 protocol to be genuinely three-seed stochastic."""
+
+    required = promotion_protocol == "v2"
+    declared_seeds: list[int] = []
+    try:
+        declared_seeds = sorted({int(seed) for seed in matrix.get("seeds", [])})
+    except (TypeError, ValueError):
+        declared_seeds = []
+    temperature = matrix.get("temperature")
+    top_p = matrix.get("top_p")
+    valid_temperature = type(temperature) in {int, float} and float(temperature) > 0
+    valid_top_p = type(top_p) in {int, float} and 0 < float(top_p) <= 1
+    run_settings_match = bool(runs) and all(
+        run.get("do_sample") is True
+        and run.get("temperature") == temperature
+        and run.get("top_p") == top_p
+        for run in runs
+    )
+    passed = (
+        not required
+        or (
+            matrix.get("do_sample") is True
+            and declared_seeds == [0, 1, 2]
+            and valid_temperature
+            and valid_top_p
+            and run_settings_match
+        )
+    )
+    return {
+        "required": required,
+        "matrix_do_sample": matrix.get("do_sample"),
+        "declared_seeds": declared_seeds,
+        "expected_seeds": [0, 1, 2] if required else None,
+        "temperature": temperature,
+        "top_p": top_p,
+        "valid_temperature": valid_temperature,
+        "valid_top_p": valid_top_p,
+        "run_settings_match": run_settings_match,
+        "passed": passed,
+    }
+
+
 def decide(
     matrix: dict[str, Any],
     train_holdout_audit: Path | None = None,
@@ -127,6 +211,7 @@ def decide(
     required_slices = protocol_slices(promotion_protocol)
     required_hashes = protocol_task_spec_hashes(promotion_protocol)
     protocol_gate = _protocol_binding_gate(matrix, promotion_protocol)
+    source_tree_binding = _runtime_source_tree_gate(matrix, promotion_protocol)
     audit_gate = (
         validate_required_audit_manifest(train_holdout_audit)
         if train_holdout_audit is not None
@@ -168,6 +253,7 @@ def decide(
     )
     task_spec_hash_gate = _pinned_task_spec_hash_gate(matrix, required_hashes)
     runs = list(matrix.get("runs", []))
+    stochastic_decoding = _stochastic_decoding_gate(matrix, runs, promotion_protocol)
     expected_seeds = sorted({int(seed) for seed in matrix.get("seeds", [])})
     slices: dict[str, list[dict[str, Any]]] = {name: [] for name in required_slices.values()}
     unknown_runs: list[dict[str, Any]] = []
@@ -206,6 +292,8 @@ def decide(
         "holdout_template_novelty": novelty_linked_to_matrix,
         "pinned_task_spec_hashes": task_spec_hash_gate["passed"],
         "promotion_protocol_binding": protocol_gate["passed"],
+        "runtime_source_tree_binding": source_tree_binding["passed"],
+        "stochastic_decoding": stochastic_decoding["passed"],
         "checkpoint_training_binding": checkpoint_binding_linked_to_matrix,
     }
     passed = all(gates.values())
@@ -213,6 +301,8 @@ def decide(
         "schema": "promotion-decision/v1",
         "promotion_protocol": promotion_protocol,
         "promotion_protocol_binding": protocol_gate,
+        "source_tree_binding": source_tree_binding,
+        "stochastic_decoding": stochastic_decoding,
         "checkpoint": matrix.get("checkpoint"),
         "seeds": expected_seeds,
         "expected_run_count": expected_run_count,

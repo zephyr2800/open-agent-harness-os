@@ -30,6 +30,7 @@ from app.cli import _load_auth_tokens, _optional_local_adapter, _server, _valida
 from app.storage import TraceStore
 from experiments.verify_checkpoint_run import verify as verify_checkpoint_run
 from experiments.run_promotion_matrix import _run_report, _write_heartbeat, main as promotion_matrix_main
+from experiments.launch_preflight import _wheel_smoke_sidecar, main as launch_preflight_main
 from experiments.release_readiness import _current_preflight, _current_wheel_smoke, _preflight_is_current, build_readiness
 from experiments.data_split_audit import (
     REQUIRED_FROZEN_FIXTURE_HASHES,
@@ -224,6 +225,38 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual(exited.exception.code, 2)
         self.assertIn("--task-spec must name each pinned fixture", stderr.getvalue())
 
+    def test_promotion_matrix_rejects_sampling_knobs_without_sampling(self) -> None:
+        task_spec = ROOT / "benchmarks" / "fixtures" / "task-spec-research-v4.json"
+        with mock.patch.object(sys, "argv", [
+            "run_promotion_matrix", "--project1-root", "missing-project", "--checkpoint", "missing-checkpoint",
+            "--output", "missing-output.json", "--train-holdout-audit", "missing-audit.json",
+            "--holdout-novelty-audit", "missing-novelty.json", "--task-spec", str(task_spec),
+            "--temperature", "0.5",
+        ]):
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as exited:
+                promotion_matrix_main()
+        self.assertEqual(exited.exception.code, 2)
+        self.assertIn("require --do-sample", stderr.getvalue())
+
+    def test_promotion_matrix_v2_requires_stochastic_decoding_before_model_load(self) -> None:
+        missing_audit = ROOT / "work" / "missing-train-holdout-audit.json"
+        missing_novelty = ROOT / "work" / "missing-holdout-novelty-audit.json"
+        research = ROOT / "benchmarks" / "fixtures" / "task-spec-research-v4.json"
+        active_proxy = ROOT / "benchmarks" / "fixtures" / "task-spec-industry-proxy-v2.json"
+        author_holdout = ROOT / "benchmarks" / "fixtures" / "task-spec-author-holdout-v1.json"
+        with mock.patch.object(sys, "argv", [
+            "run_promotion_matrix", "--project1-root", "missing-project", "--checkpoint", "missing-checkpoint",
+            "--output", "missing-output.json", "--train-holdout-audit", str(missing_audit),
+            "--holdout-novelty-audit", str(missing_novelty), "--promotion-protocol", "v2",
+            "--task-spec", str(research), "--task-spec", str(active_proxy), "--task-spec", str(author_holdout),
+        ]):
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as exited:
+                promotion_matrix_main()
+        self.assertEqual(exited.exception.code, 2)
+        self.assertIn("requires --do-sample", stderr.getvalue())
+
     def test_promotion_matrix_heartbeat_is_claim_safe_and_timestamped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "matrix.heartbeat.json"
@@ -240,13 +273,62 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual(gate["evidence"], "docs/PROVENANCE_REVIEW.md")
         self.assertTrue((ROOT / "docs" / "PROVENANCE_REVIEW.md").is_file())
 
-    def test_readiness_uses_smoke_evidence_for_current_package_version(self) -> None:
+    def test_readiness_reports_current_wheel_evidence_or_a_pending_rebuild(self) -> None:
         report = build_readiness(ROOT)
         expected_wheel = f"open_agent_harness_os-{report['package_version']}-py3-none-any.whl"
         gate = report["gates"]["clean_wheel_smoke"]
-        self.assertIn("clean-wheel-smoke-v", Path(gate["evidence"]).name)
         self.assertIn(expected_wheel, gate["detail"])
-        self.assertEqual(gate["status"], "passed")
+        # A source checkout may legitimately be ahead of its committed
+        # preflight evidence. The release command, not this unit test, is what
+        # creates a source-bound passing artifact after a code change.
+        if gate["status"] == "passed":
+            self.assertIn("clean-wheel-smoke-v", Path(gate["evidence"]).name)
+        else:
+            self.assertEqual(gate["status"], "pending")
+            self.assertIn("clean-wheel-smoke-current-", Path(gate["evidence"]).name)
+            self.assertIn("has not passed", gate["detail"])
+
+    def test_preflight_exports_a_normalized_source_bound_wheel_smoke_sidecar(self) -> None:
+        report = {
+            "checks": [{
+                "id": "wheel_install_smoke",
+                "passed": True,
+                "detail": {
+                    "path": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+                    "sha256": "b" * 64,
+                    "source_package_sha256": "a" * 64,
+                    "wheel_package_sha256": "a" * 64,
+                    "source_matches_wheel": True,
+                    "console_scripts_match": True,
+                    "wheel_manifest_sha256": "c" * 64,
+                    "reference_wheel_sha256": "d" * 64,
+                    "reference_wheel_manifest_sha256": "c" * 64,
+                    "wheel_manifest_matches_reference": True,
+                },
+            }],
+        }
+        preflight = Path("experiments/results/launch-preflight-v42.json")
+        sidecar = _wheel_smoke_sidecar(report, preflight_output=preflight)
+        self.assertIsNotNone(sidecar)
+        assert sidecar is not None
+        self.assertTrue(sidecar["passed"])
+        self.assertEqual(sidecar["wheel"], "open_agent_harness_os-0.1.8-py3-none-any.whl")
+        self.assertEqual(sidecar["preflight_artifact"], str(preflight))
+
+    def test_preflight_refuses_to_overwrite_a_wheel_smoke_evidence_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            existing = root / "clean-wheel-smoke-v99.json"
+            existing.write_text("{}\n", encoding="utf-8")
+            with mock.patch.object(sys, "argv", [
+                "launch_preflight", "--output", str(root / "preflight.json"),
+                "--wheel-smoke-output", str(existing),
+            ]):
+                stderr = io.StringIO()
+                with redirect_stderr(stderr), self.assertRaises(SystemExit) as exited:
+                    launch_preflight_main()
+        self.assertEqual(exited.exception.code, 2)
+        self.assertIn("new immutable evidence path", stderr.getvalue())
 
     def test_preflight_selection_requires_the_current_source_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -460,11 +542,15 @@ class ExperimentTests(unittest.TestCase):
             rows=[row],
             elapsed_seconds=0.2,
             complete=False,
+            temperature=0.55,
+            top_p=0.82,
         )
         self.assertFalse(report["complete"])
         self.assertEqual(report["task_count"], 1)
         self.assertEqual(report["rows"][0]["expected_action_count"], 3)
         self.assertEqual(report["runtime_replay_agreement"], 1.0)
+        self.assertEqual(report["temperature"], 0.55)
+        self.assertEqual(report["top_p"], 0.82)
 
     def test_real_report_verifier_replays_protocol_error_traces(self) -> None:
         report = {"rows": [{"model": "qwen", "variant": "H1", "seed": 0, "task_id": "t", "protocol_valid": False, "verified_success": False, "trace_jsonl": run_action("real-audit", "Write x", "write_file", {"path": "x", "content": "y"})["trace_jsonl"]}]}

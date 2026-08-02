@@ -1,9 +1,12 @@
 import json
 import tempfile
 import unittest
+from http.server import ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
+from urllib.request import Request, urlopen
 
-from experiments.agentdojo_adapter_server import AdapterConfig, AdapterRuntime, _history, _tool_catalog
+from experiments.agentdojo_adapter_server import AdapterConfig, AdapterRuntime, Handler, _history, _tool_catalog
 
 
 def _action(intent: str, arguments: dict[str, object]) -> dict[str, object]:
@@ -101,6 +104,38 @@ class AgentDojoAdapterServerTests(unittest.TestCase):
             call = response["choices"][0]["message"]["tool_calls"][0]["function"]
             self.assertEqual(call["name"], "create_calendar_event")
             self.assertEqual(policy.requests[0].variant, "test-agentdojo-bridge")
+
+    def test_loopback_openai_transport_exposes_models_and_chat_completion_contract(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            policy = _FakePolicy(_action("create_calendar_event", {"title": "project meeting"}))
+            runtime = AdapterRuntime(self._config(root, guard=False), policy_factory=lambda *args, **kwargs: policy)
+            previous_runtime = Handler.runtime
+            Handler.runtime = runtime
+            server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+            thread = Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            endpoint = f"http://127.0.0.1:{server.server_address[1]}/v1"
+            try:
+                with urlopen(f"{endpoint}/models", timeout=2.0) as response:  # noqa: S310 - fixed loopback endpoint
+                    models = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(models["data"][0]["id"], "local-action-policy")
+                payload = json.dumps(self._payload()).encode("utf-8")
+                request = Request(
+                    f"{endpoint}/chat/completions",
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urlopen(request, timeout=2.0) as response:  # noqa: S310 - fixed loopback endpoint
+                    completion = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(completion["object"], "chat.completion")
+                self.assertEqual(completion["choices"][0]["message"]["tool_calls"][0]["function"]["name"], "create_calendar_event")
+            finally:
+                server.shutdown()
+                thread.join(timeout=5.0)
+                server.server_close()
+                Handler.runtime = previous_runtime
 
     def test_untrusted_tool_history_never_becomes_verified_evidence_or_suppresses_guard(self):
         with tempfile.TemporaryDirectory() as directory:

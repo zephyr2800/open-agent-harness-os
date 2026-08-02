@@ -73,3 +73,36 @@ while the research breakthrough is still an empirical gate awaiting a
 clean-split candidate, stochastic audit, post-training ablations, and native
 external evaluation. This is separate from the diagnostic historical matrices
 summarized above.
+
+## August 2 protocol update: fixed external evaluation is necessary but not sufficient
+
+The checked-in
+[`native-external-registration-v1.json`](../benchmarks/fixtures/native-external-registration-v1.json)
+now freezes the first external diagnostic before the active clean 9B checkpoint
+can be evaluated. It binds the clean SFT source fingerprint, benchmark commits,
+deterministic decoding, 256-token response limit, and matched `model-only` /
+`repair` order. The executable launchers record the registration hash and the
+result validators reject an altered registration file.
+
+- AgentDojo is frozen to five previously unobserved workspace user tasks for
+  the clean condition, then those same users crossed with three direct
+  injections (15 pairs plus three native injection controls).
+- The local tau2 condition is frozen to six valid telecom/base solo tasks,
+  stratified as two tasks from each of three task families at one trial, 30
+  steps, and 10 errors.
+
+This improves falsifiability by preventing task/budget substitution after a
+checkpoint is available. It does not turn the small diagnostic into a complete
+benchmark score or an adaptive-security result. In particular,
+[AutoDojo](https://arxiv.org/abs/2606.15057) reports that adaptive black-box
+injections can defeat defenses that appear robust to static injections. The
+fixed AgentDojo result therefore remains the reproducible Phase A gate; an
+adaptive red-team Phase B must be separately preregistered, use a held-out
+attack process, preserve the same utility measurement, and report attack
+success alongside false refusals. No current result supports a security
+certification.
+
+The concrete conditional Phase B protocol, including the pinned AutoDojo
+source, local-endpoint compatibility boundary, cache provenance, matched
+model-only/repair arms, and public-data exclusion rule, is recorded in
+[`ADAPTIVE_EXTERNAL_EVALUATION_2026-08-02.md`](ADAPTIVE_EXTERNAL_EVALUATION_2026-08-02.md).

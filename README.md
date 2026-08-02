@@ -25,9 +25,9 @@ actually complete.
 
 The local developer-preview harness passes its documented product checks:
 
-- Project 2 tests: 137/137 (including dense-reliability, source-bound wheel integrity, scorecard, promotion-protocol, and native-evaluation-launcher checks)
+- Project 2 tests: 202 total (201 passed; one Windows symlink-capability test skipped; including dense-reliability, source-bound wheel integrity, scorecard, promotion-protocol, native-result-validator, energy-measurement, corpus-quality-audit, and action-surface-stress checks)
 - Project 1 tests: 47/47
-- Launch preflight: 16/16 (including a fresh clean-source wheel build and extracted-wheel installation smoke)
+- Launch preflight v33: 16/16 (including a fresh clean-source wheel build, source-tree binding, extracted-wheel installation smoke, and the current source suite)
 
 The associated Qwopus3.5-9B frozen promotion matrix completed privately under a
 fixed protocol: 483/552 independently verified successes (87.5%), zero unsafe
@@ -36,7 +36,8 @@ promotion decision rejected the checkpoint. This is failure-localization
 evidence, not a claim that the model is generally capable or that RL improved
 it. See
 `docs/CLAIMS_AND_EVIDENCE_MATRIX.md` and
-`docs/RESEARCH_LAUNCH_BRIEF.md` for the evidence boundaries.
+`docs/RESEARCH_LAUNCH_BRIEF.md` for the evidence boundaries; `STATUS.md`
+records the current program state and gated next steps.
 
 ## Quick start
 
@@ -46,7 +47,7 @@ python -m venv .venv
 pip install -e .
 python -m unittest discover -s tests -v
 python -m pip wheel . --no-deps --wheel-dir work/package-dist
-python -m experiments.launch_preflight --with-tests
+python -m experiments.launch_preflight --with-tests --output experiments/results/launch-preflight-local.json
 ```
 
 The companion project uses intentionally local package names such as

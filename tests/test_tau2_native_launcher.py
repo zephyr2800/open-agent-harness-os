@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import socket
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -11,7 +13,15 @@ from pathlib import Path
 from unittest import mock
 
 from experiments.data_split_audit import REQUIRED_FROZEN_FIXTURE_HASHES, validate_required_audit_manifest
-from experiments.tau2_native_launcher import REPO_ROOT, Tau2NativeRunConfig, _assert_port_available, build_plan
+from experiments.tau2_native_launcher import (
+    REPO_ROOT,
+    Tau2NativeRunConfig,
+    _NATIVE_RESULT_SCHEMA_PROBE_SCRIPT,
+    _RUNTIME_PROBE_SCRIPT,
+    _assert_port_available,
+    _native_result_schema_validation,
+    build_plan,
+)
 
 
 def _audit(path: Path) -> Path:
@@ -51,6 +61,10 @@ def _runtime_probe() -> dict[str, object]:
         "python_version": "3.12.0",
         "tau2_version": "1.0.1",
         "package_file": "C:/tau2/src/tau2/__init__.py",
+        "module_files": {
+            "experiments.agentdojo_adapter_server": str(REPO_ROOT / "experiments" / "agentdojo_adapter_server.py"),
+            "experiments.tau2_native_runner": str(REPO_ROOT / "experiments" / "tau2_native_runner.py"),
+        },
         "source_bound": True,
     }
 
@@ -86,10 +100,15 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         entrypoint = tau2 / "src" / "tau2"
         entrypoint.mkdir(parents=True)
         (entrypoint / "cli.py").write_text("# cli placeholder\n", encoding="utf-8")
+        (tau2 / "data").mkdir()
         project1 = root / "project1"
-        project1.mkdir()
+        (project1 / "model").mkdir(parents=True)
+        (project1 / "model" / "transformers_backend.py").write_text(
+            "class TransformersActionPolicy: ...\n",
+            encoding="utf-8",
+        )
         runtime = root / "tau2-runtime"
-        runtime.mkdir()
+        (runtime / "Lib" / "site-packages").mkdir(parents=True)
         return Tau2NativeRunConfig(
             checkpoint=_checkpoint(root, audit),
             train_holdout_audit=audit,
@@ -132,9 +151,20 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         self.assertTrue(plan["runner_wrapper"]["compatibility"]["required"])
         self.assertEqual(plan["runner_wrapper"]["compatibility"]["id"], "tau2-dummy-user-constructor-v1")
         self.assertEqual(plan["tau2"]["selector_catalog"]["sha256"], "e" * 64)
+        self.assertEqual(plan["adapter"]["source_trees"]["project1"]["schema"], "python-source-tree/v1")
+        self.assertGreater(plan["adapter"]["source_trees"]["harness"]["file_count"], 0)
         self.assertTrue(plan["runtime"]["source_bound"])
+        self.assertEqual(plan["runtime"]["module_files"], _runtime_probe()["module_files"])
         self.assertEqual(plan["environment"]["PYTHONUTF8"], "1")
+        self.assertEqual(
+            plan["environment"]["TAU2_DATA_DIR"],
+            str((Path(str(plan["tau2"]["root"])) / "data").resolve()),
+        )
         entries = plan["runtime"]["pythonpath_entries"]
+        self.assertIn(
+            str(Path(str(plan["runtime"]["tau2_runtime"])) / "Lib" / "site-packages"),
+            entries,
+        )
         self.assertLess(
             entries.index(str(REPO_ROOT)),
             entries.index(str(Path(plan["checkpoint"]["directory"]).parent / "project1")),
@@ -147,12 +177,62 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         self.assertIn("--max-retries", benchmark)
         self.assertIn("--enforce-communication-protocol", benchmark)
 
+    def test_plan_refuses_a_checkout_without_its_pinned_task_data(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = self._config(Path(directory))
+            (config.tau2_root / "data").rmdir()
+            with self.assertRaisesRegex(ValueError, "pinned task data directory"):
+                build_plan(config)
+
+    def test_windows_venv_dependencies_follow_the_active_ml_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"PYTHONPATH": "active-ml-a;active-ml-b"}, clear=False):
+                plan = self._plan(self._config(Path(directory)))
+        entries = plan["runtime"]["pythonpath_entries"]
+        runtime_site_packages = str(Path(str(plan["runtime"]["tau2_runtime"])) / "Lib" / "site-packages")
+        self.assertEqual(entries[-1], runtime_site_packages)
+        self.assertLess(entries.index("active-ml-a;active-ml-b"), entries.index(runtime_site_packages))
+
+    def test_help_supports_a_legacy_windows_console_encoding(self) -> None:
+        environment = os.environ.copy()
+        environment["PYTHONUTF8"] = "0"
+        environment["PYTHONIOENCODING"] = "cp1252"
+        completed = subprocess.run(
+            [sys.executable, "-m", "experiments.tau2_native_launcher", "--help"],
+            cwd=REPO_ROOT,
+            env=environment,
+            capture_output=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr.decode("utf-8", errors="replace"))
+        self.assertIn(b"--task-id", completed.stdout)
+
+    def test_runtime_probe_script_imports_every_module_it_reports(self) -> None:
+        self.assertIn("import experiments.agentdojo_adapter_server as adapter_server", _RUNTIME_PROBE_SCRIPT)
+        self.assertIn("import experiments.tau2_native_runner as runner_wrapper", _RUNTIME_PROBE_SCRIPT)
+
     def test_repair_variant_is_explicit_in_the_adapter_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             plan = self._plan(self._config(Path(directory), variant="repair"))
         self.assertTrue(plan["adapter"]["enable_repair"])
         self.assertIn("--enable-repair", plan["commands"]["adapter"])
         self.assertEqual(plan["variant"], "repair")
+
+    def test_plan_records_a_preregistered_external_condition(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = replace(self._config(root), registration=root / "registration.json")
+            record = {"schema": "native-external-evaluation-registration-record/v1", "registration_id": "test"}
+            with (
+                mock.patch("experiments.tau2_native_launcher._git", side_effect=["b" * 40, ""]),
+                mock.patch("experiments.tau2_native_launcher._runtime_probe", return_value=_runtime_probe()),
+                mock.patch("experiments.tau2_native_launcher._selector_catalog", return_value=_selector_catalog()),
+                mock.patch("experiments.tau2_native_launcher._compatibility_probe", return_value=_compatibility_probe()),
+                mock.patch("experiments.tau2_native_launcher.validate_tau2_registration", return_value=record) as registered,
+            ):
+                plan = build_plan(config)
+        self.assertEqual(plan["registration"], record)
+        self.assertEqual(registered.call_args.kwargs["source_commit"], "b" * 40)
+        self.assertEqual(registered.call_args.kwargs["task_ids"], ("task-1",))
 
     def test_unknown_duplicate_and_non_solo_selectors_are_rejected_before_an_adapter_can_start(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -203,3 +283,37 @@ class Tau2NativeLauncherTests(unittest.TestCase):
             port = listener.getsockname()[1]
             with self.assertRaisesRegex(RuntimeError, "already in use"):
                 _assert_port_available(port)
+
+    def test_native_result_schema_check_uses_tau2_pydantic_results_model(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            results = root / "results.json"
+            results.write_text("{}\n", encoding="utf-8")
+            package_file = root / "tau2" / "src" / "tau2" / "__init__.py"
+            package_file.parent.mkdir(parents=True)
+            package_file.write_text("# source-bound test package\n", encoding="utf-8")
+            payload = {
+                "schema": "tau2-results-pydantic/v1",
+                "passed": True,
+                "result_model": "tau2.data_model.simulation.Results",
+                "tau2_package_file": str(package_file),
+                "task_count": 1,
+                "simulation_count": 1,
+            }
+            completed = subprocess.CompletedProcess(
+                args=["python", "-c", "probe"],
+                returncode=0,
+                stdout=json.dumps(payload) + "\n",
+                stderr="",
+            )
+            with mock.patch("experiments.tau2_native_launcher.subprocess.run", return_value=completed):
+                checked = _native_result_schema_validation(
+                    python=Path(sys.executable),
+                    tau2_root=root / "tau2",
+                    environment={},
+                    native_results_file=results,
+                )
+            expected_hash = hashlib.sha256(results.read_bytes()).hexdigest()
+        self.assertIn("Results.model_validate_json", _NATIVE_RESULT_SCHEMA_PROBE_SCRIPT)
+        self.assertTrue(checked["passed"])
+        self.assertEqual(checked["results_record"]["sha256"], expected_hash)

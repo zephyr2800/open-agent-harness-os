@@ -10,7 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
-from experiments.agentdojo_native_launcher import NativeRunConfig, _assert_port_available, build_plan
+from experiments.agentdojo_native_launcher import NativeRunConfig, _assert_port_available, _native_log_records, build_plan
 from experiments.data_split_audit import REQUIRED_FROZEN_FIXTURE_HASHES, validate_required_audit_manifest
 
 
@@ -67,6 +67,7 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
         (entrypoint / "benchmark.py").write_text("# benchmark placeholder\n", encoding="utf-8")
         project1 = root / "project1"
         project1.mkdir()
+        (project1 / "policy.py").write_text("POLICY = 'native-test'\n", encoding="utf-8")
         runtime = root / "agentdojo-runtime"
         runtime.mkdir()
         return NativeRunConfig(
@@ -100,9 +101,12 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
                 plan = build_plan(config)
         self.assertEqual(plan["status"], "planned")
         self.assertEqual(plan["agentdojo"]["commit"], "b" * 40)
+        self.assertEqual(plan["agentdojo"]["source_tree"]["schema"], "python-source-tree/v1")
         self.assertTrue(plan["checkpoint"]["training_binding"]["passed"])
         self.assertFalse(plan["adapter"]["lookup_first_enabled"])
         self.assertEqual(plan["agentdojo"]["selector_catalog"]["sha256"], "e" * 64)
+        self.assertEqual(plan["adapter"]["source_trees"]["project1"]["schema"], "python-source-tree/v1")
+        self.assertGreater(plan["adapter"]["source_trees"]["harness"]["file_count"], 0)
         self.assertIn("openai-compatible", plan["commands"]["benchmark"])
         self.assertIn("--user-task", plan["commands"]["benchmark"])
         self.assertNotIn("--enable-repair", plan["commands"]["adapter"])
@@ -118,6 +122,21 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
         self.assertTrue(plan["adapter"]["enable_repair"])
         self.assertIn("--enable-repair", plan["commands"]["adapter"])
         self.assertEqual(plan["variant"], "repair")
+
+    def test_plan_records_a_preregistered_external_condition(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = replace(self._config(root), registration=root / "registration.json")
+            record = {"schema": "native-external-evaluation-registration-record/v1", "registration_id": "test"}
+            with (
+                mock.patch("experiments.agentdojo_native_launcher._git", side_effect=["b" * 40, ""]),
+                mock.patch("experiments.agentdojo_native_launcher._selector_catalog", return_value=_selector_catalog()),
+                mock.patch("experiments.agentdojo_native_launcher.validate_agentdojo_registration", return_value=record) as registered,
+            ):
+                plan = build_plan(config)
+        self.assertEqual(plan["registration"], record)
+        self.assertEqual(registered.call_args.kwargs["source_commit"], "b" * 40)
+        self.assertEqual(registered.call_args.kwargs["user_tasks"], ("user_task_17",))
 
     def test_injection_selector_requires_an_attack(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -172,3 +191,16 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
             port = listener.getsockname()[1]
             with self.assertRaisesRegex(RuntimeError, "already in use"):
                 _assert_port_available(port)
+
+    def test_native_log_records_bind_only_completed_agentdojo_json_results(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            logs = Path(directory) / "native-logs"
+            result = logs / "openai-compatible" / "workspace" / "user_task_17" / "none" / "none.json"
+            result.parent.mkdir(parents=True)
+            result.write_text('{"utility": true}\n', encoding="utf-8")
+            (logs / "benchmark.stdout.log").write_text("finished\n", encoding="utf-8")
+            records = _native_log_records(logs)
+        self.assertEqual(records["schema"], "agentdojo-native-logs/v1")
+        self.assertEqual(records["directory"], str(logs.resolve()))
+        self.assertEqual(len(records["records"]), 1)
+        self.assertEqual(records["records"][0]["path"], str(result.resolve()))

@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased - source-bound evaluation and research-control hardening (2026-08-02)
+
+- Added a checked-in native-evaluation preregistration, source-bound
+  AgentDojo/tau2 launchers, immutable artifact validators, and regression
+  coverage for the local OpenAI-compatible adapter transport.
+- Bind completed AgentDojo evidence to the current pinned checkout's
+  source-tree fingerprint, rejecting source drift before a result is reported.
+- Hardened τ³ result validation against stale local endpoints, command/module
+  rebinding, dirty or mismatched benchmark checkouts, selector-catalog drift,
+  and JSON boolean-versus-integer identity confusion; public wheel-build log
+ tails now redact machine-local paths.
+- Fixed the τ³ runtime probe to import and record the exact adapter and runner
+  source modules it verifies, with a regression test and a no-model-load
+  check against the prepared pinned runtime and registered solo selectors.
+- Separated the fixed native diagnostic from a conditional adaptive AutoDojo
+  security protocol; neither is presented as a general capability or security
+  certification.
+- Refreshed the research and investor materials with source-backed Kimi K3,
+  Inkling/Tinker, and adaptive-injection context.
+- Preregistered a full-coverage uniform-versus-weighted sampling-order
+  ablation for a post-baseline failure-localization decision.
+- Added this program status ledger so current evidence, hypotheses, and gates
+  are visible without inspecting private checkpoints or local watcher logs.
+
 ## 0.1.8 - 2026-08-01
 
 - Made release-readiness wheel smoke selection version-aware so stale

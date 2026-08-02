@@ -25,3 +25,8 @@ For a new candidate, pass `--promotion-protocol v2` to the matrix runner,
 promotion decision, and verified-RL gate. The matrix runner rejects a task
 set with a missing, substituted, duplicated, or hash-mismatched fixture; the
 decision and RL gate reject a matrix/decision bound to another protocol.
+
+The active v2 protocol also requires `--do-sample`, exactly decoding seeds
+`0,1,2`, and recorded temperature/top-p values that match every run. It
+records executable Project 1 and harness source trees in the matrix; the
+promotion decision recomputes those records and rejects any source drift.

@@ -41,11 +41,21 @@ than academic extras. ([Agents SDK](https://openai.com/index/the-next-evolution-
 
 Moonshot’s open model work reinforces a complementary scaling direction:
 mixture-of-experts plus hybrid/linear attention and agent-oriented execution,
-as documented for Kimi K2/K2.5 and Kimi Linear. The July 2026 K3 launch is a
-useful market signal, but until an official technical report and reproducible
-weights/evals are available, we treat third-party parameter and architecture
-claims as unverified—not as a benchmark target. ([Kimi K2.5 paper](https://arxiv.org/abs/2602.02276),
+as documented for Kimi K2/K2.5 and Kimi Linear. The July 2026 K3 release now
+has an [official repository and technical report](https://github.com/MoonshotAI/Kimi-K3),
+so its stated architecture (a 2.8T-parameter, 104B-active MoE using Kimi Delta
+Attention and Attention Residuals) is a vendor-documented systems signal. Its
+published benchmark table remains vendor-reported and harness-sensitive, not an
+independent local comparison or a target a single RTX 5090 can reproduce.
+([Kimi K2.5 paper](https://arxiv.org/abs/2602.02276),
 [Moonshot research organization](https://github.com/MoonshotAI))
+
+K3 also reports quantization-aware training with MXFP4 weights and MXFP8
+activations. That supports treating quantization as a measured training and
+deployment intervention, not a free parameter-scaling trick: our 4-bit QLoRA
+load enables the 9B experiment to fit locally, while any more aggressive
+precision or scale change must enter as a separately evaluated arm with the
+same verified-utility, safety, and replay gates.
 
 Our strategic position is therefore the layer frontier model launches do not
 remove: a local, model-agnostic control plane that can constrain a small model,
@@ -85,7 +95,7 @@ than one aggregate success number.
 | 7B v6 industry proxy v1 | 48/48 verified, zero unsafe attempts | Stronger state/injection proxy result; still offline |
 | 7B v7 external-gap revision | 39/48; policy sequence 3/12 | Not promoted; repeated narrow data caused regression |
 | 7B verifier-backed RL smoke | neutral reward before/after | Undirected RL is not a valid improvement strategy |
-| Project 2 test suite | 137/137 passing | Harness/evaluator regression control |
+| Project 2 test suite | 202 total: 201 passed, one Windows symlink-capability skip | Harness/evaluator regression control |
 | Qwopus3.5-9B rank-64 QLoRA | Historical SFT, merge, and 9-run matrix complete on RTX 5090 | 483/552 independently verified (87.5%), zero unsafe attempts, perfect trace/replay checks; context only because source-corpus isolation was not recorded |
 
 Data-isolation addendum: the later targeted 9B curriculum was found to overlap
@@ -156,7 +166,8 @@ replays. ([model card](https://huggingface.co/Jackrong/Qwopus3.5-9B-v3),
 
 The local product surface has a CLI, loopback HTTP API, MCP stdio server,
 typed Action IR, allowlisted tools, default high-risk denial, independent
-verification, bounded budgets, and replayable JSONL traces. The 95-test suite,
+verification, bounded budgets, and replayable JSONL traces. The current
+202-test suite (one Windows symlink-capability skip),
 offline demo, replay smoke, explicit concurrent-retention preflight, and
 bearer-authentication plus tenant-isolation checks support a technically
 capable local preview.

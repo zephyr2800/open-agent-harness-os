@@ -38,6 +38,12 @@ the policy.
   for a hidden or native external suite.
 - At least three decoding seeds are required for a completed checkpoint; an
   independent training seed is preferred for a paper claim.
+- A stochastic matrix must record its exact temperature and nucleus threshold
+  with every run and use the same values for every compared arm. Sampling
+  controls are invalid when sampling is disabled.
+- The active v2 protocol requires stochastic seeds 0, 1, and 2 and records
+  both the executable policy and harness source trees. The decision gate
+  recomputes those records and rejects source drift.
 - Tool aliases, reordered tool descriptions, long-horizon state dependencies,
   insufficient information, confirmation boundaries, and indirect injection
   are separate slices.

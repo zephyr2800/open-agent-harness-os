@@ -9,11 +9,18 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from experiments.launch_preflight import _wheel_check
+from experiments.launch_preflight import _redact_public_log, _wheel_check
 from experiments.wheel_smoke import _source_console_scripts, source_tree_sha256, wheel_manifest_sha256, wheel_source_tree_sha256
 
 
 class LaunchPreflightTests(unittest.TestCase):
+    def test_public_build_logs_redact_user_home_paths(self) -> None:
+        windows_path = "C:" + "\\" + "Users" + "\\" + "alice\\cache\\wheel.whl"
+        output = _redact_public_log(windows_path + "\n/home/bob/build.log")
+        self.assertNotIn("alice", output)
+        self.assertNotIn("bob", output)
+        self.assertIn("<user-home>", output)
+
     def test_source_console_scripts_parse_project_table(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

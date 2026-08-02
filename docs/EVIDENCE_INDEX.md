@@ -18,6 +18,10 @@ stateful-agent benchmarks, and current model/harness launches.
 policy-plus-harness thesis, an investor-ready 90-minute reading order, and
 claim-safe language for the active 9B scale branch.
 
+`docs/HARNESS_SYSTEMS_AND_LAUNCHES_2026-08-02.md` consolidates the current
+primary-source Pi, Agents SDK, AgentDojo, AutoDojo, TUA-Bench, Inkling/Tinker,
+and Kimi K3 comparison into observed facts, limitations, and experiments.
+
 `docs/EXTERNAL_BAR_UPDATE_2026-07-26.md` records the newly checked TUA-Bench
 and OSWorld 2.0 bar and translates their failure modes into the next local
 evaluation gate.

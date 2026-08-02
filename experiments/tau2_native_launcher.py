@@ -108,6 +108,36 @@ print(json.dumps(compatibility_metadata(DummyUser), sort_keys=True))
 """
 
 
+_NATIVE_RESULT_SCHEMA_PROBE_SCRIPT = """
+import json
+import pathlib
+import sys
+
+import tau2
+from tau2.data_model.simulation import Results
+
+results_path = pathlib.Path(sys.argv[1])
+try:
+    results = Results.model_validate_json(results_path.read_text(encoding="utf-8"))
+except Exception as error:
+    print(json.dumps({
+        "schema": "tau2-results-pydantic/v1",
+        "passed": False,
+        "error": repr(error),
+    }, sort_keys=True))
+    raise
+
+print(json.dumps({
+    "schema": "tau2-results-pydantic/v1",
+    "passed": True,
+    "result_model": f"{type(results).__module__}.{type(results).__name__}",
+    "tau2_package_file": str(pathlib.Path(tau2.__file__).resolve()),
+    "task_count": len(results.tasks),
+    "simulation_count": len(results.simulations),
+}, sort_keys=True))
+"""
+
+
 @dataclass(frozen=True)
 class Tau2NativeRunConfig:
     checkpoint: Path
@@ -636,6 +666,71 @@ def _preserve_native_output(plan: dict[str, Any], run_dir: Path) -> dict[str, An
     return record
 
 
+def _native_result_schema_validation(
+    *,
+    python: Path,
+    tau2_root: Path,
+    environment: dict[str, str],
+    native_results_file: Path,
+) -> dict[str, Any]:
+    """Use the pinned τ³ runtime's own Pydantic model to validate results.json."""
+
+    if not native_results_file.is_file():
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": f"native results file does not exist: {native_results_file}",
+        }
+    try:
+        completed = subprocess.run(
+            [str(python), "-c", _NATIVE_RESULT_SCHEMA_PROBE_SCRIPT, str(native_results_file)],
+            cwd=tau2_root,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": repr(error),
+        }
+    payload: dict[str, Any] | None = None
+    for line in reversed(completed.stdout.splitlines()):
+        try:
+            candidate = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(candidate, dict):
+            payload = candidate
+            break
+    if payload is None:
+        detail = completed.stderr.strip() or completed.stdout.strip() or "schema probe returned no JSON payload"
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": detail,
+        }
+    if completed.returncode != 0 or payload.get("passed") is not True:
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": str(payload.get("error") or completed.stderr.strip() or "τ³ Pydantic validation failed"),
+        }
+    if payload.get("schema") != "tau2-results-pydantic/v1":
+        return {
+            "schema": "tau2-results-pydantic/v1",
+            "passed": False,
+            "error": "τ³ Pydantic validation returned an unexpected schema marker",
+        }
+    return {
+        **payload,
+        "results_record": _file_record(native_results_file),
+    }
+
+
 def execute(plan: dict[str, Any]) -> dict[str, Any]:
     """Run the official benchmark and stop only the adapter launched here."""
 
@@ -649,6 +744,7 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
     adapter_stderr = run_dir / "adapter.stderr.log"
     benchmark_stdout = run_dir / "benchmark.stdout.log"
     benchmark_stderr = run_dir / "benchmark.stderr.log"
+    adapter_log = run_dir / "adapter.jsonl"
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     process: subprocess.Popen[str] | None = None
     running = {**plan, "status": "running", "started_at_unix": time.time()}
@@ -682,9 +778,21 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
                     check=False,
                     creationflags=creationflags,
                 )
-        native_output = _preserve_native_output(plan, run_dir)
         native_results_file = Path(str(plan["tau2"]["native_results_file"]))
-        completed = benchmark.returncode == 0 and native_results_file.is_file()
+        native_schema_validation = _native_result_schema_validation(
+            python=Path(benchmark_command[0]),
+            tau2_root=tau2_root,
+            environment=environment,
+            native_results_file=native_results_file,
+        )
+        native_output = _preserve_native_output(plan, run_dir)
+        if native_output is not None:
+            native_output["schema_validation"] = native_schema_validation
+        completed = (
+            benchmark.returncode == 0
+            and native_results_file.is_file()
+            and native_schema_validation.get("passed") is True
+        )
         result = {
             **running,
             "status": "completed" if completed else "failed",
@@ -694,7 +802,7 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
             "native_output": native_output,
         }
         if not completed:
-            result["error"] = "τ³-bench did not return a successful native results.json artifact"
+            result["error"] = "τ³-bench did not return a successful, schema-valid native results.json artifact"
     except Exception as error:
         result = {
             **running,
@@ -705,6 +813,8 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
     finally:
         if process is not None:
             result["adapter_process"] = _stop(process)
+    if adapter_log.is_file():
+        result["adapter_log"] = _file_record(adapter_log)
     _write_json_atomic(run_dir / "run_manifest.json", result)
     return result
 

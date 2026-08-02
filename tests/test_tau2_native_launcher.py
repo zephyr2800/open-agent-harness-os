@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import socket
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -11,7 +12,14 @@ from pathlib import Path
 from unittest import mock
 
 from experiments.data_split_audit import REQUIRED_FROZEN_FIXTURE_HASHES, validate_required_audit_manifest
-from experiments.tau2_native_launcher import REPO_ROOT, Tau2NativeRunConfig, _assert_port_available, build_plan
+from experiments.tau2_native_launcher import (
+    REPO_ROOT,
+    Tau2NativeRunConfig,
+    _NATIVE_RESULT_SCHEMA_PROBE_SCRIPT,
+    _assert_port_available,
+    _native_result_schema_validation,
+    build_plan,
+)
 
 
 def _audit(path: Path) -> Path:
@@ -203,3 +211,37 @@ class Tau2NativeLauncherTests(unittest.TestCase):
             port = listener.getsockname()[1]
             with self.assertRaisesRegex(RuntimeError, "already in use"):
                 _assert_port_available(port)
+
+    def test_native_result_schema_check_uses_tau2_pydantic_results_model(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            results = root / "results.json"
+            results.write_text("{}\n", encoding="utf-8")
+            package_file = root / "tau2" / "src" / "tau2" / "__init__.py"
+            package_file.parent.mkdir(parents=True)
+            package_file.write_text("# source-bound test package\n", encoding="utf-8")
+            payload = {
+                "schema": "tau2-results-pydantic/v1",
+                "passed": True,
+                "result_model": "tau2.data_model.simulation.Results",
+                "tau2_package_file": str(package_file),
+                "task_count": 1,
+                "simulation_count": 1,
+            }
+            completed = subprocess.CompletedProcess(
+                args=["python", "-c", "probe"],
+                returncode=0,
+                stdout=json.dumps(payload) + "\n",
+                stderr="",
+            )
+            with mock.patch("experiments.tau2_native_launcher.subprocess.run", return_value=completed):
+                checked = _native_result_schema_validation(
+                    python=Path(sys.executable),
+                    tau2_root=root / "tau2",
+                    environment={},
+                    native_results_file=results,
+                )
+            expected_hash = hashlib.sha256(results.read_bytes()).hexdigest()
+        self.assertIn("Results.model_validate_json", _NATIVE_RESULT_SCHEMA_PROBE_SCRIPT)
+        self.assertTrue(checked["passed"])
+        self.assertEqual(checked["results_record"]["sha256"], expected_hash)

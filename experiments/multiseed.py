@@ -16,6 +16,7 @@ from runtime.orchestrator import Harness, HarnessConfig, TaskRequest
 from tools.memory_workspace import make_memory_registry
 from adapters.project1_transformers import Project1TransformersAdapter
 from experiments.data_split_audit import validate_checkpoint_training_binding, validate_required_audit_manifest
+from experiments.checkpoint_identity import manifest_sha256, verify_checkpoint_identity_manifest
 from experiments.project1_transformers_run import _runtime_manifest
 from experiments.source_tree import record_source_tree
 from verify.independent import verify_trace
@@ -78,6 +79,39 @@ def _record_provenance(
     }
 
 
+def _bind_model_identities(model_specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Require each claim-eligible adapter to load the locally fingerprinted checkpoint."""
+
+    bound: list[dict[str, Any]] = []
+    for raw_spec in model_specs:
+        spec = dict(raw_spec)
+        model_id = spec.get("model_id")
+        checkpoint_path = spec.get("checkpoint_path")
+        manifest_path = spec.get("checkpoint_identity_manifest")
+        if not isinstance(model_id, str) or not model_id:
+            raise ValueError("every model requires a non-empty model_id")
+        if not isinstance(checkpoint_path, str) or not checkpoint_path:
+            raise ValueError("every claim-eligible model requires a local checkpoint_path")
+        if not isinstance(manifest_path, str) or not manifest_path:
+            raise ValueError("every claim-eligible model requires a checkpoint_identity_manifest")
+        model_path = Path(model_id).expanduser().resolve()
+        checkpoint = Path(checkpoint_path).expanduser().resolve()
+        if model_path != checkpoint:
+            raise ValueError("claim-eligible model_id must resolve to its local checkpoint_path")
+        identity = verify_checkpoint_identity_manifest(
+            manifest_path,
+            model_id=model_id,
+            revision=spec.get("revision"),
+            checkpoint_path=checkpoint,
+        )
+        spec["checkpoint_path"] = str(checkpoint)
+        spec["checkpoint_identity_manifest"] = str(Path(manifest_path).expanduser().resolve())
+        spec["checkpoint_identity_sha256"] = manifest_sha256(manifest_path)
+        spec["checkpoint_content_sha256"] = identity["sha256"]
+        bound.append(spec)
+    return bound
+
+
 def run_fixture(task_spec: str | Path, seeds: Iterable[int]) -> dict[str, Any]:
     runs = []
     for seed in seeds:
@@ -124,6 +158,7 @@ def run_real(
     require_provenance: bool = False,
 ) -> dict[str, Any]:
     task_spec_path = Path(task_spec)
+    model_specs = [dict(spec) for spec in model_specs]
     seeds = tuple(int(seed) for seed in seeds)
     variants = tuple(variant.strip() for variant in variants if variant.strip())
     repair_variants = frozenset(variant.strip() for variant in repair_variants if variant.strip())
@@ -148,6 +183,7 @@ def run_real(
             specialized_model=specialized_model,
             train_holdout_audit=train_holdout_audit,
         )
+        model_specs = _bind_model_identities(model_specs)
     tasks = tuple(task for task in load_tasks(task_spec_path) if not splits or task.split in splits)
     task_spec_sha256 = hashlib.sha256(task_spec_path.read_bytes()).hexdigest()
     rows: list[dict[str, Any]] = []
@@ -225,6 +261,7 @@ def run_real(
                         "checkpoint_path": model_spec.get("checkpoint_path"),
                         "checkpoint_identity_manifest": model_spec.get("checkpoint_identity_manifest"),
                         "checkpoint_identity_sha256": model_spec.get("checkpoint_identity_sha256"),
+                        "checkpoint_content_sha256": model_spec.get("checkpoint_content_sha256"),
                         "seed": seed,
                         "variant": variant,
                         "task_id": task.task_id,
@@ -291,6 +328,7 @@ def run_real(
                 "checkpoint_path": spec.get("checkpoint_path"),
                 "checkpoint_identity_manifest": spec.get("checkpoint_identity_manifest"),
                 "checkpoint_identity_sha256": spec.get("checkpoint_identity_sha256"),
+                "checkpoint_content_sha256": spec.get("checkpoint_content_sha256"),
             }
             for spec in model_specs
         ],
@@ -340,7 +378,7 @@ def main() -> int:
         if not args.specialized_model or not args.train_holdout_audit:
             parser.error("real mode requires --specialized-model and --train-holdout-audit")
         specs = []
-        identities: dict[str, dict[str, str]] = {}
+        identities: dict[str, str] = {}
         for item in args.model_identity_manifest:
             name, raw_path = item.split("=", 1)
             if name in identities:
@@ -348,10 +386,7 @@ def main() -> int:
             path = Path(raw_path)
             if not path.is_file():
                 parser.error(f"checkpoint identity manifest does not exist: {path}")
-            identities[name] = {
-                "checkpoint_identity_manifest": str(path),
-                "checkpoint_identity_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-            }
+            identities[name] = str(path)
         checkpoints: dict[str, str] = {}
         for item in args.model_checkpoint:
             name, path = item.split("=", 1)
@@ -366,7 +401,7 @@ def main() -> int:
                 "model_id": model_id,
                 "revision": revision or None,
                 "checkpoint_path": checkpoints.get(name),
-                **identities.get(name, {}),
+                "checkpoint_identity_manifest": identities.get(name),
             })
         unknown_identities = sorted(set(identities) - {str(spec["name"]) for spec in specs})
         if unknown_identities:
@@ -377,6 +412,9 @@ def main() -> int:
         unknown_checkpoints = sorted(set(checkpoints) - {str(spec["name"]) for spec in specs})
         if unknown_checkpoints:
             parser.error("--model-checkpoint names must match --model names: " + ", ".join(unknown_checkpoints))
+        missing_checkpoints = sorted(str(spec["name"]) for spec in specs if not isinstance(spec.get("checkpoint_path"), str) or not spec["checkpoint_path"])
+        if missing_checkpoints:
+            parser.error("real mode requires --model-checkpoint for every --model: " + ", ".join(missing_checkpoints))
         report = run_real(
             args.project1_root,
             args.task_spec,

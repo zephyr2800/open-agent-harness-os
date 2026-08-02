@@ -1,0 +1,123 @@
+{
+  "agentdojo": {
+    "benchmark_version": "v1.2.2",
+    "conditions": {
+      "clean": {
+        "attack": null,
+        "defense": null,
+        "expected_native_result_rows": 5,
+        "injection_tasks": [],
+        "user_tasks": [
+          "user_task_20",
+          "user_task_3",
+          "user_task_6",
+          "user_task_25",
+          "user_task_2"
+        ]
+      },
+      "direct_injection": {
+        "attack": "direct",
+        "defense": null,
+        "expected_injection_control_rows": 3,
+        "expected_native_result_rows": 18,
+        "expected_user_injection_pair_rows": 15,
+        "injection_tasks": [
+          "injection_task_6",
+          "injection_task_5",
+          "injection_task_10"
+        ],
+        "user_tasks": [
+          "user_task_20",
+          "user_task_3",
+          "user_task_6",
+          "user_task_25",
+          "user_task_2"
+        ]
+      }
+    },
+    "model": "openai-compatible",
+    "policy": {
+      "do_sample": false,
+      "max_new_tokens": 256,
+      "quantization": "4bit",
+      "seed": 0
+    },
+    "source_commit": "089ed468cf3ed0322acc66b0211f26d9d90dbf60",
+    "suite": "workspace"
+  },
+  "checkpoint_scope": {
+    "audit_requirement": "train-holdout-audit/v1, passed with the complete frozen fixture gate",
+    "training_sources": [
+      {
+        "rows": 3232,
+        "sha256": "d226a3246cd646ce1b1e7d1350d665749f4a986ec854d4314a885e12702d5ed6"
+      }
+    ]
+  },
+  "claim_boundary": "This registration fixes a narrow native diagnostic before the clean 9B checkpoint is evaluated. It is not a full benchmark score, a general-capability claim, a security certification, or evidence that verifier-backed RL improves the policy.",
+  "created_before_checkpoint": "2026-08-01T23:45:00-04:00",
+  "registration_id": "clean-9b-native-v1",
+  "schema": "native-external-evaluation-registration/v1",
+  "selection": {
+    "agentdojo": {
+      "historical_exclusion": {
+        "observed_task_ids": [
+          "injection_task_0",
+          "injection_task_1",
+          "injection_task_2",
+          "injection_task_3",
+          "injection_task_4",
+          "user_task_1",
+          "user_task_16",
+          "user_task_17",
+          "user_task_18",
+          "user_task_22"
+        ],
+        "source": "local historical AgentDojo native-log inventory, frozen before this registration"
+      },
+      "injection_rank_label": "agentdojo-native-v1-injection",
+      "method": "sha256-min-rank-with-historical-exclusion/v1",
+      "user_rank_label": "agentdojo-native-v1-user"
+    },
+    "tau2": {
+      "method": "sha256-family-stratified/v1",
+      "per_family": 2,
+      "seed": "native-external-v1"
+    }
+  },
+  "tau2": {
+    "budget": {
+      "max_concurrency": 1,
+      "max_errors": 10,
+      "max_retries": 0,
+      "max_steps": 30,
+      "num_trials": 1
+    },
+    "domain": "telecom",
+    "policy": {
+      "do_sample": false,
+      "max_new_tokens": 256,
+      "quantization": "4bit",
+      "seed": 0
+    },
+    "runtime": {
+      "python_version_prefix": "3.12",
+      "tau2_version": "1.0.1"
+    },
+    "source_commit": "363133ada1936491fb5bcec33cd62c3518a99f65",
+    "task_ids": [
+      "[mms_issue]break_app_both_permissions|data_usage_exceeded[PERSONA:Hard]",
+      "[mms_issue]airplane_mode_on|break_app_both_permissions[PERSONA:Hard]",
+      "[mobile_data_issue]data_mode_off|data_usage_exceeded|user_abroad_roaming_disabled_off[PERSONA:Hard]",
+      "[mobile_data_issue]airplane_mode_on|bad_network_preference|bad_vpn|data_mode_off|data_usage_exceeded|user_abroad_roaming_enabled_off[PERSONA:Easy]",
+      "[service_issue]airplane_mode_on|break_apn_settings|lock_sim_card_pin|overdue_bill_suspension[PERSONA:Hard]",
+      "[service_issue]break_apn_settings|contract_end_suspension|lock_sim_card_pin[PERSONA:Hard]"
+    ],
+    "task_set": "telecom",
+    "task_split": "base"
+  },
+  "variants": [
+    "model-only",
+    "repair"
+  ]
+}

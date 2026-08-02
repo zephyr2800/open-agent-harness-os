@@ -21,6 +21,7 @@ from statistics import mean
 from typing import Any
 
 from experiments.source_tree import verify_source_tree_record
+from experiments.native_evaluation_registration import verify_registration_record
 
 
 SCHEMA = "agentdojo-native-result-validation/v1"
@@ -523,6 +524,13 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
         attack=attack,
     )
     native_records = _validate_native_output(manifest, run_dir=run_dir, expected=expected)
+    registration = verify_registration_record(manifest["registration"]) if "registration" in manifest else None
+    if registration is not None:
+        if registration["benchmark"] != "agentdojo":
+            raise ValueError("manifest preregistration is not an AgentDojo registration")
+        expected_condition = "direct_injection" if injection_tasks else "clean"
+        if registration.get("condition") != expected_condition:
+            raise ValueError("manifest preregistration condition does not match the native AgentDojo selectors")
     return {
         "run_dir": run_dir,
         "checkpoint_records": checkpoint_records,
@@ -540,6 +548,7 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
         },
         "expected_logs": expected,
         "native_records": native_records,
+        "registration": registration,
     }
 
 
@@ -612,6 +621,7 @@ def validate_native_result(run_manifest_path: str | Path) -> dict[str, Any]:
             "checkpoint": validated["checkpoint_records"],
             "adapter": validated["adapter_binding"],
             "native_logs": native_records,
+            **({"registration": validated["registration"]} if validated["registration"] is not None else {}),
         },
         "attestation": {
             "status": "not_provided",

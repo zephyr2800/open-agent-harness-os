@@ -13,6 +13,11 @@ own selector catalog; then writes `run_manifest.json`. Add
 `--execute` only after the active SFT job has
 finished and no other process owns the GPU.
 
+An executed native run additionally requires a checked-in preregistration. The
+current clean-9B protocol is
+`benchmarks/fixtures/native-external-registration-v1.json`; see
+[`NATIVE_EVALUATION_REGISTRATION_2026-08-01.md`](NATIVE_EVALUATION_REGISTRATION_2026-08-01.md).
+
 ```powershell
 $py = 'C:\Users\steve\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
 $root = 'C:\Users\steve\Documents\Codex\2026-07-25\ru'
@@ -23,6 +28,7 @@ $root = 'C:\Users\steve\Documents\Codex\2026-07-25\ru'
   --agentdojo-root (Join-Path $root 'work\external\agentdojo') `
   --agentdojo-runtime (Join-Path $root 'work\external\agentdojo-runtime') `
   --run-dir (Join-Path $root 'work\external\agentdojo-clean-9b-model-only') `
+  --registration benchmarks/fixtures/native-external-registration-v1.json `
   --variant model-only `
   --user-task user_task_17
 ```

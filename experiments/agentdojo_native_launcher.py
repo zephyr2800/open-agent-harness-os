@@ -29,6 +29,7 @@ from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
+from experiments.native_evaluation_registration import validate_agentdojo_registration
 from experiments.source_tree import record_source_tree
 
 
@@ -84,6 +85,7 @@ class NativeRunConfig:
     max_new_tokens: int
     quantization: str | None
     port: int
+    registration: Path | None = None
 
 
 def _sha256(path: Path) -> str:
@@ -333,8 +335,27 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
     environment, pythonpath = _agentdojo_environment(config)
     selector_catalog = _selector_catalog(config, environment)
     _validate_selectors(config, selector_catalog)
+    registration = (
+        validate_agentdojo_registration(
+            config.registration,
+            training_sources=audit_gate["training_sources"],
+            variant=config.variant,
+            source_commit=agentdojo_commit,
+            benchmark_version=config.benchmark_version,
+            suite=config.suite,
+            user_tasks=config.user_tasks,
+            injection_tasks=config.injection_tasks,
+            attack=config.attack,
+            defense=config.defense,
+            seed=config.seed,
+            max_new_tokens=config.max_new_tokens,
+            quantization=config.quantization,
+        )
+        if config.registration is not None
+        else None
+    )
     adapter = REPO_ROOT / "experiments" / "agentdojo_adapter_server.py"
-    return {
+    plan = {
         "schema": "agentdojo-native-run/v1",
         "status": "planned",
         "created_at_unix": time.time(),
@@ -392,6 +413,9 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
         },
         "environment": environment,
     }
+    if registration is not None:
+        plan["registration"] = registration
+    return plan
 
 
 def _assert_port_available(port: int) -> None:
@@ -539,6 +563,7 @@ def _config_from_args(args: argparse.Namespace) -> NativeRunConfig:
         max_new_tokens=args.max_new_tokens,
         quantization=args.quantization,
         port=args.port,
+        registration=Path(args.registration).expanduser().resolve() if args.registration else None,
     )
 
 
@@ -562,10 +587,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"), default="4bit")
     parser.add_argument("--port", type=int, default=8089)
+    parser.add_argument("--registration", help="checked-in preregistration required with --execute")
     parser.add_argument("--execute", action="store_true", help="start the adapter and invoke AgentDojo; omit to write only a validated plan")
     args = parser.parse_args(argv)
     try:
         config = _config_from_args(args)
+        if args.execute and config.registration is None:
+            raise ValueError("--execute requires --registration so external task selection and budgets are precommitted")
         plan = build_plan(config)
         config.run_dir.mkdir(parents=True, exist_ok=False)
         _write_json_atomic(config.run_dir / "run_manifest.json", plan)

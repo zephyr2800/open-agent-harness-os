@@ -122,6 +122,21 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
         self.assertIn("--enable-repair", plan["commands"]["adapter"])
         self.assertEqual(plan["variant"], "repair")
 
+    def test_plan_records_a_preregistered_external_condition(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = replace(self._config(root), registration=root / "registration.json")
+            record = {"schema": "native-external-evaluation-registration-record/v1", "registration_id": "test"}
+            with (
+                mock.patch("experiments.agentdojo_native_launcher._git", side_effect=["b" * 40, ""]),
+                mock.patch("experiments.agentdojo_native_launcher._selector_catalog", return_value=_selector_catalog()),
+                mock.patch("experiments.agentdojo_native_launcher.validate_agentdojo_registration", return_value=record) as registered,
+            ):
+                plan = build_plan(config)
+        self.assertEqual(plan["registration"], record)
+        self.assertEqual(registered.call_args.kwargs["source_commit"], "b" * 40)
+        self.assertEqual(registered.call_args.kwargs["user_tasks"], ("user_task_17",))
+
     def test_injection_selector_requires_an_attack(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = replace(self._config(Path(directory)), injection_tasks=("injection_task_3",))

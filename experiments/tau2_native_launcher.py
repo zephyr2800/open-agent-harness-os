@@ -39,6 +39,7 @@ from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
+from experiments.native_evaluation_registration import validate_tau2_registration
 from experiments.source_tree import record_source_tree
 
 
@@ -160,6 +161,7 @@ class Tau2NativeRunConfig:
     max_new_tokens: int
     quantization: str | None
     port: int
+    registration: Path | None = None
 
 
 def _sha256(path: Path) -> str:
@@ -523,9 +525,33 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
     selector_catalog = _selector_catalog(config, environment)
     _validate_selectors(config, selector_catalog)
     compatibility = _compatibility_probe(config, environment)
+    registration = (
+        validate_tau2_registration(
+            config.registration,
+            training_sources=audit_gate["training_sources"],
+            variant=config.variant,
+            source_commit=tau2_commit,
+            tau2_version=runtime.get("tau2_version") if isinstance(runtime.get("tau2_version"), str) else None,
+            python_version=runtime.get("python_version") if isinstance(runtime.get("python_version"), str) else None,
+            domain=config.domain,
+            task_set=config.task_set,
+            task_split=config.task_split,
+            task_ids=config.task_ids,
+            seed=config.seed,
+            max_new_tokens=config.max_new_tokens,
+            quantization=config.quantization,
+            num_trials=config.num_trials,
+            max_steps=config.max_steps,
+            max_errors=config.max_errors,
+            max_concurrency=1,
+            max_retries=0,
+        )
+        if config.registration is not None
+        else None
+    )
     adapter = REPO_ROOT / "experiments" / "agentdojo_adapter_server.py"
     runner_wrapper = REPO_ROOT / "experiments" / "tau2_native_runner.py"
-    return {
+    plan = {
         "schema": "tau2-native-run/v1",
         "status": "planned",
         "created_at_unix": time.time(),
@@ -598,6 +624,9 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
         },
         "environment": environment,
     }
+    if registration is not None:
+        plan["registration"] = registration
+    return plan
 
 
 def _assert_port_available(port: int) -> None:
@@ -845,6 +874,7 @@ def _config_from_args(args: argparse.Namespace) -> Tau2NativeRunConfig:
         max_new_tokens=args.max_new_tokens,
         quantization=args.quantization,
         port=args.port,
+        registration=Path(args.registration).expanduser().resolve() if args.registration else None,
     )
 
 
@@ -882,10 +912,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"), default="4bit")
     parser.add_argument("--port", type=int, default=8090)
+    parser.add_argument("--registration", help="checked-in preregistration required with --execute")
     parser.add_argument("--execute", action="store_true", help="start the adapter and invoke τ³-bench; omit to write only a validated plan")
     args = parser.parse_args(argv)
     try:
         config = _config_from_args(args)
+        if args.execute and config.registration is None:
+            raise ValueError("--execute requires --registration so external task selection and budgets are precommitted")
         plan = build_plan(config)
         config.run_dir.mkdir(parents=True, exist_ok=False)
         _write_json_atomic(config.run_dir / "run_manifest.json", plan)

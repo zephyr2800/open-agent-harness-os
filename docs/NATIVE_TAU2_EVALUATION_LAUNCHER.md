@@ -29,6 +29,12 @@ The launcher rejects a run unless all of these are true:
 
 Every plan records the selector-catalog hash, checkpoint and source hashes, τ³-bench commit/runtime details, commands, environment, and the exact adapter variant. Execution writes the official output to τ³-bench's native result directory and copies that tree into the immutable run directory alongside adapter and benchmark logs.
 
+The live runner requires the checked-in
+`benchmarks/fixtures/native-external-registration-v1.json` protocol. It freezes
+the source commit, six deterministic telecom selectors, runtime, policy,
+budget, variant order, and clean-SFT training source. See
+[`NATIVE_EVALUATION_REGISTRATION_2026-08-01.md`](NATIVE_EVALUATION_REGISTRATION_2026-08-01.md).
+
 ## Dry-plan example
 
 Run this only after a clean merged checkpoint exists. Omit `--execute` to validate every invariant without loading the model.
@@ -42,6 +48,7 @@ python -m experiments.tau2_native_launcher `
   --tau2-runtime C:\path\to\tau2-runtime `
   --python C:\path\to\tau2-runtime\Scripts\python.exe `
   --run-dir C:\path\to\new-native-run `
+  --registration benchmarks/fixtures/native-external-registration-v1.json `
   --task-id "[mobile_data_issue]airplane_mode_on|user_abroad_roaming_enabled_off[PERSONA:None]"
 ```
 

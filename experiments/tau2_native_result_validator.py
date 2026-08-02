@@ -24,6 +24,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from experiments.source_tree import verify_source_tree_record
+from experiments.native_evaluation_registration import verify_registration_record
 
 
 SCHEMA = "tau2-native-result-validation/v1"
@@ -357,6 +358,13 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
     if schema_record["sha256"] != preserved_record["sha256"] or schema_record["bytes"] != preserved_record["bytes"]:
         raise ValueError("native results schema validation is not bound to the preserved results bytes")
 
+    registration = verify_registration_record(manifest["registration"]) if "registration" in manifest else None
+    if registration is not None:
+        if registration["benchmark"] != "tau2":
+            raise ValueError("manifest preregistration is not a tau2 registration")
+        if registration.get("condition") != "official-solo-telecom":
+            raise ValueError("manifest preregistration condition does not match the native tau2 solo condition")
+
     return {
         "run_dir": run_dir,
         "checkpoint_directory": checkpoint_directory,
@@ -372,6 +380,7 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
         "native_results": Path(preserved_record["path"]),
         "native_results_record": preserved_record,
         "schema_validation": dict(schema_validation),
+        "registration": registration,
     }
 
 
@@ -534,6 +543,7 @@ def validate_native_result(run_manifest_path: str | Path) -> dict[str, Any]:
             "runner_wrapper": validated["wrapper_record"],
             "runner_compatibility": validated["compatibility"],
             "native_schema_validation": validated["schema_validation"],
+            **({"registration": validated["registration"]} if validated["registration"] is not None else {}),
         },
         "attestation": {
             "status": "not_provided",

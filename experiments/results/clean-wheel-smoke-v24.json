@@ -1,0 +1,65 @@
+{
+  "build": {
+    "method": "pip wheel from clean source copy",
+    "source_copy_excludes": [
+      ".git",
+      ".pytest_cache",
+      ".venv",
+      "__pycache__",
+      "build",
+      "dist",
+      "outputs",
+      "work"
+    ],
+    "wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+    "wheel_count": 1,
+    "wheel_returncode": 0,
+    "wheel_stderr_tail": "\n[notice] A new release of pip is available: 26.0.1 -> 26.2\n[notice] To update, run: C:\\Users\\steve\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe -m pip install --upgrade pip\n",
+    "wheel_stdout_tail": "Processing .\\.\n  Installing build dependencies: started\n  Installing build dependencies: finished with status 'done'\n  Getting requirements to build wheel: started\n  Getting requirements to build wheel: finished with status 'done'\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: open-agent-harness-os\n  Building wheel for open-agent-harness-os (pyproject.toml): started\n  Building wheel for open-agent-harness-os (pyproject.toml): finished with status 'done'\n  Created wheel for open-agent-harness-os: filename=open_agent_harness_os-0.1.8-py3-none-any.whl size=190701 sha256=5c6fae49bc431c1946d68c19dff8244144e606d19b506351977ae731ed12958d\n  Stored in directory: C:\\Users\\steve\\AppData\\Local\\Temp\\pip-ephem-wheel-cache-u4xal0bs\\wheels\\b4\\55\\d6\\45f1ef91a1dd4a0a033f84f9b6bd9e1aa15cb13f86ac2e4090\nSuccessfully built open-agent-harness-os\n"
+  },
+  "bytecode_entries": 0,
+  "bytecode_free": true,
+  "console_scripts_match": true,
+  "demo_returncode": 0,
+  "demo_verified_success": true,
+  "has_license_file": true,
+  "imports_returncode": 0,
+  "install_returncode": 0,
+  "metadata_license": [
+    "License: Apache-2.0"
+  ],
+  "passed": true,
+  "reference_wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+  "reference_wheel_manifest_sha256": "62a0c8ed05e763acf4f6a2cc4ad7bfd50fa2322448fbbc42160d8d8d6ebeecb0",
+  "reference_wheel_sha256": "5c6fae49bc431c1946d68c19dff8244144e606d19b506351977ae731ed12958d",
+  "schema": "clean-wheel-smoke/v1",
+  "source_console_scripts": [
+    "harness = app.cli:main",
+    "harness-agentdojo-adapter = experiments.agentdojo_adapter_server:main",
+    "harness-factorial = experiments.factorial:main",
+    "harness-preflight = experiments.launch_preflight:main",
+    "harness-promotion-decision = experiments.promotion_decision:main",
+    "harness-replay = traces.replay:main",
+    "harness-scorecard = experiments.scorecard:main"
+  ],
+  "source_matches_wheel": true,
+  "source_package_sha256": "39b80353eab84c6528cf554fd7d30242eefcdad538a3cb66b41a687f732beeb8",
+  "stderr_tail": "",
+  "target": "isolated-target",
+  "target_created_by_runner": true,
+  "wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+  "wheel_bytes": 190701,
+  "wheel_console_scripts": [
+    "harness = app.cli:main",
+    "harness-agentdojo-adapter = experiments.agentdojo_adapter_server:main",
+    "harness-factorial = experiments.factorial:main",
+    "harness-preflight = experiments.launch_preflight:main",
+    "harness-promotion-decision = experiments.promotion_decision:main",
+    "harness-replay = traces.replay:main",
+    "harness-scorecard = experiments.scorecard:main"
+  ],
+  "wheel_manifest_matches_reference": true,
+  "wheel_manifest_sha256": "62a0c8ed05e763acf4f6a2cc4ad7bfd50fa2322448fbbc42160d8d8d6ebeecb0",
+  "wheel_package_sha256": "39b80353eab84c6528cf554fd7d30242eefcdad538a3cb66b41a687f732beeb8",
+  "wheel_sha256": "5c6fae49bc431c1946d68c19dff8244144e606d19b506351977ae731ed12958d"
+}

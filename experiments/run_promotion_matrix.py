@@ -111,6 +111,8 @@ def _run_report(
     elapsed_seconds: float,
     complete: bool,
     active_task_id: str | None = None,
+    temperature: float = 0.7,
+    top_p: float = 0.9,
 ) -> dict[str, Any]:
     """Build a resumable report for a complete or in-progress task spec."""
 
@@ -139,6 +141,8 @@ def _run_report(
         "task_spec_sha256": _sha256(task_spec),
         "seed": seed,
         "do_sample": do_sample,
+        "temperature": temperature,
+        "top_p": top_p,
         "enable_repair": enable_repair,
         "quantization": os.environ.get("ACTION_MODEL_QUANTIZATION"),
         "complete": complete,
@@ -175,6 +179,8 @@ def _run_spec(
     seed: int,
     do_sample: bool,
     enable_repair: bool,
+    temperature: float = 0.7,
+    top_p: float = 0.9,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
     checkpoint_every_tasks: int = 5,
     initial_rows: list[dict[str, Any]] | None = None,
@@ -203,6 +209,8 @@ def _run_spec(
                 elapsed_seconds=time.perf_counter() - started,
                 complete=False,
                 active_task_id=task.task_id,
+                temperature=temperature,
+                top_p=top_p,
             ))
         _, registry = make_memory_registry(
             task.initial_files,
@@ -341,6 +349,8 @@ def _run_spec(
                 elapsed_seconds=time.perf_counter() - started,
                 complete=False,
                 active_task_id=tasks[task_index + 1].task_id if task_index + 1 < len(tasks) else None,
+                temperature=temperature,
+                top_p=top_p,
             ))
     return _run_report(
         task_spec,
@@ -350,6 +360,8 @@ def _run_spec(
         rows=rows,
         elapsed_seconds=time.perf_counter() - started,
         complete=True,
+        temperature=temperature,
+        top_p=top_p,
     )
 
 
@@ -376,6 +388,8 @@ def main() -> int:
     )
     parser.add_argument("--seeds", default="0,1,2")
     parser.add_argument("--do-sample", action="store_true")
+    parser.add_argument("--temperature", type=float, default=0.7)
+    parser.add_argument("--top-p", type=float, default=0.9)
     parser.add_argument("--repair", action="store_true")
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--quantization", choices=("4bit", "int4", "nf4"))
@@ -387,6 +401,12 @@ def main() -> int:
         parser.error("--checkpoint-every-tasks must be positive")
     if args.heartbeat_seconds <= 0:
         parser.error("--heartbeat-seconds must be positive")
+    if args.temperature <= 0:
+        parser.error("--temperature must be positive")
+    if not 0 < args.top_p <= 1:
+        parser.error("--top-p must be in (0, 1]")
+    if not args.do_sample and (args.temperature != 0.7 or args.top_p != 0.9):
+        parser.error("--temperature and --top-p require --do-sample")
     project1_root = Path(args.project1_root)
     checkpoint = Path(args.checkpoint)
     task_specs = [Path(item) for item in args.task_spec]
@@ -439,6 +459,8 @@ def main() -> int:
                 and saved.get("seeds") == seeds
                 and saved.get("task_specs") == [str(path) for path in task_specs]
                 and bool(saved.get("do_sample")) == bool(args.do_sample)
+                and saved.get("temperature") == args.temperature
+                and saved.get("top_p") == args.top_p
                 and bool(saved.get("enable_repair")) == bool(args.repair)
                 and int(saved.get("max_new_tokens", 256)) == args.max_new_tokens
                 and int(saved.get("checkpoint_every_tasks", 5)) == args.checkpoint_every_tasks
@@ -473,6 +495,8 @@ def main() -> int:
             "seeds": seeds,
             "task_specs": [str(path) for path in task_specs],
             "do_sample": args.do_sample,
+            "temperature": args.temperature,
+            "top_p": args.top_p,
             "enable_repair": args.repair,
             "max_new_tokens": args.max_new_tokens,
             "checkpoint_every_tasks": args.checkpoint_every_tasks,
@@ -513,6 +537,8 @@ def main() -> int:
             revision="main",
             seed=seed,
             do_sample=args.do_sample,
+            temperature=args.temperature,
+            top_p=args.top_p,
             enable_repair=args.repair,
             max_new_tokens=args.max_new_tokens,
             quantization=args.quantization,
@@ -542,6 +568,8 @@ def main() -> int:
                 seed=seed,
                 do_sample=args.do_sample,
                 enable_repair=args.repair,
+                temperature=args.temperature,
+                top_p=args.top_p,
                 on_progress=persist_report,
                 checkpoint_every_tasks=args.checkpoint_every_tasks,
                 initial_rows=initial_rows,
@@ -557,6 +585,8 @@ def main() -> int:
         "seeds": seeds,
         "task_specs": [str(path) for path in task_specs],
         "do_sample": args.do_sample,
+        "temperature": args.temperature,
+        "top_p": args.top_p,
         "enable_repair": args.repair,
         "max_new_tokens": args.max_new_tokens,
         "checkpoint_every_tasks": args.checkpoint_every_tasks,

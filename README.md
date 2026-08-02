@@ -25,9 +25,9 @@ actually complete.
 
 The local developer-preview harness passes its documented product checks:
 
-- Project 2 tests: 137/137 (including dense-reliability, source-bound wheel integrity, scorecard, promotion-protocol, and native-evaluation-launcher checks)
+- Project 2 tests: 151/151 (including dense-reliability, source-bound wheel integrity, scorecard, promotion-protocol, and native-evaluation-launcher checks)
 - Project 1 tests: 47/47
-- Launch preflight: 16/16 (including a fresh clean-source wheel build and extracted-wheel installation smoke)
+- Launch preflight v12: 16/16 (including a fresh clean-source wheel build, source-tree binding, and extracted-wheel installation smoke)
 
 The associated Qwopus3.5-9B frozen promotion matrix completed privately under a
 fixed protocol: 483/552 independently verified successes (87.5%), zero unsafe
@@ -46,7 +46,7 @@ python -m venv .venv
 pip install -e .
 python -m unittest discover -s tests -v
 python -m pip wheel . --no-deps --wheel-dir work/package-dist
-python -m experiments.launch_preflight --with-tests
+python -m experiments.launch_preflight --with-tests --output experiments/results/launch-preflight-local.json
 ```
 
 The companion project uses intentionally local package names such as

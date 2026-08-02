@@ -139,12 +139,12 @@ model claim.
 - `experiments/results/product-smoke-v0.json` covers six workflows with 1.0
   protocol validity, 0.833333 verified-success rate, and a deliberate safety
   denial for high-risk delete.
-- `experiments/results/launch-preflight-v9.json` is a fresh local developer-
+- `experiments/results/launch-preflight-v12.json` is the current local developer-
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 137-test source suite passed at artifact creation. It builds from a
+  the 151-test source suite passed at artifact creation. It builds from a
   clean source copy, binds the complete wheel archive, modules, and console
   scripts to a fresh source-derived reference, and rejects Python bytecode
   caches. It
@@ -379,7 +379,8 @@ available.
   SHA-256 is recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`;
   it contains the explicit non-loopback authentication-plus-TLS gate.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout
-  command `python -m experiments.launch_preflight --with-tests`; the artifact
+  command `python -m experiments.launch_preflight --with-tests --output
+  experiments/results/launch-preflight-local.json`; the artifact
   explicitly records 12 concurrent writes, 12 valid traces after a fresh
   store restart, and is scoped to the local developer preview; it does not
   claim public authentication, multi-user isolation, or external-benchmark

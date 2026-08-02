@@ -38,6 +38,9 @@ the policy.
   for a hidden or native external suite.
 - At least three decoding seeds are required for a completed checkpoint; an
   independent training seed is preferred for a paper claim.
+- A stochastic matrix must record its exact temperature and nucleus threshold
+  with every run and use the same values for every compared arm. Sampling
+  controls are invalid when sampling is disabled.
 - Tool aliases, reordered tool descriptions, long-horizon state dependencies,
   insufficient information, confirmation boundaries, and indirect injection
   are separate slices.

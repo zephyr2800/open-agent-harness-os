@@ -224,6 +224,20 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual(exited.exception.code, 2)
         self.assertIn("--task-spec must name each pinned fixture", stderr.getvalue())
 
+    def test_promotion_matrix_rejects_sampling_knobs_without_sampling(self) -> None:
+        task_spec = ROOT / "benchmarks" / "fixtures" / "task-spec-research-v4.json"
+        with mock.patch.object(sys, "argv", [
+            "run_promotion_matrix", "--project1-root", "missing-project", "--checkpoint", "missing-checkpoint",
+            "--output", "missing-output.json", "--train-holdout-audit", "missing-audit.json",
+            "--holdout-novelty-audit", "missing-novelty.json", "--task-spec", str(task_spec),
+            "--temperature", "0.5",
+        ]):
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as exited:
+                promotion_matrix_main()
+        self.assertEqual(exited.exception.code, 2)
+        self.assertIn("require --do-sample", stderr.getvalue())
+
     def test_promotion_matrix_heartbeat_is_claim_safe_and_timestamped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "matrix.heartbeat.json"
@@ -460,11 +474,15 @@ class ExperimentTests(unittest.TestCase):
             rows=[row],
             elapsed_seconds=0.2,
             complete=False,
+            temperature=0.55,
+            top_p=0.82,
         )
         self.assertFalse(report["complete"])
         self.assertEqual(report["task_count"], 1)
         self.assertEqual(report["rows"][0]["expected_action_count"], 3)
         self.assertEqual(report["runtime_replay_agreement"], 1.0)
+        self.assertEqual(report["temperature"], 0.55)
+        self.assertEqual(report["top_p"], 0.82)
 
     def test_real_report_verifier_replays_protocol_error_traces(self) -> None:
         report = {"rows": [{"model": "qwen", "variant": "H1", "seed": 0, "task_id": "t", "protocol_valid": False, "verified_success": False, "trace_jsonl": run_action("real-audit", "Write x", "write_file", {"path": "x", "content": "y"})["trace_jsonl"]}]}

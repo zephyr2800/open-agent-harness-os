@@ -7,6 +7,9 @@ from pathlib import Path
 from experiments.tua_bench_preflight import REQUIRED_CHECKOUT_PATHS, build_preflight
 
 
+_PINNED_COMMIT = "a" * 40
+
+
 def _git_clean(_: Path, args: tuple[str, ...]) -> tuple[int, str, str]:
     if args == ("rev-parse", "HEAD"):
         return 0, "a" * 40, ""
@@ -42,6 +45,7 @@ class TuaBenchPreflightTests(unittest.TestCase):
             asset.write_bytes(b"fixture")
             report = build_preflight(
                 root,
+                expected_commit=_PINNED_COMMIT,
                 required_assets=["generated/fixture.bin"],
                 command_lookup=lambda name: f"C:/tools/{name}.exe",
                 git_runner=_git_clean,
@@ -57,6 +61,7 @@ class TuaBenchPreflightTests(unittest.TestCase):
             self._checkout(root)
             report = build_preflight(
                 root,
+                expected_commit=_PINNED_COMMIT,
                 command_lookup=lambda _: None,
                 git_runner=_git_clean,
             )
@@ -72,6 +77,7 @@ class TuaBenchPreflightTests(unittest.TestCase):
             self._checkout(root)
             report = build_preflight(
                 root,
+                expected_commit="b" * 40,
                 required_assets=["README.md"],
                 command_lookup=lambda name: "podman" if name == "podman" else "uv",
                 git_runner=_git_dirty,
@@ -79,6 +85,7 @@ class TuaBenchPreflightTests(unittest.TestCase):
             (root / "uv.lock").unlink()
             incomplete = build_preflight(
                 root,
+                expected_commit=_PINNED_COMMIT,
                 required_assets=["README.md"],
                 command_lookup=lambda name: "podman" if name == "podman" else "uv",
                 git_runner=_git_clean,
@@ -100,6 +107,7 @@ class TuaBenchPreflightTests(unittest.TestCase):
             unrelated.write_bytes(b"not a checkout asset")
             report = build_preflight(
                 root,
+                expected_commit=_PINNED_COMMIT,
                 required_assets=[unrelated],
                 command_lookup=lambda name: f"C:/tools/{name}.exe",
                 git_runner=_git_clean,
@@ -108,6 +116,34 @@ class TuaBenchPreflightTests(unittest.TestCase):
         self.assertFalse(report["passed"])
         self.assertFalse(assets["passed"])
         self.assertEqual(assets["detail"]["outside_checkout_paths"], [str(unrelated.resolve())])
+
+    def test_host_preflight_requires_a_matching_full_commit_pin(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._checkout(root)
+            asset = root / "generated" / "fixture.bin"
+            asset.parent.mkdir()
+            asset.write_bytes(b"fixture")
+            mismatch = build_preflight(
+                root,
+                expected_commit="b" * 40,
+                required_assets=[asset],
+                command_lookup=lambda name: f"C:/tools/{name}.exe",
+                git_runner=_git_clean,
+            )
+            omitted = build_preflight(
+                root,
+                required_assets=[asset],
+                command_lookup=lambda name: f"C:/tools/{name}.exe",
+                git_runner=_git_clean,
+            )
+        mismatch_checkout = next(item for item in mismatch["checks"] if item["id"] == "tua_checkout")
+        omitted_checkout = next(item for item in omitted["checks"] if item["id"] == "tua_checkout")
+        self.assertFalse(mismatch["passed"])
+        self.assertFalse(mismatch_checkout["detail"]["commit_matches_expected"])
+        self.assertTrue(mismatch_checkout["detail"]["expected_commit_valid"])
+        self.assertFalse(omitted["passed"])
+        self.assertFalse(omitted_checkout["detail"]["expected_commit_valid"])
 
 
 if __name__ == "__main__":

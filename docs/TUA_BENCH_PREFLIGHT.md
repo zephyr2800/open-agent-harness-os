@@ -20,6 +20,7 @@ host that does not yet have a container backend or `uv`:
 ```powershell
 python -m experiments.tua_bench_preflight `
   --tua-root C:\path\to\TUA-Bench `
+  --expected-commit <full-40-hex-TUA-Bench-commit> `
   --output work\external\tua-bench-host-preflight.json `
   --fail-on-blocker
 ```
@@ -31,10 +32,15 @@ treating a source checkout alone as proof that its generated task assets exist:
 ```powershell
 python -m experiments.tua_bench_preflight `
   --tua-root C:\path\to\TUA-Bench `
+  --expected-commit <full-40-hex-TUA-Bench-commit> `
   --required-asset <path-created-by-setup-env> `
   --output work\external\tua-bench-host-preflight.json `
   --fail-on-blocker
 ```
+
+The expected commit is mandatory. The report passes its checkout gate only
+when `git rev-parse HEAD` is a clean, full SHA-1 matching that exact value;
+recording an arbitrary clean checkout is not source-bound evidence.
 
 Do not run TUA-Bench until a separately reviewed, source-bound policy bridge,
 task selection, fixed budgets, native grader, and artifact-preservation plan

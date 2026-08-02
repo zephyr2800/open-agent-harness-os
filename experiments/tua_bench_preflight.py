@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 from collections.abc import Callable, Iterable
@@ -21,6 +22,7 @@ from typing import Any
 
 
 SCHEMA = "tua-bench-host-preflight/v1"
+_FULL_GIT_SHA1 = re.compile(r"^[0-9a-f]{40}$")
 REQUIRED_CHECKOUT_PATHS = (
     "README.md",
     "LICENSE",
@@ -53,16 +55,22 @@ def _command_record(name: str, lookup: CommandLookup) -> dict[str, Any]:
     return {"name": name, "available": bool(path), "path": path}
 
 
-def _checkout_check(root: Path, git_runner: GitRunner) -> dict[str, Any]:
+def _checkout_check(
+    root: Path,
+    git_runner: GitRunner,
+    expected_commit: str | None,
+) -> dict[str, Any]:
     exists = root.is_dir()
     missing = [name for name in REQUIRED_CHECKOUT_PATHS if not (root / name).exists()] if exists else list(REQUIRED_CHECKOUT_PATHS)
     commit: str | None = None
     dirty: str | None = None
     git_error: str | None = None
+    normalized_expected = expected_commit.lower() if isinstance(expected_commit, str) else None
+    expected_commit_valid = bool(normalized_expected and _FULL_GIT_SHA1.fullmatch(normalized_expected))
     if exists:
         code, stdout, stderr = git_runner(root, ("rev-parse", "HEAD"))
         if code == 0 and stdout:
-            commit = stdout
+            commit = stdout.lower()
         else:
             git_error = stderr or stdout or "git rev-parse failed"
         if git_error is None:
@@ -71,7 +79,20 @@ def _checkout_check(root: Path, git_runner: GitRunner) -> dict[str, Any]:
                 dirty = stdout
             else:
                 git_error = stderr or stdout or "git status failed"
-    passed = exists and not missing and commit is not None and not dirty and git_error is None
+    actual_commit_valid = bool(commit and _FULL_GIT_SHA1.fullmatch(commit))
+    commit_matches_expected = bool(
+        expected_commit_valid
+        and actual_commit_valid
+        and commit == normalized_expected
+    )
+    passed = (
+        exists
+        and not missing
+        and actual_commit_valid
+        and commit_matches_expected
+        and not dirty
+        and git_error is None
+    )
     return _check(
         "tua_checkout",
         passed,
@@ -81,6 +102,10 @@ def _checkout_check(root: Path, git_runner: GitRunner) -> dict[str, Any]:
             "required_paths": list(REQUIRED_CHECKOUT_PATHS),
             "missing_paths": missing,
             "commit": commit,
+            "expected_commit": normalized_expected,
+            "expected_commit_valid": expected_commit_valid,
+            "actual_commit_valid": actual_commit_valid,
+            "commit_matches_expected": commit_matches_expected,
             "clean": dirty == "" if dirty is not None else False,
             "git_error": git_error,
         },
@@ -148,6 +173,7 @@ def _assets_check(root: Path, required_assets: Iterable[str | Path]) -> dict[str
 def build_preflight(
     tua_root: str | Path,
     *,
+    expected_commit: str | None = None,
     required_assets: Iterable[str | Path] = (),
     command_lookup: CommandLookup = shutil.which,
     git_runner: GitRunner = _default_git_runner,
@@ -156,7 +182,7 @@ def build_preflight(
 
     root = Path(tua_root).expanduser().resolve()
     checks = [
-        _checkout_check(root, git_runner),
+        _checkout_check(root, git_runner, expected_commit),
         _backend_check(command_lookup),
         _uv_check(command_lookup),
         _assets_check(root, required_assets),
@@ -194,6 +220,11 @@ def build_preflight(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tua-root", required=True, help="path to a pinned TUA-Bench checkout")
+    parser.add_argument(
+        "--expected-commit",
+        required=True,
+        help="full 40-hex commit SHA that the pinned TUA-Bench checkout must resolve to",
+    )
     parser.add_argument("--output", required=True, help="path for the JSON preflight report")
     parser.add_argument(
         "--required-asset",
@@ -207,7 +238,11 @@ def main() -> int:
         help="return status 2 when checkout, container backend, uv, or required assets are unavailable",
     )
     args = parser.parse_args()
-    report = build_preflight(args.tua_root, required_assets=args.required_asset)
+    report = build_preflight(
+        args.tua_root,
+        expected_commit=args.expected_commit,
+        required_assets=args.required_asset,
+    )
     output = Path(args.output).expanduser().resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

@@ -212,6 +212,8 @@ def _is_within(path: Path, root: Path) -> bool:
 def _tau2_environment(config: Tau2NativeRunConfig) -> tuple[dict[str, str], list[str]]:
     """Return a UTF-8-safe, source-bound environment for τ³-bench and the adapter."""
 
+    data_directory = (config.tau2_root / "data").resolve()
+    runtime_site_packages = config.tau2_runtime / "Lib" / "site-packages"
     pythonpath = [
         str(config.tau2_root / "src"),
         str(REPO_ROOT),
@@ -221,10 +223,16 @@ def _tau2_environment(config: Tau2NativeRunConfig) -> tuple[dict[str, str], list
     inherited_pythonpath = os.environ.get("PYTHONPATH")
     if inherited_pythonpath:
         pythonpath.append(inherited_pythonpath)
+    if runtime_site_packages.is_dir():
+        # Keep the active CUDA/transformers stack ahead of the benchmark venv.
+        # The venv contributes tau2's pinned LiteLLM dependencies without
+        # overriding a compatible local tokenizers/torch installation.
+        pythonpath.append(str(runtime_site_packages))
     return {
         "PYTHONUTF8": "1",
         "PYTHONIOENCODING": "utf-8",
         "PYTHONPATH": os.pathsep.join(pythonpath),
+        "TAU2_DATA_DIR": str(data_directory),
     }, pythonpath
 
 
@@ -499,6 +507,9 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
         raise ValueError(f"--tau2-root is not a directory: {config.tau2_root}")
     if not config.tau2_runtime.is_dir():
         raise ValueError(f"--tau2-runtime is not a directory: {config.tau2_runtime}")
+    tau2_data_directory = config.tau2_root / "data"
+    if not tau2_data_directory.is_dir():
+        raise ValueError(f"--tau2-root does not contain the pinned task data directory: {tau2_data_directory}")
     cli_entrypoint = config.tau2_root / "src" / "tau2" / "cli.py"
     if not cli_entrypoint.is_file():
         raise ValueError(f"--tau2-root does not contain the official CLI entrypoint: {cli_entrypoint}")

@@ -19,6 +19,12 @@ The launcher rejects a run unless all of these are true:
 
 - The checkpoint is a merged v2 checkpoint cryptographically bound to a passed clean train/holdout audit.
 - The official τ³-bench checkout is clean, its commit is recorded, and the selected Python runtime imports `tau2` from that checkout.
+- The launcher binds `TAU2_DATA_DIR` to the pinned checkout's `data` directory,
+  so task fixtures cannot silently come from another installation.
+- When `--tau2-runtime` is a Windows venv, its `Lib/site-packages` directory is
+  also supplied to the shared adapter/benchmark interpreter. This permits the
+  benchmark's pinned dependencies to coexist with the local CUDA/transformers
+  runtime without rebinding the `tau2` source package.
 - Requested task IDs exist in the pinned `telecom/base` catalog and are valid for τ³-bench solo mode.
 - The local run directory and τ³-bench output directory are both new, so the benchmark cannot resume or mix an earlier score.
 - The model is deterministic (`temperature=0`), uses one local worker, has explicit step/error/token limits, and disables benchmark retries.

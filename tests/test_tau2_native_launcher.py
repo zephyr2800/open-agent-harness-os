@@ -95,6 +95,7 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         entrypoint = tau2 / "src" / "tau2"
         entrypoint.mkdir(parents=True)
         (entrypoint / "cli.py").write_text("# cli placeholder\n", encoding="utf-8")
+        (tau2 / "data").mkdir()
         project1 = root / "project1"
         (project1 / "model").mkdir(parents=True)
         (project1 / "model" / "transformers_backend.py").write_text(
@@ -102,7 +103,7 @@ class Tau2NativeLauncherTests(unittest.TestCase):
             encoding="utf-8",
         )
         runtime = root / "tau2-runtime"
-        runtime.mkdir()
+        (runtime / "Lib" / "site-packages").mkdir(parents=True)
         return Tau2NativeRunConfig(
             checkpoint=_checkpoint(root, audit),
             train_holdout_audit=audit,
@@ -149,7 +150,15 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         self.assertGreater(plan["adapter"]["source_trees"]["harness"]["file_count"], 0)
         self.assertTrue(plan["runtime"]["source_bound"])
         self.assertEqual(plan["environment"]["PYTHONUTF8"], "1")
+        self.assertEqual(
+            plan["environment"]["TAU2_DATA_DIR"],
+            str((Path(str(plan["tau2"]["root"])) / "data").resolve()),
+        )
         entries = plan["runtime"]["pythonpath_entries"]
+        self.assertIn(
+            str(Path(str(plan["runtime"]["tau2_runtime"])) / "Lib" / "site-packages"),
+            entries,
+        )
         self.assertLess(
             entries.index(str(REPO_ROOT)),
             entries.index(str(Path(plan["checkpoint"]["directory"]).parent / "project1")),
@@ -161,6 +170,22 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         self.assertIn("openai/local-action-policy", benchmark)
         self.assertIn("--max-retries", benchmark)
         self.assertIn("--enforce-communication-protocol", benchmark)
+
+    def test_plan_refuses_a_checkout_without_its_pinned_task_data(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = self._config(Path(directory))
+            (config.tau2_root / "data").rmdir()
+            with self.assertRaisesRegex(ValueError, "pinned task data directory"):
+                build_plan(config)
+
+    def test_windows_venv_dependencies_follow_the_active_ml_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"PYTHONPATH": "active-ml-a;active-ml-b"}, clear=False):
+                plan = self._plan(self._config(Path(directory)))
+        entries = plan["runtime"]["pythonpath_entries"]
+        runtime_site_packages = str(Path(str(plan["runtime"]["tau2_runtime"])) / "Lib" / "site-packages")
+        self.assertEqual(entries[-1], runtime_site_packages)
+        self.assertLess(entries.index("active-ml-a;active-ml-b"), entries.index(runtime_site_packages))
 
     def test_help_supports_a_legacy_windows_console_encoding(self) -> None:
         environment = os.environ.copy()

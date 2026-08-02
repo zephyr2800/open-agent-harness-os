@@ -95,7 +95,7 @@ than one aggregate success number.
 | 7B v6 industry proxy v1 | 48/48 verified, zero unsafe attempts | Stronger state/injection proxy result; still offline |
 | 7B v7 external-gap revision | 39/48; policy sequence 3/12 | Not promoted; repeated narrow data caused regression |
 | 7B verifier-backed RL smoke | neutral reward before/after | Undirected RL is not a valid improvement strategy |
-| Project 2 test suite | 190/190 passing | Harness/evaluator regression control |
+| Project 2 test suite | 191/191 passing | Harness/evaluator regression control |
 | Qwopus3.5-9B rank-64 QLoRA | Historical SFT, merge, and 9-run matrix complete on RTX 5090 | 483/552 independently verified (87.5%), zero unsafe attempts, perfect trace/replay checks; context only because source-corpus isolation was not recorded |
 
 Data-isolation addendum: the later targeted 9B curriculum was found to overlap
@@ -167,7 +167,7 @@ replays. ([model card](https://huggingface.co/Jackrong/Qwopus3.5-9B-v3),
 The local product surface has a CLI, loopback HTTP API, MCP stdio server,
 typed Action IR, allowlisted tools, default high-risk denial, independent
 verification, bounded budgets, and replayable JSONL traces. The current
-190-test suite,
+191-test suite,
 offline demo, replay smoke, explicit concurrent-retention preflight, and
 bearer-authentication plus tenant-isolation checks support a technically
 capable local preview.

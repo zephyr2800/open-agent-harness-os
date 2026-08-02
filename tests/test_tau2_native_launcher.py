@@ -17,6 +17,7 @@ from experiments.tau2_native_launcher import (
     REPO_ROOT,
     Tau2NativeRunConfig,
     _NATIVE_RESULT_SCHEMA_PROBE_SCRIPT,
+    _RUNTIME_PROBE_SCRIPT,
     _assert_port_available,
     _native_result_schema_validation,
     build_plan,
@@ -60,6 +61,10 @@ def _runtime_probe() -> dict[str, object]:
         "python_version": "3.12.0",
         "tau2_version": "1.0.1",
         "package_file": "C:/tau2/src/tau2/__init__.py",
+        "module_files": {
+            "experiments.agentdojo_adapter_server": str(REPO_ROOT / "experiments" / "agentdojo_adapter_server.py"),
+            "experiments.tau2_native_runner": str(REPO_ROOT / "experiments" / "tau2_native_runner.py"),
+        },
         "source_bound": True,
     }
 
@@ -149,6 +154,7 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         self.assertEqual(plan["adapter"]["source_trees"]["project1"]["schema"], "python-source-tree/v1")
         self.assertGreater(plan["adapter"]["source_trees"]["harness"]["file_count"], 0)
         self.assertTrue(plan["runtime"]["source_bound"])
+        self.assertEqual(plan["runtime"]["module_files"], _runtime_probe()["module_files"])
         self.assertEqual(plan["environment"]["PYTHONUTF8"], "1")
         self.assertEqual(
             plan["environment"]["TAU2_DATA_DIR"],
@@ -199,6 +205,10 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr.decode("utf-8", errors="replace"))
         self.assertIn(b"--task-id", completed.stdout)
+
+    def test_runtime_probe_script_imports_every_module_it_reports(self) -> None:
+        self.assertIn("import experiments.agentdojo_adapter_server as adapter_server", _RUNTIME_PROBE_SCRIPT)
+        self.assertIn("import experiments.tau2_native_runner as runner_wrapper", _RUNTIME_PROBE_SCRIPT)
 
     def test_repair_variant_is_explicit_in_the_adapter_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

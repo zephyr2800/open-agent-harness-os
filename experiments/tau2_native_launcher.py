@@ -69,6 +69,9 @@ import json
 import pathlib
 import sys
 
+import experiments.agentdojo_adapter_server as adapter_server
+import experiments.tau2_native_runner as runner_wrapper
+
 import tau2
 
 try:

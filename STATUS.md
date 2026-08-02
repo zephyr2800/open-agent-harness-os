@@ -16,7 +16,7 @@ gate, native external diagnostic, or verifier-backed RL gate.
   gates, registered tools, deterministic verification, an evidence ledger,
   replayable JSONL traces, checkpoint/recovery machinery, loopback HTTP, and
   MCP stdio surfaces.
-- The current Project 2 regression suite is 190/190 and the current release
+- The current Project 2 regression suite is 191/191 and the current release
   preflight is 16/16. These are developer-preview regression controls, not an
   external capability score.
 - A historical 9B matrix completed at 483/552 independently verified local

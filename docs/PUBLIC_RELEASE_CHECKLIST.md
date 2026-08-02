@@ -6,20 +6,20 @@ This checklist records the evidence attached to the current public repository sn
 
 ## Verified locally
 
-- Open Agent Harness OS unit and integration suite: 190/190 passing, including
+- Open Agent Harness OS unit and integration suite: 191/191 passing, including
   dense-reliability, source-bound wheel integrity, claim-safe scorecard, promotion-protocol, native-evaluation-launcher, and energy-measurement checks.
 - Local Action Model companion suite: 47/47 passing.
-- Launch preflight v31: 16/16 checks passing, including a fresh
+- Launch preflight v32: 16/16 checks passing, including a fresh
   clean-source wheel build, extracted-wheel install smoke, bytecode
   exclusion, complete archive-manifest, package-digest, and console-script
   binding to a fresh reference wheel and the companion suite.
 - Wheel build: `open_agent_harness_os-0.1.8-py3-none-any.whl` (no Python
   bytecode caches; 86 archive entries; source/package fingerprint
-  `006e024aebd6349d6cb9ad7a903ee5180c2959cce27da51b9ab3bad434fb0f06`).
+  `064f9e59bbc12e963818d745bbe064ef022ec43ed2910b13e239781fb78a4259`).
 - Clean-source wheel SHA-256 (recorded in the smoke artifact):
-  `13c907876eae2ca321e95643352641532a0ebd326c9f19332246f711a0b6cfd3`.
+  `af9ea18b14712fa5cde1209486e3a3b2057da50a7aab82fae76e88fe31e03c6d`.
 - Source-derived wheel archive-manifest SHA-256:
-  `c28321232c5a6f131b5b1af2ae7bc099f016b6bc0255c50c73e9a4872ca1378d`.
+  `5145b3b7937e085e39edac0d872ddb634e7cfa845089c0f97036181155a6d6b2`.
 - The release gate rebuilds from a clean source copy and records each raw
   wheel hash in its evidence; the archive-manifest hash is the cross-build
   provenance binding.

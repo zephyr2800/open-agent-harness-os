@@ -10,7 +10,10 @@
 - Hardened τ³ result validation against stale local endpoints, command/module
   rebinding, dirty or mismatched benchmark checkouts, selector-catalog drift,
   and JSON boolean-versus-integer identity confusion; public wheel-build log
-  tails now redact machine-local paths.
+ tails now redact machine-local paths.
+- Fixed the τ³ runtime probe to import and record the exact adapter and runner
+  source modules it verifies, with a regression test and a no-model-load
+  check against the prepared pinned runtime and registered solo selectors.
 - Separated the fixed native diagnostic from a conditional adaptive AutoDojo
   security protocol; neither is presented as a general capability or security
   certification.

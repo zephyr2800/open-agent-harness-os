@@ -159,12 +159,12 @@ model claim.
 - `experiments/results/product-smoke-v0.json` covers six workflows with 1.0
   protocol validity, 0.833333 verified-success rate, and a deliberate safety
   denial for high-risk delete.
-- `experiments/results/launch-preflight-v31.json` is the current local developer-
+- `experiments/results/launch-preflight-v32.json` is the current local developer-
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 190-test source suite passed at artifact creation. It builds from a
+  the 191-test source suite passed at artifact creation. It builds from a
   clean source copy, binds the complete wheel archive, modules, and console
   scripts to a fresh source-derived reference, and rejects Python bytecode
   caches. It
@@ -398,12 +398,12 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 190/190 after evaluator hardening,
+- The current project test suite is 191/191 after evaluator hardening,
   dense-reliability, atomic concurrent trace-retention, HTTP bearer-auth, and
   loopback OpenAI-transport coverage.
 - Current wheel/preflight evidence is
-  `experiments/results/clean-wheel-smoke-v31.json` and
-  `experiments/results/launch-preflight-v31.json`; the source/package and
+  `experiments/results/clean-wheel-smoke-v32.json` and
+  `experiments/results/launch-preflight-v32.json`; the source/package and
   wheel-manifest fingerprints are recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 - `experiments/gpu_energy.py` provides a raw-sample, whole-GPU-energy sidecar
   for future exclusive evaluation windows; `docs/GPU_ENERGY_MEASUREMENT.md`

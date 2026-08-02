@@ -16,9 +16,10 @@ gate, native external diagnostic, or verifier-backed RL gate.
   gates, registered tools, deterministic verification, an evidence ledger,
   replayable JSONL traces, checkpoint/recovery machinery, loopback HTTP, and
   MCP stdio surfaces.
-- The current Project 2 regression suite is 191/191 and the current release
-  preflight is 16/16. These are developer-preview regression controls, not an
-  external capability score.
+- The current Project 2 regression suite has 202 tests total (201 passed; one
+  Windows symlink-capability skip), and fresh release preflight v33 is 16/16.
+  These are developer-preview regression controls, not an external capability
+  score.
 - A historical 9B matrix completed at 483/552 independently verified local
   successes with zero unsafe attempts and complete trace/replay checks, but it
   was rejected and remains context-only because its training-source isolation
@@ -40,9 +41,9 @@ gate, native external diagnostic, or verifier-backed RL gate.
   not evidence of held-out model generalization.
 - The first native external diagnostic is preregistered before checkpoint
   evaluation: source-pinned AgentDojo clean/direct-injection cases and a
-  source-pinned tau2 telecom/base solo diagnostic. The launchers preserve
-  native artifacts and the validators fail closed on selector, source, policy,
-  or artifact drift.
+  source-pinned tau3-bench v1.0.1 telecom/base solo diagnostic (using the
+  upstream `tau2` CLI). The launchers preserve native artifacts and the
+  validators fail closed on selector, source, policy, or artifact drift.
 - Future checkpoint, native, and factorial runs can preserve a raw sampled
   whole-GPU-energy sidecar (`gpu-energy/v1`). No energy value is claimed for
   the live clean 9B training job; the sampler cannot retroactively observe it
@@ -79,8 +80,8 @@ gate, native external diagnostic, or verifier-backed RL gate.
 1. Finish the clean 9B SFT and validate its manifest and train/holdout audit.
 2. Run the frozen three-seed promotion matrix and publish either its promotion
    decision or its rejection evidence.
-3. If promoted, run the registered native AgentDojo and tau2 diagnostics, then
-   validate their native artifacts before describing any external result.
+3. If promoted, run the registered native AgentDojo and tau3-bench diagnostics,
+   then validate their native artifacts before describing any external result.
 4. Only then choose a failure-targeted remediation, the preregistered
    sampling-order ablation, verifier-backed RL, or the separate 27B NF4 QLoRA
    feasibility smoke; preserve the same held-out and safety gates. The 27B

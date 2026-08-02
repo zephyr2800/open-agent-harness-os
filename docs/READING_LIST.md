@@ -35,6 +35,14 @@ compare it with current launches, and defend the claim boundaries.
     utility/security tradeoffs.
 11. [τ-Knowledge](https://taubench.com/blog/tau-knowledge.html) — messy
     knowledge bases, policy retrieval, and evidence-grounded action.
+11a. [τ³-bench, official repository](https://github.com/sierra-research/tau2-bench)
+    — use this to understand why benchmark source version, task split, and
+    grader are part of a result. Its v1.0.1 release includes task fixes; do
+    not compare banking-knowledge scores across that boundary.
+11b. [From Confident Closing to Silent Failure](https://arxiv.org/abs/2606.09863)
+    — a 2026 preprint on false-success monitoring in τ²-bench and AppWorld;
+    it motivates state-based verification and replay rather than treating an
+    LLM judge or confident final prose as evidence of completion.
 12. [AppWorld-UL](https://arxiv.org/abs/2607.20536) — clarification,
     confirmation, infeasibility, and user-in-the-loop behavior.
 13. [OSWorld](https://arxiv.org/abs/2404.07972) / [OSWorld 2.0](https://osworld-v1.xlang.ai/)

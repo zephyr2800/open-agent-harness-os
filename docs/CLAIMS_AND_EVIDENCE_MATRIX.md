@@ -24,10 +24,12 @@ metadata.
 | The harness prevents all unsafe actions | Not supported | only registered-tool and local-scope safety evidence exists | Say “configured high-risk actions are denied by the tested policy boundary.” |
 | The product is public-launch ready | Not supported | public identity/operations, usability, security review, licensing, and external benchmark gates remain | Say “developer-preview candidate,” not “production-ready.” |
 
-Evidence freshness: `launch-preflight-v9.json` above remains a valid historical
-artifact, but `experiments/results/launch-preflight-v32.json` is the current
-developer-preview evidence: 16/16 checks, 191/191 Project 2 tests, and 47/47
-companion-project tests.
+Evidence freshness: `launch-preflight-v9.json` and
+`experiments/results/launch-preflight-v32.json` remain valid historical
+artifacts. `experiments/results/launch-preflight-v33.json` is the current
+developer-preview evidence: 16/16 checks, 202 total Project 2 tests (201
+passed; one Windows symlink-capability skip), and 47/47 companion-project
+tests.
 
 ## Promotion decision rule
 

@@ -21,6 +21,9 @@ claim-safe language for the active 9B scale branch.
 `docs/HARNESS_SYSTEMS_AND_LAUNCHES_2026-08-02.md` consolidates the current
 primary-source Pi, Agents SDK, AgentDojo, AutoDojo, TUA-Bench, Inkling/Tinker,
 and Kimi K3 comparison into observed facts, limitations, and experiments.
+It also records the tau3-bench v1.0.1 version boundary and the false-success
+monitoring consequence: state/replay verification, not an LLM judge, is the
+evidence source for a completion claim.
 
 `docs/EXTERNAL_BAR_UPDATE_2026-07-26.md` records the newly checked TUA-Bench
 and OSWorld 2.0 bar and translates their failure modes into the next local
@@ -122,7 +125,8 @@ $py = 'python'
 & $py -m compileall -q .
 ```
 
-Current result: 173 Project 2 tests pass. The current suite includes the
+Current result: 202 Project 2 tests total (201 passed; one Windows
+symlink-capability skip). The current suite includes the
 external-adapter, preregistration, evidence/replay, and loopback
 OpenAI-transport regressions.
 
@@ -159,12 +163,13 @@ model claim.
 - `experiments/results/product-smoke-v0.json` covers six workflows with 1.0
   protocol validity, 0.833333 verified-success rate, and a deliberate safety
   denial for high-risk delete.
-- `experiments/results/launch-preflight-v32.json` is the current local developer-
+- `experiments/results/launch-preflight-v33.json` is the current local developer-
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 191-test source suite passed at artifact creation. It builds from a
+  the 202-test source suite completed with 201 passes and one Windows
+  symlink-capability skip at artifact creation. It builds from a
   clean source copy, binds the complete wheel archive, modules, and console
   scripts to a fresh source-derived reference, and rejects Python bytecode
   caches. It
@@ -398,7 +403,8 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 191/191 after evaluator hardening,
+- The current project test suite has 202 total tests (201 passed; one Windows
+  symlink-capability skip) after evaluator hardening,
   dense-reliability, atomic concurrent trace-retention, HTTP bearer-auth, and
   loopback OpenAI-transport coverage.
 - Current wheel/preflight evidence is

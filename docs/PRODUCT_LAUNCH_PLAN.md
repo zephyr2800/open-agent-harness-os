@@ -78,7 +78,7 @@ developer preview; it does not close multi-user isolation, production
 operational, security-review, or external-agent benchmark gates.
 
 The current consolidated source-checkout preflight is recorded at
-`experiments/results/launch-preflight-v20.json`. It passes the six-case product
+`experiments/results/launch-preflight-v21.json`. It passes the six-case product
  smoke, MCP contract and replay, local-only endpoint policy, bearer
  authentication, high-risk denial, persistence, wheel integrity,
 launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
@@ -88,13 +88,13 @@ tests and the recorded v5 preflight artifact contains an 83-test subcheck.
 The historical source-bound v9 preflight contains a 137-test subcheck; the
 historical v11 preflight contains a 150-test subcheck; the historical v12
 preflight contains a 151-test subcheck; the historical v13 preflight contains
-a 154-test subcheck; the current v20 preflight contains a 172-test subcheck. The
+a 154-test subcheck; the current v21 preflight contains a 173-test subcheck. The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 
 The 2026-07-27 timeout-boundary artifact recorded Project 2 source tests at
 81/81 and Project 1 source tests at 47/47; those are historical artifact
-counts. The current suites are 172/172 and 47/47, respectively, and the
+counts. The current suites are 173/173 and 47/47, respectively, and the
 consolidated launch preflight remains green. This closes the adapter-level
 budget-enforcement regression; it does not by itself close real-model
 performance, usability, security-review, licensing, or external-benchmark

@@ -33,8 +33,9 @@ into a single aggregate “security score.”
   `autodojo` attack and local `vllm_parsed` target mode.
 - The harness's loopback adapter provides the two OpenAI-compatible endpoints
   AutoDojo's local mode needs: `GET /v1/models` and `POST /v1/chat/completions`.
-  This is a compatibility hypothesis only until a checkpoint-bound Phase B
-  smoke validates an end-to-end request.
+  A loopback transport test covers that discovery/completion contract without
+  loading a model. A checkpoint-bound Phase B smoke must still validate the
+  actual end-to-end policy request.
 
 AutoDojo normally calls an optimizer/analyzer model through an API provider.
 For a local-only study, the attacker model and its endpoint must be named in

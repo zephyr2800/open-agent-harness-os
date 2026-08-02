@@ -26,6 +26,10 @@ gate, native external diagnostic, or verifier-backed RL gate.
 - The active clean 9B branch binds 3,232 audited training rows to a frozen
   promotion protocol with genuinely stochastic decoding seeds, source-tree
   records, independent replay, safety accounting, and a decision artifact.
+- The active local v2 promotion surface is structurally bounded: every
+  `finish` task offers only reference-contract tool types, and no finish
+  contract exceeds three required actions. The tracked evaluation-surface
+  audit is a complexity floor and does not weaken or change the frozen gate.
 - The public corpus-quality audit binds that same 3,232-row source hash and
   reports zero exact duplicate rows or inputs, 7 provenance sources, and 15
   sampling strata without exposing examples. It is a data-integrity control,
@@ -88,6 +92,8 @@ gate, native external diagnostic, or verifier-backed RL gate.
 - `docs/RESEARCH_ABLATION_SPEC_V2.md` -- controlled model/harness and sampling
   ablations.
 - `docs/CORPUS_QUALITY_AUDIT.md` -- raw-content-free corpus integrity audit.
+- `docs/EVALUATION_SURFACE_AUDIT.md` -- reproducible limits of the local task
+  surface; not a model score.
 - `docs/NATIVE_EVALUATION_REGISTRATION_2026-08-01.md` -- Phase A external
   diagnostic.
 - `docs/ADAPTIVE_EXTERNAL_EVALUATION_2026-08-02.md` -- conditional Phase B.

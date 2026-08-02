@@ -29,12 +29,15 @@ The local developer-preview harness passes its documented product checks:
 - Project 1 tests: 47/47
 - Launch preflight v36: 16/16 (including a fresh clean-source wheel build, source-tree binding, extracted-wheel installation smoke, repository-relative evidence links, required LICENSE/NOTICE entries in the wheel, and the focused HTTP security-review record)
 
-The associated Qwopus3.5-9B frozen promotion matrix completed privately under a
+The historical Qwopus3.5-9B frozen promotion matrix completed privately under a
 fixed protocol: 483/552 independently verified successes (87.5%), zero unsafe
 attempts, 100% trace validity, and 100% runtime/replay agreement. The separate
 promotion decision rejected the checkpoint. This is failure-localization
 evidence, not a claim that the model is generally capable or that RL improved
-it. See
+it. Separately, the clean-source Qwopus3.5-9B candidate completed audited SFT,
+but its frozen promotion matrix was intentionally paused at 96/480 task-seed
+attempts. That partial matrix has no promotion decision and cannot authorize
+native evaluation or RL. See
 `docs/CLAIMS_AND_EVIDENCE_MATRIX.md` and
 `docs/RESEARCH_LAUNCH_BRIEF.md` for the evidence boundaries; `STATUS.md`
 records the current program state and gated next steps.

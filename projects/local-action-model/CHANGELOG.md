@@ -10,6 +10,9 @@
   documented that scale is a measured deployment branch, not a rescue claim.
 - Preregistered a uniform-versus-weighted full-coverage order ablation for a
   failure-localized post-baseline decision.
+- Refreshed the Parameter Golf source boundary: local RTX 5090 compression
+  experiments are deployment-Pareto evidence, not 16 MB/10-minute-on-8xH100
+  FineWeb leaderboard submissions.
 
 ## 0.1.0 — 2026-07-25
 

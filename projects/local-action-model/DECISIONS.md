@@ -121,16 +121,30 @@ factorial comparison interpretable.
 ### Decision
 
 Adopt Parameter Golf's discipline of reporting artifact size, fixed compute,
-and tokenizer-agnostic compression metrics, but do not force the 0.5B Action
+and tokenizer-agnostic compression metrics, but do not force the core Action
 Model checkpoint into the 16 MB challenge. Maintain a separate scratch-model
-and deployment Pareto track.
+and deployment-Pareto track.
 
 ### Rationale
 
-The 16 MB challenge is useful for architecture and compression experiments, but
-the core research question requires a capable typed-action model and verified
-execution. Treating the hard challenge limit as the only objective would
-optimize away the model capability and protocol evidence we need.
+The official challenge fixes a complete artifact to 16 MB, a leaderboard
+training budget to 10 minutes on 8xH100s, and measures FineWeb validation
+compression in tokenizer-agnostic bits-per-byte. A single-RTX-5090 Action IR
+run neither shares that compute envelope nor optimizes that metric. The 16 MB
+challenge is useful for architecture and compression experiments, but the core
+research question requires a capable typed-action model and verified execution.
+Treating the hard challenge limit as the only objective would optimize away the
+model capability and protocol evidence we need.
+
+### Consequences
+
+- Label local results `Parameter Golf-inspired deployment Pareto`, never
+  Parameter Golf leaderboard results or scores.
+- Record whole-artifact bytes, tokenizer/sidecar bytes, precision, latency,
+  peak VRAM, energy, Action IR holdout score, and seed for each candidate.
+- Test imported compression or test-time-compute ideas only through a
+  preregistered fixed-seed Action IR ablation; FineWeb compression does not
+  promote a policy by itself.
 
 ## Checkpoint note: mid-training smoke (2026-07-25)
 

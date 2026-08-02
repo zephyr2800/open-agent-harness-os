@@ -86,6 +86,9 @@ project.
 - Research inputs now include Karpathy's `nanochat` stage separation,
   `autoresearch` fixed-time single-GPU loop, Hugging Face TRL/PEFT/data
   streaming, and the OpenAI Parameter Golf constraint track.
+- The Parameter Golf track is explicitly local and non-leaderboard: its
+  official 16 MB, 10-minute-on-8xH100, FineWeb bits-per-byte benchmark is
+  distinct from this RTX 5090 Action IR deployment-Pareto objective.
 - The first real RTX 5090 sweep is recorded in
   `experiments/results/qwen2.5-0.5b-5090-zero-shot-v0.{json,md}`: PyTorch
   2.11.0+cu128/CUDA 12.8/BF16, 4,737.1 ms load, 3,440.3 ms mean task wall

@@ -122,11 +122,13 @@ successes with zero unsafe attempts and complete trace/replay checks, but was
 rejected because the training-source isolation was not auditable. It is useful
 failure-localization context and is not a promotion or paper result.
 
-The active clean 9B QLoRA candidate binds 3,232 audited training rows to a
-frozen three-seed promotion protocol. Its current result is intentionally not
-written here while training/evaluation are live. The watcher will emit a
-manifest, merge the adapter, run the frozen promotion matrix, and produce a
-separate decision artifact. Only a `promote` decision authorizes the
+The clean 9B QLoRA candidate binds 3,232 audited training rows to a frozen
+three-seed promotion protocol. Audited SFT and merged-checkpoint handoff are
+complete; the promotion matrix was intentionally paused at 96 of 480 task-seed
+attempts. Its partial output is preserved as non-decisional evidence and does
+not authorize any downstream evaluation or training. A resumption requires
+explicit operator direction and must preserve the frozen protocol, then produce
+a separate decision artifact. Only a `promote` decision authorizes the
 pre-registered native AgentDojo/tau2 diagnostics. It does not authorize RL by
 itself.
 

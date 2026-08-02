@@ -206,6 +206,24 @@ class ExperimentTests(unittest.TestCase):
                     promotion_matrix_main()
         self.assertEqual(exited.exception.code, 2)
 
+    def test_promotion_matrix_v2_rejects_a_legacy_proxy_substitution_before_model_load(self) -> None:
+        missing_audit = ROOT / "work" / "missing-train-holdout-audit.json"
+        missing_novelty = ROOT / "work" / "missing-holdout-novelty-audit.json"
+        research = ROOT / "benchmarks" / "fixtures" / "task-spec-research-v4.json"
+        legacy_proxy = ROOT / "benchmarks" / "fixtures" / "task-spec-industry-proxy-v1.json"
+        active_proxy = ROOT / "benchmarks" / "fixtures" / "task-spec-industry-proxy-v2.json"
+        with mock.patch.object(sys, "argv", [
+            "run_promotion_matrix", "--project1-root", "missing-project", "--checkpoint", "missing-checkpoint",
+            "--output", "missing-output.json", "--train-holdout-audit", str(missing_audit),
+            "--holdout-novelty-audit", str(missing_novelty), "--promotion-protocol", "v2",
+            "--task-spec", str(research), "--task-spec", str(legacy_proxy), "--task-spec", str(active_proxy),
+        ]):
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as exited:
+                promotion_matrix_main()
+        self.assertEqual(exited.exception.code, 2)
+        self.assertIn("--task-spec must name each pinned fixture", stderr.getvalue())
+
     def test_promotion_matrix_heartbeat_is_claim_safe_and_timestamped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "matrix.heartbeat.json"
@@ -226,7 +244,7 @@ class ExperimentTests(unittest.TestCase):
         report = build_readiness(ROOT)
         expected_wheel = f"open_agent_harness_os-{report['package_version']}-py3-none-any.whl"
         gate = report["gates"]["clean_wheel_smoke"]
-        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v6.json"))
+        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v7.json"))
         self.assertIn(expected_wheel, gate["detail"])
         self.assertEqual(gate["status"], "passed")
 

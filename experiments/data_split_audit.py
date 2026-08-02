@@ -30,13 +30,14 @@ _GENERIC_VALUES = frozenset(
 
 
 # These fixture names and hashes define the immutable audit surface used by
-# promotion and verifier-backed RL.  The promotion matrix itself measures only
-# the three promotion slices, but training must be disjoint from the exact
-# payload and external diagnostic contracts as well.
+# promotion and verifier-backed RL. The promotion matrix itself measures a
+# versioned three-slice protocol, but training must be disjoint from all local
+# promotion, authored-holdout, exact-payload, and external diagnostic contracts.
 REQUIRED_FROZEN_FIXTURE_HASHES = {
     "task-spec-research-v4.json": "9c4e3a4f643c21056dd8fe5437ffe180054cf7f96ad02f572910eb298369bfda",
     "task-spec-industry-proxy-v1.json": "c5c0e843f2edc27cdb10b2a2b5d394d5d64373d558f072f4cb0f49001c10cb5e",
     "task-spec-industry-proxy-v2.json": "eb4d071facde6b94e632d68b01caf43e3ae8f7cb456b504e52c38453304d1d6c",
+    "task-spec-author-holdout-v1.json": "b752403f5b06c918eef2565c18a9ddc536fbf7de685eb7245578fd5bdcb3a2ab",
     "task-spec-exact-payload-holdout-v1.json": "0d63bfab581a696528bf3d92bb89e13e64f57b573446f2be5799660f7c3f0cc0",
     "task-spec-external-bar-lite-v1.json": "8d1d852b4cd181079effd7023df13655406de73ddfd6a65329ec6597adf6cae3",
     "task-spec-external-bar-lite-v2.json": "e6c2d7a34fc4317ed116ab882df1f9c6cd363aa60e9f7067329334b9491d785e",

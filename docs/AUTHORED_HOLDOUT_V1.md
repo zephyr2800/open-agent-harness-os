@@ -28,6 +28,10 @@ research claim only alongside the fixed model/harness comparison, multi-seed
 replication, independent trace replay, and native external results specified
 in [the breakthrough protocol](RESEARCH_BREAKTHROUGH_PROTOCOL_2026-07-29.md).
 
+It is a required local slice of promotion protocol `v2`. It remains published
+and local, so it does not turn that protocol into a semantic-novelty proof or
+a replacement for AgentDojo or another native external benchmark.
+
 Run it only after the candidate checkpoint is merged and its source-bound
 training manifest is available:
 
@@ -36,8 +40,9 @@ python -m experiments.run_promotion_matrix `
   --project1-root <project-1-root> `
   --checkpoint <merged-checkpoint> `
   --output work\author-holdout-v1-matrix.json `
-  --train-holdout-audit <audit-covering-the-six-pinned-fixtures-and-this-one> `
+  --train-holdout-audit <audit-covering-all-seven-pinned-fixtures> `
   --holdout-novelty-audit <passing-author-holdout-novelty-audit> `
+  --promotion-protocol v2 `
   --task-spec benchmarks\fixtures\task-spec-author-holdout-v1.json `
   --seeds 0,1,2 --max-new-tokens 256 --quantization 4bit
 ```

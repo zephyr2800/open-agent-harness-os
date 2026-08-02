@@ -28,6 +28,10 @@ the policy.
   reference trajectories whose provenance is recorded.
 - The primary holdout is authored after the training curriculum and has new
   names, payload markers, paraphrases, and state values.
+- New markers alone are not enough: promotion and RL authorization require a
+  passing direct-contract audit and a bound, identifier-normalized
+  template-affinity audit. The latter is a conservative local screen, not a
+  semantic-novelty proof.
 - At least three decoding seeds are required for a completed checkpoint; an
   independent training seed is preferred for a paper claim.
 - Tool aliases, reordered tool descriptions, long-horizon state dependencies,
@@ -68,7 +72,7 @@ for external review, not a breakthrough claim.
 
 A breakthrough claim additionally requires:
 
-1. a disjoint author-held-out suite;
+1. a disjoint author-held-out suite that passes both isolation screens;
 2. at least three decoding seeds and, where practical, independent training
    replication;
 3. a model-only versus verifier-first versus post-trained ablation;

@@ -17,6 +17,7 @@ from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
+from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
 
 
 REQUIRED_SLICES = {
@@ -96,7 +97,13 @@ def _pinned_task_spec_hash_gate(matrix: dict[str, Any]) -> dict[str, Any]:
         "mismatches": mismatches,
         "passed": not missing and not unexpected and not duplicates and not mismatches,
     }
-def decide(matrix: dict[str, Any], train_holdout_audit: Path | None = None) -> dict[str, Any]:
+
+
+def decide(
+    matrix: dict[str, Any],
+    train_holdout_audit: Path | None = None,
+    holdout_novelty_audit: Path | None = None,
+) -> dict[str, Any]:
     audit_gate = (
         validate_required_audit_manifest(train_holdout_audit)
         if train_holdout_audit is not None
@@ -108,6 +115,22 @@ def decide(matrix: dict[str, Any], train_holdout_audit: Path | None = None) -> d
         and isinstance(matrix_audit, dict)
         and matrix_audit.get("passed") is True
         and matrix_audit.get("sha256") == audit_gate["sha256"]
+    )
+    novelty_gate = (
+        validate_novelty_manifest(
+            holdout_novelty_audit,
+            expected_training_sources=audit_gate.get("training_sources", []),
+            expected_task_spec_hashes=REQUIRED_PROMOTION_TASK_SPEC_HASHES,
+        )
+        if holdout_novelty_audit is not None
+        else {"path": None, "sha256": None, "passed": False}
+    )
+    matrix_novelty = matrix.get("holdout_novelty_audit")
+    novelty_linked_to_matrix = bool(
+        novelty_gate["passed"]
+        and isinstance(matrix_novelty, dict)
+        and matrix_novelty.get("passed") is True
+        and matrix_novelty.get("sha256") == novelty_gate["sha256"]
     )
     checkpoint_training_binding = validate_checkpoint_training_binding(
         Path(str(matrix.get("checkpoint") or "")), audit_gate,
@@ -157,6 +180,7 @@ def decide(matrix: dict[str, Any], train_holdout_audit: Path | None = None) -> d
         "all_frozen_runs_pass": all(item["all_runs_passed"] for item in slice_checks.values()),
         "no_unknown_task_specs": not unknown_runs,
         "required_train_holdout_audit": audit_linked_to_matrix,
+        "holdout_template_novelty": novelty_linked_to_matrix,
         "pinned_task_spec_hashes": task_spec_hash_gate["passed"],
         "checkpoint_training_binding": checkpoint_binding_linked_to_matrix,
     }
@@ -168,6 +192,7 @@ def decide(matrix: dict[str, Any], train_holdout_audit: Path | None = None) -> d
         "expected_run_count": expected_run_count,
         "matrix_schema": matrix.get("schema"),
         "train_holdout_audit": {**audit_gate, "linked_to_matrix": audit_linked_to_matrix},
+        "holdout_novelty_audit": {**novelty_gate, "linked_to_matrix": novelty_linked_to_matrix},
         "checkpoint_training_binding": {
             **checkpoint_training_binding,
             "linked_to_matrix": checkpoint_binding_linked_to_matrix,
@@ -186,10 +211,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--matrix", required=True)
     parser.add_argument("--train-holdout-audit", required=True)
+    parser.add_argument("--holdout-novelty-audit", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     matrix = json.loads(Path(args.matrix).read_text(encoding="utf-8"))
-    result = decide(matrix, Path(args.train_holdout_audit))
+    result = decide(
+        matrix,
+        Path(args.train_holdout_audit),
+        Path(args.holdout_novelty_audit),
+    )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")

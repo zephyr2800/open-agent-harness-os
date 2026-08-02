@@ -18,6 +18,8 @@ from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
+from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
+from experiments.promotion_decision import REQUIRED_PROMOTION_TASK_SPEC_HASHES
 
 
 def _load(path: Path) -> dict[str, Any] | None:
@@ -56,6 +58,7 @@ def _frozen_evidence_gate(
     decision: dict[str, Any] | None,
     path: Path,
     train_holdout_audit: dict[str, Any],
+    holdout_novelty_audit: dict[str, Any],
     checkpoint_training_binding: dict[str, Any],
 ) -> dict[str, Any]:
     """Check matrix completeness/integrity without requiring capability success.
@@ -72,6 +75,7 @@ def _frozen_evidence_gate(
         "all_required_seeds_present",
         "no_duplicate_seeds",
         "no_unknown_task_specs",
+        "holdout_template_novelty",
         "pinned_task_spec_hashes",
         "checkpoint_training_binding",
     )
@@ -100,6 +104,13 @@ def _frozen_evidence_gate(
         and decision_audit.get("linked_to_matrix") is True
         and decision_audit.get("sha256") == train_holdout_audit.get("sha256")
     )
+    decision_novelty = decision.get("holdout_novelty_audit", {}) if decision else {}
+    novelty_linked_to_decision = bool(
+        holdout_novelty_audit.get("passed")
+        and isinstance(decision_novelty, dict)
+        and decision_novelty.get("linked_to_matrix") is True
+        and decision_novelty.get("sha256") == holdout_novelty_audit.get("sha256")
+    )
     decision_checkpoint_binding = decision.get("checkpoint_training_binding", {}) if decision else {}
     checkpoint_binding_linked_to_decision = bool(
         checkpoint_training_binding.get("passed")
@@ -114,6 +125,7 @@ def _frozen_evidence_gate(
         and structural
         and run_integrity
         and audit_linked_to_decision
+        and novelty_linked_to_decision
         and checkpoint_binding_linked_to_decision
     )
     return {
@@ -125,6 +137,7 @@ def _frozen_evidence_gate(
         "observed_runs": len(frozen_runs),
         "integrity_checks_passed": run_integrity,
         "train_holdout_audit_linked": audit_linked_to_decision,
+        "holdout_novelty_audit_linked": novelty_linked_to_decision,
         "checkpoint_training_binding_linked": checkpoint_binding_linked_to_decision,
         "passed": passed,
     }
@@ -137,14 +150,21 @@ def check_gate(
     external_v2_path: Path,
     checkpoint: Path,
     train_holdout_audit_path: Path,
+    holdout_novelty_audit_path: Path,
 ) -> dict[str, Any]:
     decision = _load(decision_path)
     train_holdout_audit = validate_required_audit_manifest(train_holdout_audit_path)
+    holdout_novelty_audit = validate_novelty_manifest(
+        holdout_novelty_audit_path,
+        expected_training_sources=train_holdout_audit.get("training_sources", []),
+        expected_task_spec_hashes=REQUIRED_PROMOTION_TASK_SPEC_HASHES,
+    )
     checkpoint_training_binding = validate_checkpoint_training_binding(checkpoint, train_holdout_audit)
     evidence_gate = _frozen_evidence_gate(
         decision,
         decision_path,
         train_holdout_audit,
+        holdout_novelty_audit,
         checkpoint_training_binding,
     )
     promotion_gate = {
@@ -175,6 +195,7 @@ def check_gate(
         "promotion": promotion_gate,
         "frozen_evidence": evidence_gate,
         "train_holdout_audit": train_holdout_audit,
+        "holdout_novelty_audit": holdout_novelty_audit,
         "checkpoint": checkpoint_gate,
         "external_bar_v1": external_v1,
         "external_bar_v2": external_v2,
@@ -182,6 +203,7 @@ def check_gate(
             "RL authorization requires a complete frozen matrix with valid traces, exact runtime/replay agreement, and zero unsafe attempts.",
             "Every frozen run must use the exact pinned task-spec hash for its declared slice.",
             "The matrix and promotion decision must link to a clean audit of every pinned fixture at its fixed hash.",
+            "Promotion and RL authorization require a passing lexical template-affinity audit bound to the same training data and pinned fixtures.",
             "The merged checkpoint must carry a training manifest whose data hashes match that audit.",
             "A rejected baseline remains rejected and is never promoted merely because RL is authorized.",
             "Both disjoint diagnostics must have three complete seed runs with valid traces and exact replay agreement.",
@@ -198,6 +220,7 @@ def main() -> int:
     parser.add_argument("--external-bar-v2", required=True)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--train-holdout-audit", required=True)
+    parser.add_argument("--holdout-novelty-audit", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     report = check_gate(
@@ -206,6 +229,7 @@ def main() -> int:
         external_v2_path=Path(args.external_bar_v2),
         checkpoint=Path(args.checkpoint),
         train_holdout_audit_path=Path(args.train_holdout_audit),
+        holdout_novelty_audit_path=Path(args.holdout_novelty_audit),
     )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

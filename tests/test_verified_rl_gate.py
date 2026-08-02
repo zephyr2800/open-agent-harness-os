@@ -9,6 +9,8 @@ from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
+from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
+from experiments.promotion_decision import REQUIRED_PROMOTION_TASK_SPEC_HASHES
 from experiments.verified_rl_gate import check_gate
 
 
@@ -58,7 +60,21 @@ def _checkpoint(path: Path, audit: Path) -> Path:
     return checkpoint
 
 
-def _decision(path: Path, *, promoted: bool, audit: Path, checkpoint: Path) -> None:
+def _novelty(path: Path, audit: Path) -> Path:
+    audit_gate = validate_required_audit_manifest(audit)
+    path.write_text(json.dumps({
+        "schema": "holdout-novelty-audit/v1",
+        "passed": True,
+        "train": audit_gate["training_sources"],
+        "task_specs": [
+            {"path": f"C:/fixtures/{name}", "sha256": digest}
+            for name, digest in REQUIRED_PROMOTION_TASK_SPEC_HASHES.items()
+        ],
+    }), encoding="utf-8")
+    return path
+
+
+def _decision(path: Path, *, promoted: bool, audit: Path, novelty: Path, checkpoint: Path) -> None:
     checks = {
         "run_complete": True,
         "all_task_rows_present": True,
@@ -73,6 +89,12 @@ def _decision(path: Path, *, promoted: bool, audit: Path, checkpoint: Path) -> N
         name: {"runs": [{"checks": checks} for _ in range(3)]}
         for name in ("research_v4", "industry_proxy_v1", "industry_proxy_v2")
     }
+    audit_gate = validate_required_audit_manifest(audit)
+    novelty_gate = validate_novelty_manifest(
+        novelty,
+        expected_training_sources=audit_gate["training_sources"],
+        expected_task_spec_hashes=REQUIRED_PROMOTION_TASK_SPEC_HASHES,
+    )
     path.write_text(json.dumps({
         "schema": "promotion-decision/v1",
         "decision": "promote" if promoted else "reject",
@@ -86,11 +108,13 @@ def _decision(path: Path, *, promoted: bool, audit: Path, checkpoint: Path) -> N
             "no_unknown_task_specs": True,
             "all_frozen_runs_pass": promoted,
             "required_train_holdout_audit": True,
+            "holdout_template_novelty": True,
             "pinned_task_spec_hashes": True,
             "checkpoint_training_binding": True,
         },
-        "train_holdout_audit": {**validate_required_audit_manifest(audit), "linked_to_matrix": True},
-        "checkpoint_training_binding": {**validate_checkpoint_training_binding(checkpoint, validate_required_audit_manifest(audit)), "linked_to_matrix": True},
+        "train_holdout_audit": {**audit_gate, "linked_to_matrix": True},
+        "holdout_novelty_audit": {**novelty_gate, "linked_to_matrix": True},
+        "checkpoint_training_binding": {**validate_checkpoint_training_binding(checkpoint, audit_gate), "linked_to_matrix": True},
         "slices": slices,
     }), encoding="utf-8")
 
@@ -101,8 +125,9 @@ class VerifiedRLGateTests(unittest.TestCase):
             root = Path(directory)
             decision = root / "decision.json"
             audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
             checkpoint = _checkpoint(root, audit)
-            _decision(decision, promoted=True, audit=audit, checkpoint=checkpoint)
+            _decision(decision, promoted=True, audit=audit, novelty=novelty, checkpoint=checkpoint)
             external_v1 = root / "external-v1.json"
             external_v2 = root / "external-v2.json"
             _matrix(external_v1, 20)
@@ -113,6 +138,7 @@ class VerifiedRLGateTests(unittest.TestCase):
                 external_v2_path=external_v2,
                 checkpoint=checkpoint,
                 train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
             )
             self.assertTrue(report["passed"])
 
@@ -121,8 +147,9 @@ class VerifiedRLGateTests(unittest.TestCase):
             root = Path(directory)
             decision = root / "decision.json"
             audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
             checkpoint = _checkpoint(root, audit)
-            _decision(decision, promoted=False, audit=audit, checkpoint=checkpoint)
+            _decision(decision, promoted=False, audit=audit, novelty=novelty, checkpoint=checkpoint)
             external_v1 = root / "external-v1.json"
             external_v2 = root / "external-v2.json"
             _matrix(external_v1, 20)
@@ -133,6 +160,7 @@ class VerifiedRLGateTests(unittest.TestCase):
                 external_v2_path=external_v2,
                 checkpoint=checkpoint,
                 train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
             )
             self.assertTrue(report["passed"])
             self.assertFalse(report["promotion"]["passed"])
@@ -143,8 +171,9 @@ class VerifiedRLGateTests(unittest.TestCase):
             root = Path(directory)
             decision = root / "decision.json"
             audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
             checkpoint = _checkpoint(root, audit)
-            _decision(decision, promoted=False, audit=audit, checkpoint=checkpoint)
+            _decision(decision, promoted=False, audit=audit, novelty=novelty, checkpoint=checkpoint)
             payload = json.loads(decision.read_text(encoding="utf-8"))
             payload["slices"]["research_v4"]["runs"][0]["checks"]["task_spec_hash_matches_pinned"] = False
             decision.write_text(json.dumps(payload), encoding="utf-8")
@@ -158,6 +187,7 @@ class VerifiedRLGateTests(unittest.TestCase):
                 external_v2_path=external_v2,
                 checkpoint=checkpoint,
                 train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
             )
             self.assertFalse(report["passed"])
             self.assertFalse(report["frozen_evidence"]["integrity_checks_passed"])
@@ -167,8 +197,9 @@ class VerifiedRLGateTests(unittest.TestCase):
             root = Path(directory)
             decision = root / "decision.json"
             audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
             checkpoint = _checkpoint(root, audit)
-            _decision(decision, promoted=True, audit=audit, checkpoint=checkpoint)
+            _decision(decision, promoted=True, audit=audit, novelty=novelty, checkpoint=checkpoint)
             external_v1 = root / "external-v1.json"
             _matrix(external_v1, 20)
             report = check_gate(
@@ -177,6 +208,7 @@ class VerifiedRLGateTests(unittest.TestCase):
                 external_v2_path=root / "missing.json",
                 checkpoint=checkpoint,
                 train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
             )
             self.assertFalse(report["passed"])
 
@@ -184,9 +216,10 @@ class VerifiedRLGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
             decision = root / "decision.json"
             checkpoint = _checkpoint(root, audit)
-            _decision(decision, promoted=False, audit=audit, checkpoint=checkpoint)
+            _decision(decision, promoted=False, audit=audit, novelty=novelty, checkpoint=checkpoint)
             payload = json.loads(decision.read_text(encoding="utf-8"))
             payload["train_holdout_audit"]["linked_to_matrix"] = False
             decision.write_text(json.dumps(payload), encoding="utf-8")
@@ -200,6 +233,33 @@ class VerifiedRLGateTests(unittest.TestCase):
                 external_v2_path=external_v2,
                 checkpoint=checkpoint,
                 train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
             )
         self.assertFalse(report["passed"])
         self.assertFalse(report["frozen_evidence"]["train_holdout_audit_linked"])
+
+    def test_failed_or_unlinked_template_novelty_blocks_research_rl(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            decision = root / "decision.json"
+            audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=False, audit=audit, novelty=novelty, checkpoint=checkpoint)
+            payload = json.loads(decision.read_text(encoding="utf-8"))
+            payload["holdout_novelty_audit"]["linked_to_matrix"] = False
+            decision.write_text(json.dumps(payload), encoding="utf-8")
+            external_v1 = root / "external-v1.json"
+            external_v2 = root / "external-v2.json"
+            _matrix(external_v1, 20)
+            _matrix(external_v2, 32)
+            report = check_gate(
+                decision_path=decision,
+                external_v1_path=external_v1,
+                external_v2_path=external_v2,
+                checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
+            )
+        self.assertFalse(report["passed"])
+        self.assertFalse(report["frozen_evidence"]["holdout_novelty_audit_linked"])

@@ -19,7 +19,8 @@ metadata.
 | The system beats frontier agents | Not supported | no native external benchmark comparison | Do not make this claim. |
 
 | Qwopus3.5-9B is a better action policy than the promoted 7B | Not supported | frozen 9B matrix is complete but promotion decision is reject | Do not make this claim; use the 483/552 failure-localization result instead. |
-| Qwopus3.5-9B SFT completed | Supported | adapter manifest and merged checkpoint manifest | “The 9B scale branch completed QLoRA SFT and merge.” |
+| The historical Qwopus3.5-9B scale branch completed QLoRA SFT and merge | Supported as historical context only | historical adapter and merged-checkpoint manifests; its source-corpus isolation was not auditable and the promotion decision was reject | “A prior 9B scale branch completed SFT and merge, but it is failure-localization context rather than a promoted model result.” |
+| The active clean-source Qwopus3.5-9B candidate completed SFT or passed promotion | Not supported | the active training manifest and promotion-decision artifact do not yet exist | Do not make this claim. |
 | Verifier-backed RL improves the policy | Not supported | prior 7B RL was neutral/negative; 9B RL has not run | Do not make this claim. |
 | The harness prevents all unsafe actions | Not supported | only registered-tool and local-scope safety evidence exists | Say “configured high-risk actions are denied by the tested policy boundary.” |
 | The product is public-launch ready | Not supported | public identity/operations, usability, security review, licensing, and external benchmark gates remain | Say “developer-preview candidate,” not “production-ready.” |

@@ -50,6 +50,19 @@ python -m pip wheel . --no-deps --wheel-dir work/package-dist
 python -m experiments.launch_preflight --with-tests --output experiments/results/launch-preflight-local.json
 ```
 
+### Try the developer preview
+
+After installation, run the offline verified-write workflow and replay its
+trace without executing the tool again:
+
+```powershell
+python -m app.cli demo --trace-out work\preview-demo-trace.jsonl
+python -m app.cli replay work\preview-demo-trace.jsonl
+```
+
+For a bounded state-inspection/recovery example and a trace-recorded
+high-risk-action denial, see [the user workflow guide](docs/USER_WORKFLOW_GUIDE.md).
+
 The companion project uses intentionally local package names such as
 `runtime` and `experiments`; run its suite from its own root:
 

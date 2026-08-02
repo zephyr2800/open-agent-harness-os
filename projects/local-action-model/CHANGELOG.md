@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased - clean 9B evidence chain (2026-08-02)
+
+- Started the clean, source-audited 9B 4-bit QLoRA branch with a frozen
+  promotion protocol and no mid-run curriculum/evaluator changes.
+- Bound downstream native AgentDojo/tau2 diagnostics to preregistered source,
+  selector, budget, and artifact-validation records.
+- Queued a staged 27B NF4 QLoRA feasibility smoke behind the 9B chain and
+  documented that scale is a measured deployment branch, not a rescue claim.
+- Preregistered a uniform-versus-weighted full-coverage order ablation for a
+  failure-localized post-baseline decision.
+
 ## 0.1.0 — 2026-07-25
 
 - Added Action IR v0 structural validator.

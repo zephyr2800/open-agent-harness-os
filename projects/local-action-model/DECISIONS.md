@@ -178,3 +178,27 @@ branch and raised `KeyError` instead of producing a scored failure. The
 verifier now checks expected decision kind before kind-specific execution and
 has a regression test. The interrupted factorial run is not evidence and must
 be rerun from the corrected evaluator.
+
+## ADR-0006: Clean evidence precedes RL or scale escalation (2026-08-02)
+
+### Decision
+
+Keep the active clean 9B source, data, and evaluator stable until it writes a
+completion manifest. Require the frozen train/holdout audit and stochastic
+promotion matrix before native external evaluation, remediation, or
+verifier-backed RL.
+
+### Rationale
+
+The historical 9B result could not support a source-isolated claim. A larger
+model, changed curriculum, or reward run cannot repair that evidentiary gap
+after the fact.
+
+### Consequences
+
+- Rejection produces failure-localization evidence rather than a trigger to
+  weaken the gate.
+- A weighted-order curriculum is a separately named full-coverage ablation.
+- The 27B NF4 QLoRA plan remains a staged feasibility test after the 9B chain,
+  with audited data and the same held-out, replay, safety, and deployment
+  measurements.

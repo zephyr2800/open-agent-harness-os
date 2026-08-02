@@ -33,6 +33,11 @@ checkpoint-bound native AgentDojo and tau2 diagnostics. Their launchers bind
 the registration hash into each run manifest; this is a reproducibility gate,
 not an external score or security certification.
 
+`docs/ADAPTIVE_EXTERNAL_EVALUATION_2026-08-02.md` records the separate,
+conditional AutoDojo Phase B protocol: adaptive attack caches are
+configuration-specific, local-only evidence and are not training data or a
+security certification.
+
 `docs/SCALE_CONTROL_NOTE_2026-07-27.md` records the interim same-task-hash
 7B-versus-9B comparison and the parameter-scaling caveats; it is evidence for
 the ablation design, not a final model leaderboard result.

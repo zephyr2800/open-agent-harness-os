@@ -101,3 +101,8 @@ adaptive red-team Phase B must be separately preregistered, use a held-out
 attack process, preserve the same utility measurement, and report attack
 success alongside false refusals. No current result supports a security
 certification.
+
+The concrete conditional Phase B protocol, including the pinned AutoDojo
+source, local-endpoint compatibility boundary, cache provenance, matched
+model-only/repair arms, and public-data exclusion rule, is recorded in
+[`ADAPTIVE_EXTERNAL_EVALUATION_2026-08-02.md`](ADAPTIVE_EXTERNAL_EVALUATION_2026-08-02.md).

@@ -68,6 +68,31 @@ authoring code are immutable during the self-improvement loop, following the
 fixed-budget discipline of
 [autoresearch](https://github.com/karpathy/autoresearch).
 
+## Sampling and curriculum control
+
+The active clean 9B baseline uses `uniform` sampling: all 3,232 audited rows
+are seen once in a seeded permutation during its single epoch. Its stored
+per-row sampling weights are therefore intentionally inactive in that run.
+This distinction matters: a later result may not call itself a data-sampling
+improvement merely because the same curriculum contains weights.
+
+If the frozen baseline rejects and its error ledger localizes a failure family,
+the first sampling intervention is a preregistered two-arm, full-coverage
+order ablation on the exact same clean training-source hash:
+
+| Arm | Row exposure | Ordering | Held fixed |
+|---|---|---|---|
+| Uniform control | Every row exactly once/epoch | seeded uniform permutation | base, tokenizer, response masking, epoch count, optimizer steps, LoRA rank, context limit, and evaluation protocol |
+| Weighted-order arm | Every row exactly once/epoch | seeded Efraimidis-Spirakis weighted permutation using the committed row weights | the same factors and data hash |
+
+The weighted arm is not replacement sampling and does not oversample rows; it
+only changes when an equally exposed row is encountered. It is eligible only
+as a separately named post-baseline branch, with the error slice fixed before
+training and a fresh disjoint evaluation slice held outside curriculum design.
+No sampling strategy is accepted because it improves a local aggregate while
+regressing the worst failure family, unsafe-attempt rate, false completion, or
+replay agreement.
+
 ## Promotion rules
 
 Cell E may be called an improvement only if, on the disjoint holdout:

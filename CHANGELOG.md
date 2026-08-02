@@ -19,6 +19,10 @@
   certification.
 - Refreshed the research and investor materials with source-backed Kimi K3,
   Inkling/Tinker, and adaptive-injection context.
+- Refreshed developer-preview release evidence to v34 (16/16 preflight,
+  210 Project 2 tests with one Windows capability skip, and 47/47 companion
+  tests), and made public wheel-smoke sidecars use repository-relative or
+  redacted evidence paths.
 - Preregistered a full-coverage uniform-versus-weighted sampling-order
   ablation for a post-baseline failure-localization decision.
 - Added this program status ledger so current evidence, hypotheses, and gates

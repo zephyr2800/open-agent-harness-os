@@ -69,9 +69,9 @@ redistribution yet.
 ## Current source and model-card boundary — 2026-08-02
 
 The fresh public-harness evidence is
-`experiments/results/launch-preflight-v33.json` with its paired
-`clean-wheel-smoke-v33.json`. It records a clean-source, dependency-free wheel
-build with 89 archive entries, a 208,672-byte wheel, matching source/package
+`experiments/results/launch-preflight-v34.json` with its paired
+`clean-wheel-smoke-v34.json`. It records a clean-source, dependency-free wheel
+build with 90 archive entries, a 217,078-byte wheel, matching source/package
 and archive-manifest fingerprints, extracted-install import verification, and
 the verified demo. The build deliberately excludes the repository's `work`
 tree; `pyproject.toml` disables package data and declares no third-party
@@ -89,7 +89,7 @@ redistribution rights for the base, derivative, adapter, tokenizer, training
 sources, or any merged export.
 
 Release decision: the public artifact may be the Apache-2.0 harness source and
-v33 wheel only. Keep the Qwopus base, local adapter, merged checkpoint,
+v34 wheel only. Keep the Qwopus base, local adapter, merged checkpoint,
 training mixtures, raw traces, external benchmark assets, and any hosted
 Qwopus endpoint outside that distribution until human legal/provenance sign-off
 exists.

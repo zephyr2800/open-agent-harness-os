@@ -26,8 +26,8 @@ metadata.
 
 Evidence freshness: `launch-preflight-v9.json` and
 `experiments/results/launch-preflight-v32.json` remain valid historical
-artifacts. `experiments/results/launch-preflight-v33.json` is the current
-developer-preview evidence: 16/16 checks, 202 total Project 2 tests (201
+artifacts. `experiments/results/launch-preflight-v34.json` is the current
+developer-preview evidence: 16/16 checks, 210 total Project 2 tests (209
 passed; one Windows symlink-capability skip), and 47/47 companion-project
 tests.
 

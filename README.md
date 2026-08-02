@@ -25,9 +25,9 @@ actually complete.
 
 The local developer-preview harness passes its documented product checks:
 
-- Project 2 tests: 202 total (201 passed; one Windows symlink-capability test skipped; including dense-reliability, source-bound wheel integrity, scorecard, promotion-protocol, native-result-validator, energy-measurement, corpus-quality-audit, and action-surface-stress checks)
+- Project 2 tests: 210 total (209 passed; one Windows symlink-capability test skipped; including dense-reliability, source-bound wheel integrity, scorecard, promotion-protocol, native-result-validator, energy-measurement, corpus-quality-audit, action-surface-stress, and public-evidence-path checks)
 - Project 1 tests: 47/47
-- Launch preflight v33: 16/16 (including a fresh clean-source wheel build, source-tree binding, extracted-wheel installation smoke, and the current source suite)
+- Launch preflight v34: 16/16 (including a fresh clean-source wheel build, source-tree binding, extracted-wheel installation smoke, repository-relative evidence links, and the current source suite)
 
 The associated Qwopus3.5-9B frozen promotion matrix completed privately under a
 fixed protocol: 483/552 independently verified successes (87.5%), zero unsafe

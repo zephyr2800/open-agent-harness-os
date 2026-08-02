@@ -86,6 +86,15 @@ def _redact_public_log(value: str) -> str:
     return _USER_HOME_PATH_RE.sub("<user-home>", redacted)
 
 
+def _public_evidence_path(path: Path) -> str:
+    """Return a portable evidence reference without exposing local paths."""
+
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return _redact_public_log(str(path))
+
+
 def _mcp_check() -> dict[str, Any]:
     initialized = dispatch({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
     listed = dispatch({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
@@ -796,7 +805,7 @@ def _wheel_smoke_sidecar(report: dict[str, Any], *, preflight_output: Path) -> d
         "reference_wheel_sha256": detail.get("reference_wheel_sha256"),
         "reference_wheel_manifest_sha256": detail.get("reference_wheel_manifest_sha256"),
         "wheel_manifest_matches_reference": detail.get("wheel_manifest_matches_reference"),
-        "preflight_artifact": str(preflight_output),
+        "preflight_artifact": _public_evidence_path(preflight_output),
     }
 
 

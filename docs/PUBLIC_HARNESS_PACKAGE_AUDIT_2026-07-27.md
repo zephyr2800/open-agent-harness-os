@@ -50,3 +50,24 @@ This audit still covers the harness wheel only. A source checkout intentionally
 contains small synthetic fixtures for tests and reproducibility; that does not
 authorize release of the Qwopus model, its adapter, merged weights, or any
 non-synthetic training corpus.
+
+## v34 addendum â€” 2026-08-02
+
+The v33 addendum remains historical. The current public-harness evidence is
+`experiments/results/launch-preflight-v34.json` and
+`experiments/results/clean-wheel-smoke-v34.json`, generated from a fresh clean
+source copy:
+
+- wheel: `open_agent_harness_os-0.1.8-py3-none-any.whl`;
+- size: 217,078 bytes; 90 archive entries; no Python bytecode entries;
+- wheel SHA-256:
+  `2d22a1374b615db3afea2adbaec128f8e55bdc92811b0177c43f059001c22055`;
+- source/package SHA-256:
+  `19b68dfa514840f107f5d60b465e9c10aef27e23ec630cf6a7d8c656054bf7c9`;
+- archive-manifest SHA-256:
+  `b03a21ee940bd3657ad762b931c63c34793fb6ee7a3aa90fa6eb09521c9cfc55`.
+
+The v34 sidecar links back to its preflight artifact with the repository-
+relative path `experiments/results/launch-preflight-v34.json`; the evidence
+generator redacts external/local paths so a public sidecar does not expose a
+machine username or workspace location.

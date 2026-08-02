@@ -313,7 +313,22 @@ class ExperimentTests(unittest.TestCase):
         assert sidecar is not None
         self.assertTrue(sidecar["passed"])
         self.assertEqual(sidecar["wheel"], "open_agent_harness_os-0.1.8-py3-none-any.whl")
-        self.assertEqual(sidecar["preflight_artifact"], str(preflight))
+        self.assertEqual(sidecar["preflight_artifact"], "experiments/results/launch-preflight-v42.json")
+
+    def test_preflight_sidecar_redacts_an_external_evidence_path(self) -> None:
+        report = {
+            "checks": [{
+                "id": "wheel_install_smoke",
+                "passed": True,
+                "detail": {"path": "fixture.whl"},
+            }],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            sidecar = _wheel_smoke_sidecar(report, preflight_output=Path(directory) / "preflight.json")
+        self.assertIsNotNone(sidecar)
+        assert sidecar is not None
+        self.assertIn("<temp>", sidecar["preflight_artifact"])
+        self.assertNotIn(str(Path(directory)), sidecar["preflight_artifact"])
 
     def test_preflight_refuses_to_overwrite_a_wheel_smoke_evidence_path(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

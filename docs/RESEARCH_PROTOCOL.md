@@ -25,6 +25,11 @@ IR-aware harness produce a superadditive gain for the paired small model?
 - recovery success, unnecessary calls, state loss, escalation precision;
 - evaluator-gaming rate and held-out regression.
 
+For GPU energy, use `harness-gpu-energy` during an exclusive, bounded
+evaluation window and preserve its `gpu-energy/v1` sidecar with the evaluation
+artifact. This is sampled whole-device energy, not per-process or wall-socket
+energy; see `docs/GPU_ENERGY_MEASUREMENT.md`.
+
 ## Interaction estimate
 
 For specialized model `M_s`, generic model `M_g`, baseline `H1`, and variant

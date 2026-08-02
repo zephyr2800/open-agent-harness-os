@@ -750,17 +750,71 @@ def run(*, wheel: Path | None = DEFAULT_WHEEL, include_tests: bool = False) -> d
     )
 
 
+def _wheel_smoke_sidecar(report: dict[str, Any], *, preflight_output: Path) -> dict[str, Any] | None:
+    """Extract independently reusable wheel-smoke evidence from preflight.
+
+    The preflight already builds a fresh wheel and runs the isolated smoke. A
+    normalized sidecar lets release-readiness consume that exact source-bound
+    evidence without requiring a second, potentially divergent wheel build.
+    """
+
+    check = next(
+        (item for item in report.get("checks", []) if item.get("id") == "wheel_install_smoke"),
+        None,
+    )
+    if not isinstance(check, dict) or not isinstance(check.get("detail"), dict):
+        return None
+    detail = check["detail"]
+    return {
+        "schema": "clean-wheel-smoke/v1",
+        "passed": bool(check.get("passed")),
+        "wheel": detail.get("path"),
+        "wheel_sha256": detail.get("sha256"),
+        "source_package_sha256": detail.get("source_package_sha256"),
+        "wheel_package_sha256": detail.get("wheel_package_sha256"),
+        "source_matches_wheel": detail.get("source_matches_wheel"),
+        "console_scripts_match": detail.get("console_scripts_match"),
+        "wheel_manifest_sha256": detail.get("wheel_manifest_sha256"),
+        "reference_wheel_sha256": detail.get("reference_wheel_sha256"),
+        "reference_wheel_manifest_sha256": detail.get("reference_wheel_manifest_sha256"),
+        "wheel_manifest_matches_reference": detail.get("wheel_manifest_matches_reference"),
+        "preflight_artifact": str(preflight_output),
+    }
+
+
+def _write_json_atomic(path: Path, value: dict[str, Any]) -> None:
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default=str(ROOT / "experiments" / "results" / "launch-preflight-v9.json"))
     parser.add_argument("--wheel", help="optional wheel; source checkouts build a fresh wheel by default")
     parser.add_argument("--with-tests", action="store_true", help="also run the full source test suite")
+    parser.add_argument(
+        "--wheel-smoke-output",
+        help="new standalone wheel-smoke sidecar path; existing evidence is never overwritten",
+    )
     args = parser.parse_args()
     output = Path(args.output)
+    wheel_smoke_output = Path(args.wheel_smoke_output) if args.wheel_smoke_output else None
+    if wheel_smoke_output is not None and wheel_smoke_output.exists():
+        parser.error("--wheel-smoke-output must name a new immutable evidence path")
     output.parent.mkdir(parents=True, exist_ok=True)
     report = run(wheel=Path(args.wheel) if args.wheel else None, include_tests=args.with_tests)
-    output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps({"passed": report["passed"], "checks": {item["id"]: item["passed"] for item in report["checks"]}}, indent=2, sort_keys=True))
+    _write_json_atomic(output, report)
+    if wheel_smoke_output is not None:
+        sidecar = _wheel_smoke_sidecar(report, preflight_output=output)
+        if sidecar is not None:
+            wheel_smoke_output.parent.mkdir(parents=True, exist_ok=True)
+            _write_json_atomic(wheel_smoke_output, sidecar)
+    print(json.dumps({
+        "passed": report["passed"],
+        "checks": {item["id"]: item["passed"] for item in report["checks"]},
+        "wheel_smoke_output": str(wheel_smoke_output) if wheel_smoke_output is not None else None,
+    }, indent=2, sort_keys=True))
     return 0 if report["passed"] else 1
 
 

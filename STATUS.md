@@ -16,7 +16,7 @@ gate, native external diagnostic, or verifier-backed RL gate.
   gates, registered tools, deterministic verification, an evidence ledger,
   replayable JSONL traces, checkpoint/recovery machinery, loopback HTTP, and
   MCP stdio surfaces.
-- The current Project 2 regression suite is 173/173 and the current release
+- The current Project 2 regression suite is 180/180 and the current release
   preflight is 16/16. These are developer-preview regression controls, not an
   external capability score.
 - A historical 9B matrix completed at 483/552 independently verified local
@@ -31,6 +31,10 @@ gate, native external diagnostic, or verifier-backed RL gate.
   source-pinned tau2 telecom/base solo diagnostic. The launchers preserve
   native artifacts and the validators fail closed on selector, source, policy,
   or artifact drift.
+- Future checkpoint, native, and factorial runs can preserve a raw sampled
+  whole-GPU-energy sidecar (`gpu-energy/v1`). No energy value is claimed for
+  the live clean 9B training job; the sampler cannot retroactively observe it
+  and is not a per-process or wall-socket meter.
 - Adaptive AutoDojo evaluation is a separate conditional Phase B protocol.
   It has not run, generated attack data is excluded from training/public
   artifacts, and no current result is a security certification.

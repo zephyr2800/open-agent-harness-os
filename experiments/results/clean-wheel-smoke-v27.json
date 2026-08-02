@@ -1,0 +1,15 @@
+{
+  "console_scripts_match": true,
+  "passed": true,
+  "preflight_artifact": "experiments\\results\\launch-preflight-v27.json",
+  "reference_wheel_manifest_sha256": "be65c571c0db038da8f98887198998b53f47c6376840276959485afb80e1f36e",
+  "reference_wheel_sha256": "92820098f66e74584dfb040d30e8f14646defe78460ad3955c5b99598a1e756c",
+  "schema": "clean-wheel-smoke/v1",
+  "source_matches_wheel": true,
+  "source_package_sha256": "b219412c6877208bd760929d987c452d1c766262300df1c0acdd9eb00b7c4a9a",
+  "wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+  "wheel_manifest_matches_reference": true,
+  "wheel_manifest_sha256": "be65c571c0db038da8f98887198998b53f47c6376840276959485afb80e1f36e",
+  "wheel_package_sha256": "b219412c6877208bd760929d987c452d1c766262300df1c0acdd9eb00b7c4a9a",
+  "wheel_sha256": "92820098f66e74584dfb040d30e8f14646defe78460ad3955c5b99598a1e756c"
+}

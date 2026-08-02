@@ -41,11 +41,21 @@ than academic extras. ([Agents SDK](https://openai.com/index/the-next-evolution-
 
 Moonshot’s open model work reinforces a complementary scaling direction:
 mixture-of-experts plus hybrid/linear attention and agent-oriented execution,
-as documented for Kimi K2/K2.5 and Kimi Linear. The July 2026 K3 launch is a
-useful market signal, but until an official technical report and reproducible
-weights/evals are available, we treat third-party parameter and architecture
-claims as unverified—not as a benchmark target. ([Kimi K2.5 paper](https://arxiv.org/abs/2602.02276),
+as documented for Kimi K2/K2.5 and Kimi Linear. The July 2026 K3 release now
+has an [official repository and technical report](https://github.com/MoonshotAI/Kimi-K3),
+so its stated architecture (a 2.8T-parameter, 104B-active MoE using Kimi Delta
+Attention and Attention Residuals) is a vendor-documented systems signal. Its
+published benchmark table remains vendor-reported and harness-sensitive, not an
+independent local comparison or a target a single RTX 5090 can reproduce.
+([Kimi K2.5 paper](https://arxiv.org/abs/2602.02276),
 [Moonshot research organization](https://github.com/MoonshotAI))
+
+K3 also reports quantization-aware training with MXFP4 weights and MXFP8
+activations. That supports treating quantization as a measured training and
+deployment intervention, not a free parameter-scaling trick: our 4-bit QLoRA
+load enables the 9B experiment to fit locally, while any more aggressive
+precision or scale change must enter as a separately evaluated arm with the
+same verified-utility, safety, and replay gates.
 
 Our strategic position is therefore the layer frontier model launches do not
 remove: a local, model-agnostic control plane that can constrain a small model,

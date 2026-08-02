@@ -27,6 +27,12 @@ public-launch readiness.
 TUA-Bench, OSWorld 2.0, OpenComputer, current verifier-grounded research,
 Inkling/Tinker, Kimi K3, and the current claim-safe launch consequences.
 
+`docs/NATIVE_EVALUATION_REGISTRATION_2026-08-01.md` and
+`benchmarks/fixtures/native-external-registration-v1.json` freeze the first
+checkpoint-bound native AgentDojo and tau2 diagnostics. Their launchers bind
+the registration hash into each run manifest; this is a reproducibility gate,
+not an external score or security certification.
+
 `docs/SCALE_CONTROL_NOTE_2026-07-27.md` records the interim same-task-hash
 7B-versus-9B comparison and the parameter-scaling caveats; it is evidence for
 the ablation design, not a final model leaderboard result.
@@ -103,8 +109,8 @@ $py = 'python'
 & $py -m compileall -q .
 ```
 
-Current result: 95 Project 2 tests pass. The latest delta includes the
-external-adapter and evidence/replay regressions.
+Current result: 170 Project 2 tests pass. The latest delta includes the
+external-adapter, preregistration, and evidence/replay regressions.
 
 ## Independent research fixture
 

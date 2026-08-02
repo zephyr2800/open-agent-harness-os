@@ -38,6 +38,13 @@ under its own pinned revision, then configure its OpenAI client to use
 `http://127.0.0.1:8089/v1`. Start each ablation with an explicit configuration
 and a distinct log path:
 
+For the clean 9B candidate, prefer the checkpoint-bound
+[`agentdojo_native_launcher`](NATIVE_EVALUATION_LAUNCHER.md). It validates the
+seven-fixture audit and merged-checkpoint binding, requires a clean AgentDojo
+checkout and explicit task selectors, records hashes/commands in an immutable
+run manifest, and only loads the local model after `--execute` is supplied.
+Its currently comparable variants are model-only and repair.
+
 ```powershell
 # Model-only baseline: no repair and no lookup-first intervention.
 python -m experiments.agentdojo_adapter_server `
@@ -54,16 +61,16 @@ python -m experiments.agentdojo_adapter_server `
   --harness-variant H3-agentdojo-lookup-first
 ```
 
-For the guarded ablation, configure the benchmark client or its OpenAI wrapper
-to include a unique value for each task attempt:
+For a future guarded ablation, configure the benchmark client or its OpenAI
+wrapper to include a unique value for each task attempt:
 
 ```json
 {"metadata": {"adapter_task_instance_id": "<unique-benchmark-attempt-id>"}}
 ```
 
-Do not reuse this ID across retries or tasks. A client that cannot send it can
-run model-only or repair ablations, but the adapter will conservatively refuse
-to reuse a lookup acknowledgement for the guarded variant.
+Do not reuse this ID across retries or tasks. The currently pinned AgentDojo
+OpenAI-compatible client cannot send it, so native runs are limited to
+model-only and repair until a separately reviewed task-bound wrapper exists.
 
 The adapter labels every native tool result as `UNTRUSTED_TOOL_OUTPUT`, keeps
 it out of verified harness evidence, retains the native function schema,

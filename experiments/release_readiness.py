@@ -106,11 +106,28 @@ def _preflight_is_current(preflight: dict[str, Any] | None, expected_source_pack
     )
 
 
+def _current_preflight(
+    results: Path,
+    expected_source_package_sha256: str | None,
+) -> tuple[Path, dict[str, Any] | None]:
+    """Select the newest source-bound launch preflight without a version pin."""
+
+    candidates: list[tuple[int, Path, dict[str, Any]]] = []
+    for path in results.glob("launch-preflight-v*.json"):
+        match = re.fullmatch(r"launch-preflight-v(\d+)\.json", path.name)
+        report = _load(path)
+        if match and _preflight_is_current(report, expected_source_package_sha256):
+            candidates.append((int(match.group(1)), path, report))
+    if candidates:
+        _, path, report = max(candidates, key=lambda item: item[0])
+        return path, report
+    return results / "launch-preflight-current.json", None
+
+
 def build_readiness(root: Path) -> dict[str, Any]:
     results = root / "experiments" / "results"
     package_version = _package_version(root)
     source_fingerprint = source_tree_sha256(root)
-    preflight_path = results / "launch-preflight-v6.json"
     matrix_path = results / "research-project2-qwopus35-9b-promotion-greedy-v1.json"
     matrix_summary_path = results / "research-project2-qwopus35-9b-promotion-summary-v1.json"
     decision_path = results / "research-project2-qwopus35-9b-promotion-decision-v1.json"
@@ -121,7 +138,7 @@ def build_readiness(root: Path) -> dict[str, Any]:
         package_version,
         source_fingerprint,
     )
-    preflight = _load(preflight_path)
+    preflight_path, preflight = _current_preflight(results, source_fingerprint)
     matrix_summary = _load(matrix_summary_path)
     decision = _load(decision_path)
     rl_gate = _load(rl_gate_path)
@@ -197,8 +214,8 @@ def build_readiness(root: Path) -> dict[str, Any]:
         },
         "full_external_suite": {
             "status": "not_run",
-            "evidence": "docs/EXTERNAL_BAR_UPDATE_2026-07-26.md",
-            "detail": "external-bar-lite is a local diagnostic, not TUA-Bench/OSWorld/AgentDojo certification",
+            "evidence": "docs/NATIVE_EVALUATION_LAUNCHER.md",
+            "detail": "the checkpoint-bound AgentDojo launcher is prepared; no native AgentDojo/TUA-Bench/OSWorld result exists yet",
         },
         "public_identity_operations": {
             "status": "open",
@@ -253,7 +270,7 @@ def build_readiness(root: Path) -> dict[str, Any]:
         "allowed_claims": [
             "The local developer-preview surface passes its documented preflight scope.",
             "The harness provides typed actions, authority checks, independent evidence, and replay.",
-            "The Qwopus branch has completed SFT and merge; evaluation is separate from that training claim.",
+            "The historical Qwopus branch completed SFT and merge; the active clean-split candidate is evaluated separately.",
         ],
         "unsupported_claims": [
             "The 9B branch beats the promoted 7B until the frozen gate passes.",
@@ -266,7 +283,7 @@ def build_readiness(root: Path) -> dict[str, Any]:
                 if matrix_summary_complete and not matrix_complete
                 else "Complete and independently audit the 9B frozen matrix."
             ),
-            "Run and summarize the disjoint external-bar-lite diagnostic.",
+            "Execute the checkpoint-bound AgentDojo plan after the clean candidate is merged, then publish native utility/security metrics and logs.",
             "Run verifier-backed RL only after frozen integrity/diagnostic evidence passes, with a held-out control and decomposed rewards; keep capability promotion separate.",
             "Close external-suite, usability, identity/operations, security, and licensing gates before public launch.",
         ],

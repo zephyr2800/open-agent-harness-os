@@ -6,10 +6,10 @@ This checklist records the evidence attached to the current public repository sn
 
 ## Verified locally
 
-- Open Agent Harness OS unit and integration suite: 110/110 passing, including
-  dense-reliability, source-bound wheel integrity, and claim-safe scorecard checks.
+- Open Agent Harness OS unit and integration suite: 134/134 passing, including
+  dense-reliability, source-bound wheel integrity, claim-safe scorecard, promotion-protocol, and native-evaluation-launcher checks.
 - Local Action Model companion suite: 47/47 passing.
-- Launch preflight v6: 16/16 checks passing, including a fresh
+- Launch preflight v8: 16/16 checks passing, including a fresh
   clean-source wheel build, extracted-wheel install smoke, bytecode
   exclusion, complete archive-manifest, package-digest, and console-script
   binding to a fresh reference wheel, and the companion suite; the historical

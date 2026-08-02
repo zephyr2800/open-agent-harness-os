@@ -1,0 +1,47 @@
+{
+  "bytecode_entries": 0,
+  "bytecode_free": true,
+  "console_scripts_match": true,
+  "demo_returncode": 0,
+  "demo_verified_success": true,
+  "has_license_file": true,
+  "imports_returncode": 0,
+  "install_returncode": 0,
+  "metadata_license": [
+    "License: Apache-2.0"
+  ],
+  "passed": true,
+  "reference_wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+  "reference_wheel_manifest_sha256": "c0179312ae6c1eac00b6da1c1a631c3b3c16189574b91dd51bb3e0faed944a0c",
+  "reference_wheel_sha256": "14574e10ebf3743ac8d4e14419dc5bc404d5cf737a8c9de30d11588552941aad",
+  "schema": "clean-wheel-smoke/v1",
+  "source_console_scripts": [
+    "harness = app.cli:main",
+    "harness-agentdojo-adapter = experiments.agentdojo_adapter_server:main",
+    "harness-factorial = experiments.factorial:main",
+    "harness-preflight = experiments.launch_preflight:main",
+    "harness-promotion-decision = experiments.promotion_decision:main",
+    "harness-replay = traces.replay:main",
+    "harness-scorecard = experiments.scorecard:main"
+  ],
+  "source_matches_wheel": true,
+  "source_package_sha256": "00d3dea92abe1088b61971039d826f41f35fdc77ea8e8427235bf588ed23e7aa",
+  "stderr_tail": "",
+  "target": "isolated-target",
+  "target_created_by_runner": true,
+  "wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
+  "wheel_bytes": 155543,
+  "wheel_console_scripts": [
+    "harness = app.cli:main",
+    "harness-agentdojo-adapter = experiments.agentdojo_adapter_server:main",
+    "harness-factorial = experiments.factorial:main",
+    "harness-preflight = experiments.launch_preflight:main",
+    "harness-promotion-decision = experiments.promotion_decision:main",
+    "harness-replay = traces.replay:main",
+    "harness-scorecard = experiments.scorecard:main"
+  ],
+  "wheel_manifest_matches_reference": true,
+  "wheel_manifest_sha256": "c0179312ae6c1eac00b6da1c1a631c3b3c16189574b91dd51bb3e0faed944a0c",
+  "wheel_package_sha256": "00d3dea92abe1088b61971039d826f41f35fdc77ea8e8427235bf588ed23e7aa",
+  "wheel_sha256": "14574e10ebf3743ac8d4e14419dc5bc404d5cf737a8c9de30d11588552941aad"
+}

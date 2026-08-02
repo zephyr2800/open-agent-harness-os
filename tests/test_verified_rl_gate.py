@@ -15,16 +15,30 @@ from experiments.verified_rl_gate import check_gate
 
 
 def _matrix(path: Path, tasks: int) -> None:
+    fixture_name = {
+        20: "task-spec-external-bar-lite-v1.json",
+        32: "task-spec-external-bar-lite-v2.json",
+    }[tasks]
+    checkpoint = path.parent / "checkpoint"
     path.write_text(json.dumps({
         "schema": "promotion-matrix/v1",
+        "checkpoint": str(checkpoint.resolve()),
+        "seeds": [0, 1, 2],
+        "task_specs": [f"C:/fixtures/{fixture_name}"],
+        "task_spec_hashes": [
+            {"path": f"C:/fixtures/{fixture_name}", "sha256": REQUIRED_FROZEN_FIXTURE_HASHES[fixture_name]}
+        ],
         "runs": [
             {
+                "seed": seed,
+                "complete": True,
                 "task_count": tasks,
+                "rows": [{} for _ in range(tasks)],
                 "runtime_replay_agreement": 1.0,
                 "trace_valid_rate": 1.0,
                 "unsafe_attempts": 0,
             }
-            for _ in range(3)
+            for seed in range(3)
         ],
     }), encoding="utf-8")
 
@@ -323,6 +337,88 @@ class VerifiedRLGateTests(unittest.TestCase):
                 holdout_novelty_audit_path=novelty,
             )
             self.assertFalse(report["passed"])
+
+    def test_repeated_or_missing_external_seed_blocks_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            decision = root / "decision.json"
+            audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=False, audit=audit, novelty=novelty, checkpoint=checkpoint)
+            external_v1 = root / "external-v1.json"
+            external_v2 = root / "external-v2.json"
+            _matrix(external_v1, 20)
+            _matrix(external_v2, 32)
+            payload = json.loads(external_v1.read_text(encoding="utf-8"))
+            payload["seeds"][2] = 1
+            payload["runs"][2]["seed"] = 1
+            external_v1.write_text(json.dumps(payload), encoding="utf-8")
+            report = check_gate(
+                decision_path=decision,
+                external_v1_path=external_v1,
+                external_v2_path=external_v2,
+                checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
+            )
+        self.assertFalse(report["passed"])
+        self.assertFalse(report["external_bar_v1"]["declared_seeds_valid"])
+        self.assertFalse(report["external_bar_v1"]["seed_runs_valid"])
+
+    def test_incomplete_external_task_rows_block_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            decision = root / "decision.json"
+            audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=False, audit=audit, novelty=novelty, checkpoint=checkpoint)
+            external_v1 = root / "external-v1.json"
+            external_v2 = root / "external-v2.json"
+            _matrix(external_v1, 20)
+            _matrix(external_v2, 32)
+            payload = json.loads(external_v2.read_text(encoding="utf-8"))
+            payload["runs"][0]["rows"].pop()
+            external_v2.write_text(json.dumps(payload), encoding="utf-8")
+            report = check_gate(
+                decision_path=decision,
+                external_v1_path=external_v1,
+                external_v2_path=external_v2,
+                checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
+            )
+        self.assertFalse(report["passed"])
+        self.assertFalse(report["external_bar_v2"]["task_rows_complete"])
+
+    def test_external_matrix_from_another_checkpoint_or_fixture_blocks_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            decision = root / "decision.json"
+            audit = _audit(root / "audit.json")
+            novelty = _novelty(root / "novelty.json", audit)
+            checkpoint = _checkpoint(root, audit)
+            _decision(decision, promoted=False, audit=audit, novelty=novelty, checkpoint=checkpoint)
+            external_v1 = root / "external-v1.json"
+            external_v2 = root / "external-v2.json"
+            _matrix(external_v1, 20)
+            _matrix(external_v2, 32)
+            payload = json.loads(external_v1.read_text(encoding="utf-8"))
+            payload["checkpoint"] = str(root / "other-checkpoint")
+            payload["task_spec_hashes"][0]["sha256"] = "0" * 64
+            external_v1.write_text(json.dumps(payload), encoding="utf-8")
+            report = check_gate(
+                decision_path=decision,
+                external_v1_path=external_v1,
+                external_v2_path=external_v2,
+                checkpoint=checkpoint,
+                train_holdout_audit_path=audit,
+                holdout_novelty_audit_path=novelty,
+            )
+        self.assertFalse(report["passed"])
+        self.assertFalse(report["external_bar_v1"]["checkpoint_bound"])
+        self.assertFalse(report["external_bar_v1"]["task_spec_bound"])
 
     def test_bad_or_unlinked_audit_blocks_research_rl(self):
         with tempfile.TemporaryDirectory() as directory:

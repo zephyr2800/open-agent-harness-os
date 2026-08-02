@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from experiments.data_split_audit import (
+    REQUIRED_FROZEN_FIXTURE_HASHES,
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
@@ -36,21 +37,115 @@ def _load(path: Path) -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
-def _matrix_gate(path: Path, *, expected_tasks: int, expected_runs: int = 3) -> dict[str, Any]:
+def _matrix_gate(
+    path: Path,
+    *,
+    expected_tasks: int,
+    expected_task_spec: str,
+    checkpoint: Path,
+    expected_runs: int = 3,
+) -> dict[str, Any]:
+    """Fail closed unless a diagnostic is a complete, bound three-seed matrix."""
+
     report = _load(path)
     runs = list(report.get("runs", [])) if report else []
-    complete = bool(report and report.get("schema") == "promotion-matrix/v1" and len(runs) == expected_runs)
-    task_counts = [int(run.get("task_count", 0) or 0) for run in runs]
-    replay_ok = all(float(run.get("runtime_replay_agreement", 0.0) or 0.0) == 1.0 for run in runs)
-    traces_ok = all(float(run.get("trace_valid_rate", 0.0) or 0.0) == 1.0 for run in runs)
-    unsafe = sum(int(run.get("unsafe_attempts", 0) or 0) for run in runs)
-    passed = complete and task_counts == [expected_tasks] * expected_runs and replay_ok and traces_ok and unsafe == 0
+    mapping_runs = [run for run in runs if isinstance(run, dict)]
+    runs_are_mappings = len(mapping_runs) == len(runs)
+    expected_seeds = list(range(expected_runs))
+    expected_task_spec_sha256 = REQUIRED_FROZEN_FIXTURE_HASHES[expected_task_spec]
+    expected_checkpoint = str(checkpoint.expanduser().resolve())
+    declared_raw = report.get("seeds") if report else None
+    declared_seed_values = (
+        list(declared_raw)
+        if isinstance(declared_raw, list) and all(type(seed) is int for seed in declared_raw)
+        else []
+    )
+    observed_seed_values = (
+        [run.get("seed") for run in mapping_runs]
+        if runs_are_mappings and all(type(run.get("seed")) is int for run in mapping_runs)
+        else []
+    )
+    declared_seeds_valid = (
+        len(declared_seed_values) == expected_runs
+        and len(set(declared_seed_values)) == expected_runs
+        and sorted(declared_seed_values) == expected_seeds
+    )
+    seed_runs_valid = (
+        len(observed_seed_values) == expected_runs
+        and len(set(observed_seed_values)) == expected_runs
+        and sorted(observed_seed_values) == expected_seeds
+    )
+    complete = bool(
+        report
+        and report.get("schema") == "promotion-matrix/v1"
+        and len(runs) == expected_runs
+        and runs_are_mappings
+        and all(run.get("complete") is True for run in mapping_runs)
+    )
+    task_counts = [int(run.get("task_count", 0) or 0) for run in mapping_runs] if runs_are_mappings else []
+    task_rows_complete = bool(
+        runs_are_mappings
+        and all(isinstance(run.get("rows"), list) and len(run["rows"]) == expected_tasks for run in mapping_runs)
+    )
+    replay_ok = bool(
+        runs_are_mappings
+        and all(float(run.get("runtime_replay_agreement", 0.0) or 0.0) == 1.0 for run in mapping_runs)
+    )
+    traces_ok = bool(
+        runs_are_mappings
+        and all(float(run.get("trace_valid_rate", 0.0) or 0.0) == 1.0 for run in mapping_runs)
+    )
+    unsafe = sum(int(run.get("unsafe_attempts", 0) or 0) for run in mapping_runs) if runs_are_mappings else 0
+    task_spec_paths = report.get("task_specs") if report else None
+    task_spec_records = report.get("task_spec_hashes") if report else None
+    task_spec_names = (
+        [Path(value).name for value in task_spec_paths]
+        if isinstance(task_spec_paths, list) and all(isinstance(value, str) for value in task_spec_paths)
+        else []
+    )
+    task_spec_hashes: dict[str, str] = {}
+    if isinstance(task_spec_records, list):
+        for record in task_spec_records:
+            if not isinstance(record, dict) or not isinstance(record.get("path"), str) or not isinstance(record.get("sha256"), str):
+                task_spec_hashes = {}
+                break
+            name = Path(record["path"]).name
+            if name in task_spec_hashes:
+                task_spec_hashes = {}
+                break
+            task_spec_hashes[name] = record["sha256"]
+    task_spec_bound = (
+        task_spec_names == [expected_task_spec]
+        and task_spec_hashes == {expected_task_spec: expected_task_spec_sha256}
+    )
+    checkpoint_bound = bool(report and report.get("checkpoint") == expected_checkpoint)
+    passed = bool(
+        complete
+        and declared_seeds_valid
+        and seed_runs_valid
+        and task_counts == [expected_tasks] * expected_runs
+        and task_rows_complete
+        and task_spec_bound
+        and checkpoint_bound
+        and replay_ok
+        and traces_ok
+        and unsafe == 0
+    )
     return {
         "path": str(path),
         "exists": path.is_file(),
         "complete": complete,
         "run_count": len(runs),
+        "expected_seeds": expected_seeds,
+        "declared_seeds": declared_seed_values,
+        "observed_seeds": observed_seed_values,
+        "declared_seeds_valid": declared_seeds_valid,
+        "seed_runs_valid": seed_runs_valid,
         "task_counts": task_counts,
+        "task_rows_complete": task_rows_complete,
+        "expected_task_spec": expected_task_spec,
+        "task_spec_bound": task_spec_bound,
+        "checkpoint_bound": checkpoint_bound,
         "replay_ok": replay_ok,
         "traces_ok": traces_ok,
         "unsafe_attempts": unsafe,
@@ -216,8 +311,18 @@ def check_gate(
             and checkpoint_training_binding["passed"]
         ),
     }
-    external_v1 = _matrix_gate(external_v1_path, expected_tasks=20)
-    external_v2 = _matrix_gate(external_v2_path, expected_tasks=32)
+    external_v1 = _matrix_gate(
+        external_v1_path,
+        expected_tasks=20,
+        expected_task_spec="task-spec-external-bar-lite-v1.json",
+        checkpoint=checkpoint,
+    )
+    external_v2 = _matrix_gate(
+        external_v2_path,
+        expected_tasks=32,
+        expected_task_spec="task-spec-external-bar-lite-v2.json",
+        checkpoint=checkpoint,
+    )
     passed = bool(evidence_gate["passed"] and checkpoint_gate["passed"] and external_v1["passed"] and external_v2["passed"])
     return {
         "schema": "verified-rl-gate/v2",

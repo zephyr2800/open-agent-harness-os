@@ -36,7 +36,8 @@ promotion decision rejected the checkpoint. This is failure-localization
 evidence, not a claim that the model is generally capable or that RL improved
 it. See
 `docs/CLAIMS_AND_EVIDENCE_MATRIX.md` and
-`docs/RESEARCH_LAUNCH_BRIEF.md` for the evidence boundaries.
+`docs/RESEARCH_LAUNCH_BRIEF.md` for the evidence boundaries; `STATUS.md`
+records the current program state and gated next steps.
 
 ## Quick start
 

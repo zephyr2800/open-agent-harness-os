@@ -17,6 +17,9 @@ uses the pinned τ³ runtime's own Pydantic Results model before preserving the
 file. The validator rejects any native simulation terminated with
 infrastructure_error.
 
+It also recomputes the recorded Project 1 and harness runtime source trees.
+Changing either tree after execution invalidates local result consistency.
+
 The validated primary metric is mean_reward from τ³'s own reward_info.reward,
 with reward_one_rate, per-family reward, native message availability, duration,
 and reported costs alongside it. Reported LiteLLM costs are deliberately not

@@ -22,6 +22,8 @@ from statistics import mean
 from typing import Any
 from urllib.parse import urlparse
 
+from experiments.source_tree import verify_source_tree_record
+
 
 SCHEMA = "tau2-native-result-validation/v1"
 RUN_SCHEMA = "tau2-native-run/v1"
@@ -219,6 +221,18 @@ def _validate_adapter_binding(
         Path(source_record["path"]).relative_to(harness_root)
     except ValueError as error:
         raise ValueError("manifest.adapter.source is not contained in the adapter command harness root") from error
+    project1_root = _command_path(adapter_command, "--project1-root", "commands.adapter")
+    source_trees = _mapping(adapter.get("source_trees"), "manifest.adapter.source_trees")
+    project1_source = verify_source_tree_record(
+        source_trees.get("project1"),
+        field="manifest.adapter.source_trees.project1",
+        expected_root=project1_root,
+    )
+    harness_source = verify_source_tree_record(
+        source_trees.get("harness"),
+        field="manifest.adapter.source_trees.harness",
+        expected_root=harness_root,
+    )
     expected_log = run_dir / "adapter.jsonl"
     if _command_path(adapter_command, "--log", "commands.adapter") != expected_log:
         raise ValueError("manifest adapter command does not preserve its log in the immutable run directory")
@@ -231,7 +245,12 @@ def _validate_adapter_binding(
         or health.get("harness_variant") != harness_variant
     ):
         raise ValueError("manifest.adapter_health does not prove the recorded adapter loaded the registered checkpoint")
-    return {"source": source_record, "log": adapter_log, "health": dict(health)}
+    return {
+        "source": source_record,
+        "source_trees": {"project1": project1_source, "harness": harness_source},
+        "log": adapter_log,
+        "health": dict(health),
+    }
 
 
 def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict[str, Any]:

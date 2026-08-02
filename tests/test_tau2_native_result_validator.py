@@ -9,6 +9,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 
+from experiments.source_tree import record_source_tree
 from experiments.tau2_native_result_validator import SCHEMA, main, validate_native_result
 
 
@@ -64,6 +65,17 @@ def _write_fixture(
     adapter_source = harness_root / "experiments" / "agentdojo_adapter_server.py"
     adapter_source.parent.mkdir(parents=True)
     adapter_source.write_text("def main():\n    return 0\n", encoding="utf-8")
+    (harness_root / "adapters").mkdir()
+    (harness_root / "adapters" / "project1_transformers.py").write_text(
+        "class Project1TransformersAdapter: ...\n",
+        encoding="utf-8",
+    )
+    project1_root = root / "project1"
+    (project1_root / "model").mkdir(parents=True)
+    (project1_root / "model" / "transformers_backend.py").write_text(
+        "class TransformersActionPolicy: ...\n",
+        encoding="utf-8",
+    )
     wrapper_source = root / "tau2_native_runner.py"
     wrapper_source.write_text("def main():\n    return 0\n", encoding="utf-8")
     adapter_log = run_dir / "adapter.jsonl"
@@ -137,6 +149,10 @@ def _write_fixture(
             "port": 8090,
             "harness_variant": "H5-tau2-native-model-only",
             "source": _record(adapter_source),
+            "source_trees": {
+                "project1": record_source_tree(project1_root),
+                "harness": record_source_tree(harness_root),
+            },
         },
         "adapter_health": {
             "status": "ok",
@@ -164,7 +180,7 @@ def _write_fixture(
                 "--model-checkpoint",
                 str(checkpoint.resolve()),
                 "--project1-root",
-                str(root / "project1"),
+                str(project1_root.resolve()),
                 "--harness-root",
                 str(harness_root.resolve()),
                 "--host",
@@ -273,6 +289,14 @@ class Tau2NativeResultValidatorTests(unittest.TestCase):
             command[command.index("--model-checkpoint") + 1] = str(root / "different-checkpoint")
             manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "bound to the recorded merged checkpoint"):
+                validate_native_result(manifest)
+
+            manifest = _write_fixture(root / "fourth")
+            (root / "fourth" / "project1" / "model" / "transformers_backend.py").write_text(
+                "class TransformersActionPolicy:\n    changed = True\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "source_trees.project1"):
                 validate_native_result(manifest)
 
     def test_matches_tau2_success_tolerance_at_one(self) -> None:

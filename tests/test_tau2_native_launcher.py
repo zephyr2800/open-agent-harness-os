@@ -95,7 +95,11 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         entrypoint.mkdir(parents=True)
         (entrypoint / "cli.py").write_text("# cli placeholder\n", encoding="utf-8")
         project1 = root / "project1"
-        project1.mkdir()
+        (project1 / "model").mkdir(parents=True)
+        (project1 / "model" / "transformers_backend.py").write_text(
+            "class TransformersActionPolicy: ...\n",
+            encoding="utf-8",
+        )
         runtime = root / "tau2-runtime"
         runtime.mkdir()
         return Tau2NativeRunConfig(
@@ -140,6 +144,8 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         self.assertTrue(plan["runner_wrapper"]["compatibility"]["required"])
         self.assertEqual(plan["runner_wrapper"]["compatibility"]["id"], "tau2-dummy-user-constructor-v1")
         self.assertEqual(plan["tau2"]["selector_catalog"]["sha256"], "e" * 64)
+        self.assertEqual(plan["adapter"]["source_trees"]["project1"]["schema"], "python-source-tree/v1")
+        self.assertGreater(plan["adapter"]["source_trees"]["harness"]["file_count"], 0)
         self.assertTrue(plan["runtime"]["source_bound"])
         self.assertEqual(plan["environment"]["PYTHONUTF8"], "1")
         entries = plan["runtime"]["pythonpath_entries"]

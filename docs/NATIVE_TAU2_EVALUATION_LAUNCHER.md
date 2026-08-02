@@ -24,6 +24,7 @@ The launcher rejects a run unless all of these are true:
 - The model is deterministic (`temperature=0`), uses one local worker, has explicit step/error/token limits, and disables benchmark retries.
 - The wrapper's in-memory `DummyUser` compatibility status is recorded. It does not modify τ³-bench source, task data, tool environment, or grader.
 - The adapter has a unique loopback port, a health check, and is stopped only if this launcher started it.
+- The adapter file plus the executable Project 1 and harness Python source trees are hashed and recorded. A later source change makes result validation fail rather than silently rebinding the policy implementation.
 - After execution, the pinned τ³ runtime validates results.json with its own Pydantic Results model before the native tree is preserved.
 
 Every plan records the selector-catalog hash, checkpoint and source hashes, τ³-bench commit/runtime details, commands, environment, and the exact adapter variant. Execution writes the official output to τ³-bench's native result directory and copies that tree into the immutable run directory alongside adapter and benchmark logs.

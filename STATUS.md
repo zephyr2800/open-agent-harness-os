@@ -30,6 +30,10 @@ gate, native external diagnostic, or verifier-backed RL gate.
   `finish` task offers only reference-contract tool types, and no finish
   contract exceeds three required actions. The tracked evaluation-surface
   audit is a complexity floor and does not weaken or change the frozen gate.
+- A separate post-freeze 36-task action-surface stress diagnostic is registered
+  for after promotion. Its completion tasks require five ordered actions with
+  valid distractor tools under the fixed six-step budget; it is local,
+  diagnostic-only, and does not alter v2 promotion or RL authorization.
 - The public corpus-quality audit binds that same 3,232-row source hash and
   reports zero exact duplicate rows or inputs, 7 provenance sources, and 15
   sampling strata without exposing examples. It is a data-integrity control,
@@ -94,6 +98,8 @@ gate, native external diagnostic, or verifier-backed RL gate.
 - `docs/CORPUS_QUALITY_AUDIT.md` -- raw-content-free corpus integrity audit.
 - `docs/EVALUATION_SURFACE_AUDIT.md` -- reproducible limits of the local task
   surface; not a model score.
+- `docs/ACTION_SURFACE_STRESS_V1.md` -- post-freeze five-step local stress
+  diagnostic and replay-validation procedure.
 - `docs/NATIVE_EVALUATION_REGISTRATION_2026-08-01.md` -- Phase A external
   diagnostic.
 - `docs/ADAPTIVE_EXTERNAL_EVALUATION_2026-08-02.md` -- conditional Phase B.

@@ -42,6 +42,10 @@ compare it with current launches, and defend the claim boundaries.
 14. [MELON](https://proceedings.mlr.press/v267/zhu25z.html) — a research
     reference for defending against indirect prompt injection while retaining
     utility.
+14a. [AutoDojo](https://arxiv.org/abs/2606.15057) — why a defense that looks
+    robust to fixed injections can fail under adaptive black-box attacks,
+    especially on under-specified action-open tasks. Read this before treating
+    any static AgentDojo score as a security result.
 
 ## Read for the current launch landscape
 

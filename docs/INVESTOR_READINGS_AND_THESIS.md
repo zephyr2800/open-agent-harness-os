@@ -1,6 +1,6 @@
 # Investor reading brief and merged thesis
 
-Updated 2026-07-26. This is a cram guide for the merged project: a specialized
+Updated 2026-08-02. This is a cram guide for the merged project: a specialized
 action policy trained through verifier-backed post-training, wrapped in a
 harness that executes, authorizes, verifies, replays, and mines failures for
 the next training cycle.
@@ -42,10 +42,14 @@ optimization -> verifier-backed RL -> frozen-holdout promotion.
 7. [Kimi K3 technical report](https://arxiv.org/abs/2607.24653) and [official weights/code](https://github.com/MoonshotAI/Kimi-K3): the report is now available, so use it for the architecture/training discussion; treat headline benchmark claims as claims to reproduce, not as our baseline. The strategic lesson is open-weight sparse scale plus aggressive quantization, not a claim that we can reproduce a 2.8T model locally.
 8. For the current open agent-harness reference, read the [Pi mono repository](https://github.com/earendil-works/pi-mono) and its [agent architecture docs](https://www.mintlify.com/badlogic/pi-mono/concepts/architecture). Keep this distinct from Inflection's conversational Pi: the former is a modular stateful runtime, the latter is a product/model research line.
 
-Investor translation: the 5090 lets us test the scaling curve locally. Full-parameter
-SFT currently fits at 0.5B-1.5B; 3B QLoRA fits comfortably, and the next useful
-frontier is 7B-class QLoRA. Capacity matters, but data quality, reward design,
-and evaluator independence determine whether capacity becomes capability.
+Investor translation: the 5090 lets us test a controlled local scaling curve,
+not reproduce frontier pretraining. The active clean scale branch is a 9B
+4-bit QLoRA candidate; its result remains pending the frozen promotion matrix.
+Full-parameter SFT is still a small-model regime, while larger quantized bases
+must earn their extra memory, latency, and possible precision loss through the
+same held-out verified-utility, safety, and replay gates. Capacity matters, but
+data quality, reward design, and evaluator independence determine whether
+capacity becomes capability.
 
 ### 4. Why the harness is a research contribution
 

@@ -66,8 +66,10 @@ gate, native external diagnostic, or verifier-backed RL gate.
 3. If promoted, run the registered native AgentDojo and tau2 diagnostics, then
    validate their native artifacts before describing any external result.
 4. Only then choose a failure-targeted remediation, the preregistered
-   sampling-order ablation, or verifier-backed RL; preserve the same held-out
-   and safety gates.
+   sampling-order ablation, verifier-backed RL, or the separate 27B NF4 QLoRA
+   feasibility smoke; preserve the same held-out and safety gates. The 27B
+   branch must use audited clean data and cannot substitute for a failed 9B
+   evaluation.
 5. Complete the real model-by-harness factorial, deployment measurements,
    licensing/provenance review, usability evidence, and public-launch controls
    before claiming a completed paper result or production readiness.

@@ -55,3 +55,13 @@ baseline exposes an appropriate failure family, weighted ordering is tested as
 a separate full-coverage ablation with the same data hash and budget; it is
 not silently substituted for the baseline and it does not justify oversampling
 or evaluator changes.
+
+## D10 - Treat 27B scale as a feasibility branch, not a rescue claim
+
+The single RTX 5090 may be used for a staged 27B NF4 QLoRA memory/loss smoke
+only after the clean 9B evaluation chain frees the GPU. It begins with a small
+rank, short context, and fixed step budget, and proceeds only after finite
+loss, complete coverage, checkpoint integrity, and memory headroom are shown.
+It must consume an audited clean curriculum and pass the same held-out,
+replay, safety, and deployment measurements; a larger parameter count does
+not repair an invalid baseline or establish a scaling-law claim on its own.

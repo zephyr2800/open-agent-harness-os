@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -160,6 +161,19 @@ class Tau2NativeLauncherTests(unittest.TestCase):
         self.assertIn("openai/local-action-policy", benchmark)
         self.assertIn("--max-retries", benchmark)
         self.assertIn("--enforce-communication-protocol", benchmark)
+
+    def test_help_supports_a_legacy_windows_console_encoding(self) -> None:
+        environment = os.environ.copy()
+        environment["PYTHONUTF8"] = "0"
+        environment["PYTHONIOENCODING"] = "cp1252"
+        completed = subprocess.run(
+            [sys.executable, "-m", "experiments.tau2_native_launcher", "--help"],
+            cwd=REPO_ROOT,
+            env=environment,
+            capture_output=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr.decode("utf-8", errors="replace"))
+        self.assertIn(b"--task-id", completed.stdout)
 
     def test_repair_variant_is_explicit_in_the_adapter_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

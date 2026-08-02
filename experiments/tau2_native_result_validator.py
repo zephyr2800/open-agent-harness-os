@@ -15,6 +15,7 @@ import hashlib
 import json
 import math
 import re
+import sys
 from collections import Counter, defaultdict
 from collections.abc import Mapping
 from pathlib import Path
@@ -599,6 +600,13 @@ def validate_native_result(run_manifest_path: str | Path) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8")
+            except (OSError, ValueError):
+                pass
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-manifest", required=True, help="completed τ³ launcher run_manifest.json")
     parser.add_argument("--output", required=True, help="new JSON output path")

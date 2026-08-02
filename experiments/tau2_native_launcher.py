@@ -848,7 +848,20 @@ def _config_from_args(args: argparse.Namespace) -> Tau2NativeRunConfig:
     )
 
 
+def _configure_utf8_console() -> None:
+    """Keep CLI help/errors usable on Windows legacy code pages."""
+
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8")
+            except (OSError, ValueError):
+                pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _configure_utf8_console()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--train-holdout-audit", required=True)

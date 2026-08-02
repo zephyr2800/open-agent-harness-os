@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -219,6 +221,19 @@ def _write_fixture(
 
 
 class Tau2NativeResultValidatorTests(unittest.TestCase):
+    def test_help_supports_a_legacy_windows_console_encoding(self) -> None:
+        environment = os.environ.copy()
+        environment["PYTHONUTF8"] = "0"
+        environment["PYTHONIOENCODING"] = "cp1252"
+        completed = subprocess.run(
+            [sys.executable, "-m", "experiments.tau2_native_result_validator", "--help"],
+            cwd=Path(__file__).resolve().parents[1],
+            env=environment,
+            capture_output=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr.decode("utf-8", errors="replace"))
+        self.assertIn(b"--run-manifest", completed.stdout)
+
     def test_validates_completed_native_result_without_inventing_unmeasured_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

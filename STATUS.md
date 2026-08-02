@@ -44,6 +44,14 @@ gate, native external diagnostic, or verifier-backed RL gate.
   source-pinned tau3-bench v1.0.1 telecom/base solo diagnostic (using the
   upstream `tau2` CLI). The launchers preserve native artifacts and the
   validators fail closed on selector, source, policy, or artifact drift.
+- The next post-gate model×harness factorial has an isolated execution-control
+  upgrade: H1 and H3 both hide evaluator-owned contract hints and disable
+  deterministic adapter repair; H3 is explicitly the advanced
+  context/checkpoint/recovery treatment. A separate analysis tool will reject
+  incomplete, mismatched, unreplayable, unsafe, non-stochastic, or
+  source/data-unbound four-cell reports before calculating a task-cluster
+  interaction interval. This is prepared instrumentation, not a checkpoint
+  result or a change to promotion v2.
 - Future checkpoint, native, and factorial runs can preserve a raw sampled
   whole-GPU-energy sidecar (`gpu-energy/v1`). No energy value is claimed for
   the live clean 9B training job; the sampler cannot retroactively observe it

@@ -12,6 +12,8 @@ IR-aware harness produce a superadditive gain for the paired small model?
 - same task specification, tool implementation, and output budget;
 - evaluator, trace recorder, authority boundary, and hidden holdout immutable;
 - independent artifact/state verification;
+- source-hash-bound corpus audit with raw examples excluded from public audit
+  artifacts;
 - renamed tool and schema perturbations;
 - at least two task families and multiple seeds;
 - raw traces plus replay validation for every reported success.

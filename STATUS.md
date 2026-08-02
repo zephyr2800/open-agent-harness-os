@@ -16,7 +16,7 @@ gate, native external diagnostic, or verifier-backed RL gate.
   gates, registered tools, deterministic verification, an evidence ledger,
   replayable JSONL traces, checkpoint/recovery machinery, loopback HTTP, and
   MCP stdio surfaces.
-- The current Project 2 regression suite is 180/180 and the current release
+- The current Project 2 regression suite is 184/184 and the current release
   preflight is 16/16. These are developer-preview regression controls, not an
   external capability score.
 - A historical 9B matrix completed at 483/552 independently verified local
@@ -26,6 +26,10 @@ gate, native external diagnostic, or verifier-backed RL gate.
 - The active clean 9B branch binds 3,232 audited training rows to a frozen
   promotion protocol with genuinely stochastic decoding seeds, source-tree
   records, independent replay, safety accounting, and a decision artifact.
+- The public corpus-quality audit binds that same 3,232-row source hash and
+  reports zero exact duplicate rows or inputs, 7 provenance sources, and 15
+  sampling strata without exposing examples. It is a data-integrity control,
+  not evidence of held-out model generalization.
 - The first native external diagnostic is preregistered before checkpoint
   evaluation: source-pinned AgentDojo clean/direct-injection cases and a
   source-pinned tau2 telecom/base solo diagnostic. The launchers preserve
@@ -83,6 +87,7 @@ gate, native external diagnostic, or verifier-backed RL gate.
 - `docs/RESEARCH_LAUNCH_BRIEF.md` -- thesis, evidence tiers, and claim limits.
 - `docs/RESEARCH_ABLATION_SPEC_V2.md` -- controlled model/harness and sampling
   ablations.
+- `docs/CORPUS_QUALITY_AUDIT.md` -- raw-content-free corpus integrity audit.
 - `docs/NATIVE_EVALUATION_REGISTRATION_2026-08-01.md` -- Phase A external
   diagnostic.
 - `docs/ADAPTIVE_EXTERNAL_EVALUATION_2026-08-02.md` -- conditional Phase B.

@@ -1,0 +1,156 @@
+{
+  "assertions": {
+    "source_hashes_match": true,
+    "unique_inputs": true,
+    "unique_rows": true
+  },
+  "distributions": {
+    "provenance_source": {
+      "deterministic_reference_policy": 8,
+      "synthetic_clean_retry_curriculum_v1": 768,
+      "synthetic_clean_state_evidence_curriculum_v1": 1344,
+      "synthetic_exact_payload_fidelity_v1": 120,
+      "synthetic_finish_convergence_v1": 336,
+      "synthetic_finish_report_convergence_v2": 336,
+      "synthetic_policy_sequence_recovery_v1": 320
+    },
+    "sampling_stratum": {
+      "<missing>": 8,
+      "confirmation_boundary": 96,
+      "evidence_grounded_finish": 192,
+      "evidence_to_answer_api": 192,
+      "exact_payload_fidelity": 120,
+      "indirect_injection_api": 288,
+      "indirect_injection_browser": 288,
+      "insufficient_information": 96,
+      "policy_sequence_recovery": 320,
+      "retry_after_verified_failure": 192,
+      "retry_boundary_abstention": 192,
+      "retry_schema_grounding": 192,
+      "state_dependency": 384,
+      "verified_finish_convergence": 336,
+      "verified_finish_report_convergence": 336
+    },
+    "target_kind": {
+      "abstain": 387,
+      "act": 1472,
+      "finish": 1373
+    }
+  },
+  "duplicate_checks": {
+    "exact_rows": {
+      "duplicate_groups": 0,
+      "duplicate_rows": 0,
+      "excess_rows": 0,
+      "max_multiplicity": 1,
+      "unique_values": 3232
+    },
+    "inputs": {
+      "duplicate_groups": 0,
+      "duplicate_rows": 0,
+      "excess_rows": 0,
+      "max_multiplicity": 1,
+      "unique_values": 3232
+    },
+    "targets": {
+      "duplicate_groups": 0,
+      "duplicate_rows": 0,
+      "excess_rows": 0,
+      "max_multiplicity": 1,
+      "unique_values": 3232
+    },
+    "task_ids": {
+      "duplicate_groups": 60,
+      "duplicate_rows": 120,
+      "excess_rows": 60,
+      "max_multiplicity": 2,
+      "unique_values": 3172
+    }
+  },
+  "field_presence": {
+    "input": {
+      "available_tools": 3232,
+      "goal": 3232,
+      "state": 3232,
+      "task_id": 3232,
+      "token_budget": 3232
+    },
+    "provenance": {
+      "augmentation_index": 120,
+      "evaluation_identifiers_used": 2112,
+      "holdout_excluded": 3224,
+      "independent_verifier_required": 8,
+      "sampling_stratum": 3224,
+      "sampling_weight": 3224,
+      "source": 3232,
+      "state_digest_present": 120,
+      "synthetic": 3232,
+      "task_spec": 8,
+      "trajectory_verified": 3224
+    },
+    "target": {
+      "abstention": 387,
+      "action": 1472,
+      "finish": 1373,
+      "kind": 3232,
+      "schema": 3232,
+      "state_update": 3232,
+      "step_id": 3232,
+      "task_id": 3232,
+      "uncertainty": 3232
+    },
+    "top_level": {
+      "input": 3232,
+      "provenance": 3232,
+      "schema": 3232,
+      "target": 3232,
+      "task_id": 3232
+    }
+  },
+  "passed": true,
+  "raw_examples_included": false,
+  "requirements": {
+    "require_unique_inputs": true,
+    "require_unique_rows": true
+  },
+  "row_count": 3232,
+  "schema": "corpus-quality-audit/v1",
+  "serialized_character_lengths": {
+    "input": {
+      "count": 3232,
+      "max": 4140,
+      "mean": 1549.043,
+      "min": 239,
+      "p50": 1313,
+      "p90": 2961,
+      "p99": 4050
+    },
+    "row": {
+      "count": 3232,
+      "max": 5605,
+      "mean": 2502.686,
+      "min": 834,
+      "p50": 2201,
+      "p90": 4200,
+      "p99": 5511
+    },
+    "target": {
+      "count": 3232,
+      "max": 1032,
+      "mean": 537.477,
+      "min": 346,
+      "p50": 504,
+      "p90": 807,
+      "p99": 1029
+    }
+  },
+  "sources": [
+    {
+      "expected_sha256": "d226a3246cd646ce1b1e7d1350d665749f4a986ec854d4314a885e12702d5ed6",
+      "rows": 3232,
+      "sha256": "d226a3246cd646ce1b1e7d1350d665749f4a986ec854d4314a885e12702d5ed6",
+      "source": "work/clean-9b-sft-mixture-v3.jsonl",
+      "source_hash_matches_expected": true
+    }
+  ]
+}

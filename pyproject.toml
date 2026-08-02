@@ -17,6 +17,7 @@ harness-scorecard = "experiments.scorecard:main"
 harness-promotion-decision = "experiments.promotion_decision:main"
 harness-agentdojo-adapter = "experiments.agentdojo_adapter_server:main"
 harness-gpu-energy = "experiments.gpu_energy:main"
+harness-corpus-audit = "experiments.corpus_quality_audit:main"
 harness = "app.cli:main"
 
 [tool.setuptools]

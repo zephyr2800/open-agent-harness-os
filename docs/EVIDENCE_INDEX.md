@@ -159,12 +159,12 @@ model claim.
 - `experiments/results/product-smoke-v0.json` covers six workflows with 1.0
   protocol validity, 0.833333 verified-success rate, and a deliberate safety
   denial for high-risk delete.
-- `experiments/results/launch-preflight-v27.json` is the current local developer-
+- `experiments/results/launch-preflight-v28.json` is the current local developer-
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel
   integrity, extracted-wheel install smoke, launch-document presence, and all
-  the 180-test source suite passed at artifact creation. It builds from a
+  the 184-test source suite passed at artifact creation. It builds from a
   clean source copy, binds the complete wheel archive, modules, and console
   scripts to a fresh source-derived reference, and rejects Python bytecode
   caches. It
@@ -383,6 +383,12 @@ available.
 - `experiments/holdout_novelty_audit.py`: identifier-normalized lexical
   template-affinity screen. It binds its report to the exact training-source
   and task-spec hashes, but is explicitly not a semantic-novelty claim.
+- `experiments/corpus_quality_audit.py` and
+  `experiments/results/clean-9b-corpus-quality-audit-v2.json`: a
+  raw-content-free, source-hash-bound audit of the clean 9B corpus. It records
+  structural distributions and duplicate statistics; 3,232 rows, zero exact
+  row/input duplicates, and the expected source hash passed. This is a data
+  integrity control, not a generalization score.
 - `experiments/promotion_decision.py`: separate frozen promotion gate that
   requires all three slices, all recorded runs, independent replay agreement,
   zero unsafe attempts, no unknown task specifications, and a bound passing
@@ -392,12 +398,12 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 180/180 after evaluator hardening,
+- The current project test suite is 184/184 after evaluator hardening,
   dense-reliability, atomic concurrent trace-retention, HTTP bearer-auth, and
   loopback OpenAI-transport coverage.
 - Current wheel/preflight evidence is
-  `experiments/results/clean-wheel-smoke-v27.json` and
-  `experiments/results/launch-preflight-v27.json`; the source/package and
+  `experiments/results/clean-wheel-smoke-v28.json` and
+  `experiments/results/launch-preflight-v28.json`; the source/package and
   wheel-manifest fingerprints are recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 - `experiments/gpu_energy.py` provides a raw-sample, whole-GPU-energy sidecar
   for future exclusive evaluation windows; `docs/GPU_ENERGY_MEASUREMENT.md`

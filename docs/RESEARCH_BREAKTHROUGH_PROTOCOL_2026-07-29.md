@@ -32,6 +32,9 @@ the policy.
   passing direct-contract audit and a bound, identifier-normalized
   template-affinity audit. The latter is a conservative local screen, not a
   semantic-novelty proof.
+- `task-spec-author-holdout-v1.json` is the current post-freeze local
+  diagnostic for evidence-to-action transformations. It is published and
+  therefore is not a substitute for a hidden or native external suite.
 - At least three decoding seeds are required for a completed checkpoint; an
   independent training seed is preferred for a paper claim.
 - Tool aliases, reordered tool descriptions, long-horizon state dependencies,

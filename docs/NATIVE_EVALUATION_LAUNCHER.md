@@ -19,8 +19,10 @@ current clean-9B protocol is
 [`NATIVE_EVALUATION_REGISTRATION_2026-08-01.md`](NATIVE_EVALUATION_REGISTRATION_2026-08-01.md).
 
 ```powershell
-$py = 'C:\Users\steve\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
-$root = 'C:\Users\steve\Documents\Codex\2026-07-25\ru'
+# Run this block from the repository root, using the Python environment with
+# the pinned native-evaluation dependencies installed.
+$py = (Get-Command python -ErrorAction Stop).Source
+$root = (Get-Location).Path
 & $py -m experiments.agentdojo_native_launcher `
   --checkpoint <merged-clean-9b-checkpoint> `
   --train-holdout-audit <clean-seven-fixture-audit.json> `

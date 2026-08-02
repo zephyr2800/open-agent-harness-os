@@ -82,13 +82,20 @@ arguments must never be shown to the model. Both H1 and H3 set
 `adapter_enable_repair = false`; their common scorer, executor, evidence
 ledger, and verifier remain outside the model. H3 is the explicitly recorded
 advanced context/checkpoint/recovery treatment, not a new verifier plane. The
-report binds the task-spec SHA-256, model identifiers, the path and SHA-256 of
-an immutable checkpoint-identity manifest for each model, sampling parameters,
+report binds the task-spec SHA-256, model identifiers, a content-bound
+`checkpoint-identity/v1` manifest for each local model snapshot (including
+every weight-file digest), the manifest SHA-256, sampling parameters,
 per-row controls, unsafe-attempt accounting, raw trace, independent replay
 result, source-tree records, a passing train/holdout audit, and the specialized
 merged-checkpoint binding to that audit. This corrects the older generic
 real-runner shape, which was plumbing only and cannot support a causal
 H1-versus-H3 claim.
+
+Before a claim-eligible run, generate each identity record with
+`python -m experiments.checkpoint_identity`; the `--model` value must resolve
+to the same immutable local snapshot supplied by `--model-checkpoint`. Remote
+model identifiers without a pinned local checkpoint are not sufficient for an
+interaction claim.
 
 `experiments.factorial_interaction` independently replays every required row
 and fails closed unless all four named cells contain exactly the same

@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from benchmarks.tasks import Task, load_tasks
+from experiments.checkpoint_identity import manifest_sha256, verify_checkpoint_identity_manifest
 from verify.independent import verify_trace
 
 
@@ -135,6 +136,8 @@ def _model_binding_valid(
         return False
     if not all(isinstance(item.get("model_id"), str) and item.get("model_id") for item in (generic, specialized)):
         return False
+    if not all(isinstance(item.get("checkpoint_path"), str) and item.get("checkpoint_path") for item in (generic, specialized)):
+        return False
     if not all(isinstance(item.get("checkpoint_identity_manifest"), str) and item.get("checkpoint_identity_manifest") for item in (generic, specialized)):
         return False
     generic_identity = generic.get("checkpoint_identity_sha256")
@@ -143,11 +146,33 @@ def _model_binding_valid(
         return False
     if generic_identity == specialized_identity:
         return False
+    for model in (generic, specialized):
+        manifest_path = model.get("checkpoint_identity_manifest")
+        try:
+            identity = verify_checkpoint_identity_manifest(
+                str(manifest_path),
+                model_id=str(model["model_id"]),
+                revision=model.get("revision"),
+                checkpoint_path=str(model["checkpoint_path"]),
+            )
+        except ValueError:
+            return False
+        if manifest_sha256(str(manifest_path)) != model.get("checkpoint_identity_sha256"):
+            return False
+        if identity["sha256"] != model.get("checkpoint_content_sha256"):
+            return False
     for (model, _variant, _seed, _task_id), row in rows:
         expected = models.get(model)
         if not isinstance(expected, Mapping):
             return False
-        for field in ("model_id", "revision", "checkpoint_identity_manifest", "checkpoint_identity_sha256"):
+        for field in (
+            "model_id",
+            "revision",
+            "checkpoint_path",
+            "checkpoint_identity_manifest",
+            "checkpoint_identity_sha256",
+            "checkpoint_content_sha256",
+        ):
             if row.get(field) != expected.get(field):
                 return False
     return True

@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 from benchmarks.tasks import Task, load_tasks
+from experiments.checkpoint_identity import manifest_sha256, record_checkpoint_identity
 from experiments.factorial_interaction import analyze
 from experiments.multiseed import run_real
 from runtime.orchestrator import Harness, HarnessConfig, TaskRequest
@@ -172,8 +173,31 @@ class FactorialInteractionTests(unittest.TestCase):
             task.expected_result_contains,
         ))
 
+    @staticmethod
+    def _model_identity(root: Path, model: str) -> dict:
+        checkpoint = root / "checkpoints" / model
+        checkpoint.mkdir(parents=True)
+        (checkpoint / "config.json").write_text(json.dumps({"model": model}), encoding="utf-8")
+        (checkpoint / "model.safetensors").write_bytes(f"{model}-weights".encode("utf-8"))
+        identity = record_checkpoint_identity(checkpoint, model_id=str(checkpoint), revision="main")
+        manifest = root / "manifests" / f"{model}.json"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        return {
+            "model_id": str(checkpoint),
+            "revision": "main",
+            "checkpoint_path": str(checkpoint),
+            "checkpoint_identity_manifest": str(manifest),
+            "checkpoint_identity_sha256": manifest_sha256(manifest),
+            "checkpoint_content_sha256": identity["sha256"],
+        }
+
     def _matched_report(self, task_spec: Path) -> dict:
         tasks = load_tasks(task_spec)
+        identities = {
+            model: self._model_identity(task_spec.parent, model)
+            for model in ("generic", "specialized")
+        }
         rows = []
         for model in ("generic", "specialized"):
             for variant in ("H1", "H3"):
@@ -183,11 +207,7 @@ class FactorialInteractionTests(unittest.TestCase):
                         result = self._run_task(task, variant, succeeds=succeeds)
                         rows.append({
                             "model": model,
-                            "model_id": f"{model}-checkpoint",
-                            "revision": "main",
-                            "checkpoint_path": f"checkpoints/{model}",
-                            "checkpoint_identity_manifest": f"manifests/{model}.json",
-                            "checkpoint_identity_sha256": ("a" if model == "generic" else "b") * 64,
+                            **identities[model],
                             "variant": variant,
                             "seed": seed,
                             "task_id": task.task_id,
@@ -223,26 +243,16 @@ class FactorialInteractionTests(unittest.TestCase):
             },
             "models": [
                 {
-                    "name": "generic",
-                    "model_id": "generic-checkpoint",
-                    "revision": "main",
-                    "checkpoint_path": "checkpoints/generic",
-                    "checkpoint_identity_manifest": "manifests/generic.json",
-                    "checkpoint_identity_sha256": "a" * 64,
+                    "name": "generic", **identities["generic"],
                 },
                 {
-                    "name": "specialized",
-                    "model_id": "specialized-checkpoint",
-                    "revision": "main",
-                    "checkpoint_path": "checkpoints/specialized",
-                    "checkpoint_identity_manifest": "manifests/specialized.json",
-                    "checkpoint_identity_sha256": "b" * 64,
+                    "name": "specialized", **identities["specialized"],
                 },
             ],
             "provenance": {
                 "specialized_model": "specialized",
                 "train_holdout_audit": {"passed": True, "sha256": "c" * 64},
-                "specialized_checkpoint_training_binding": {"passed": True, "checkpoint": "checkpoints/specialized"},
+                "specialized_checkpoint_training_binding": {"passed": True, "checkpoint": identities["specialized"]["checkpoint_path"]},
                 "source_trees": {
                     "project1": {"schema": "python-source-tree/v1", "file_count": 1, "sha256": "d" * 64},
                     "harness": {"schema": "python-source-tree/v1", "file_count": 1, "sha256": "e" * 64},
@@ -285,6 +295,30 @@ class FactorialInteractionTests(unittest.TestCase):
         self.assertFalse(result["gates"]["cell_coverage"])
         self.assertFalse(result["interaction"]["eligible_for_claim"])
         self.assertIsNone(result["interaction"]["point_estimate"])
+
+    def test_analyze_rejects_identity_manifest_that_names_a_different_model(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            task_spec = self._task_spec(Path(temporary))
+            report = self._matched_report(task_spec)
+            generic = next(item for item in report["models"] if item["name"] == "generic")
+            manifest = Path(generic["checkpoint_identity_manifest"])
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            payload["model_id"] = "unrelated-local-checkpoint"
+            manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            replacement_hash = manifest_sha256(manifest)
+            generic["checkpoint_identity_sha256"] = replacement_hash
+            for row in report["rows"]:
+                if row["model"] == "generic":
+                    row["checkpoint_identity_sha256"] = replacement_hash
+            result = analyze(
+                report,
+                task_spec,
+                generic_model="generic",
+                specialized_model="specialized",
+                bootstrap_replicates=10,
+            )
+        self.assertFalse(result["gates"]["model_identity_binding"])
+        self.assertFalse(result["interaction"]["eligible_for_claim"])
 
     def test_analyze_rejects_adapter_repair_inside_the_a_to_d_cells(self):
         with tempfile.TemporaryDirectory() as temporary:

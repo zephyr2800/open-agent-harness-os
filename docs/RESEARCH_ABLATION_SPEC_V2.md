@@ -26,6 +26,11 @@ is now a close comparison for verifier-backed state and progress checkpointing.
 | D | Action-IR QLoRA SFT | verifier/evidence/replay runtime | none | model × harness interaction |
 | E | Action-IR QLoRA SFT | verifier/evidence/replay runtime | frozen-evaluator remediation/RL | self-improvement effect |
 
+Interpretation control: Cells C and D mean the H3 advanced
+context/checkpoint/recovery bundle while the scorer and verifier remain
+external and common across A-D. Deterministic adapter repair is excluded from
+A-D and may appear only in a separately preregistered Cell E/remediation arm.
+
 The prior targeted 9B matrix is diagnostic only: a subsequent data-split audit
 found frozen-contract overlap in its targeted curriculum. Its score cannot be
 used as cell-D, held-out, or promotion evidence. The next cell-D candidate must
@@ -67,6 +72,50 @@ independent replay result, and failure taxonomy. The evaluator and holdout
 authoring code are immutable during the self-improvement loop, following the
 fixed-budget discipline of
 [autoresearch](https://github.com/karpathy/autoresearch).
+
+### Factorial execution-integrity controls — preregistered 2026-08-02
+
+The real Project 1 × Project 2 factorial must use the versioned
+`multiseed-project1-harness/v1` report shape. Its H1 and H3 cells both set
+`expose_contract_hints = false`: evaluator-owned expected tools and action
+arguments must never be shown to the model. Both H1 and H3 set
+`adapter_enable_repair = false`; their common scorer, executor, evidence
+ledger, and verifier remain outside the model. H3 is the explicitly recorded
+advanced context/checkpoint/recovery treatment, not a new verifier plane. The
+report binds the task-spec SHA-256, model identifiers, a content-bound
+`checkpoint-identity/v1` manifest for each local model snapshot (including
+every weight-file digest), the manifest SHA-256, sampling parameters,
+per-row controls, unsafe-attempt accounting, raw trace, independent replay
+result, source-tree records, a passing train/holdout audit, and the specialized
+merged-checkpoint binding to that audit. This corrects the older generic
+real-runner shape, which was plumbing only and cannot support a causal
+H1-versus-H3 claim.
+
+Before a claim-eligible run, generate each identity record with
+`python -m experiments.checkpoint_identity`; the `--model` value must resolve
+to the same immutable local snapshot supplied by `--model-checkpoint`. Remote
+model identifiers without a pinned local checkpoint are not sufficient for an
+interaction claim.
+
+`experiments.factorial_interaction` independently replays every required row
+and fails closed unless all four named cells contain exactly the same
+seed × task units, carry the expected controls, use three-or-more stochastic
+seeds, match the supplied task digest, agree with runtime success, and record
+zero unsafe attempts. It estimates
+`specialized/H3 - specialized/H1 - generic/H3 + generic/H1` with a
+task-cluster percentile bootstrap that retains all seed outcomes for each
+resampled task. The interval is task-sampling uncertainty for that named suite;
+it is not training-replica uncertainty, a native score, or a general-capability
+claim.
+
+[Claw-SWE-Bench](https://arxiv.org/abs/2606.12344) reinforces why prompt,
+workspace, runtime budget, evaluator, and cost need to be fixed across harness
+comparisons. [How Many Tasks Are Enough for Agent Benchmark
+Decisions?](https://arxiv.org/abs/2607.12338) reinforces why coverage and an
+explicit decision rule must accompany any partial or costly evaluation. These
+controls are post-gate research instrumentation only: they do not modify
+promotion protocol v2, its task fixtures, the active trainer, or RL
+authorization.
 
 ## Sampling and curriculum control
 

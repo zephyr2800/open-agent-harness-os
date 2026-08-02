@@ -200,16 +200,21 @@ and [Inkling](https://thinkingmachines.ai/news/introducing-inkling/).
 
 Sources: [Kimi K2: Open Agentic Intelligence](https://arxiv.org/abs/2507.20534),
 [Kimi K2.5](https://arxiv.org/abs/2602.02276), and
-[Kimi Linear](https://github.com/MoonshotAI/Kimi-Linear).
+[Kimi Linear](https://github.com/MoonshotAI/Kimi-Linear), and the
+[official Kimi K3 repository and technical report](https://github.com/MoonshotAI/Kimi-K3).
 
 - Fact: Moonshot’s public work explores large sparse models, multimodal/agentic
   post-training, and hybrid linear/global attention to improve long-context
   efficiency.
+- Update: the official K3 repository now includes weights and a technical
+  report describing a 2.8T-total, 104B-active MoE with Kimi Delta Attention,
+  Attention Residuals, and MXFP4/MXFP8 quantization-aware training.
 - Inference: parameter count and active parameters are separate scaling axes;
   our 9B QLoRA branch is a useful local dense comparison, while the harness
   should be evaluated independently of architecture.
-- Caveat: current K3 launch claims are treated as market signals until an
-  official technical report, reproducible weights, and comparable evaluations
-  are available.
+- Caveat: K3's report and weights do not make it a comparable local baseline,
+  and its evaluation table remains vendor-reported and harness-sensitive.
+  Do not turn its scale or benchmark claims into a claim about this 32 GB
+  local-policy program.
 - Experiment: compare verified utility per active parameter, memory, latency,
   and replayable success—not headline total parameters alone.

@@ -45,6 +45,19 @@ def _checkpoint(root: Path, audit: Path) -> Path:
     return checkpoint
 
 
+def _selector_catalog() -> dict[str, object]:
+    return {
+        "schema": "agentdojo-selector-catalog/v1",
+        "benchmark_version": "v1.2.2",
+        "suite": "workspace",
+        "user_tasks": ["user_task_17", "user_task_18"],
+        "injection_tasks": ["injection_task_3"],
+        "attacks": ["direct"],
+        "defenses": ["tool_filter"],
+        "sha256": "e" * 64,
+    }
+
+
 class AgentDojoNativeLauncherTests(unittest.TestCase):
     def _config(self, root: Path, *, variant: str = "model-only") -> NativeRunConfig:
         audit = _audit(root / "audit.json")
@@ -80,12 +93,16 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
     def test_plan_binds_a_clean_checkpoint_and_keeps_native_metrics_external(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = self._config(Path(directory))
-            with mock.patch("experiments.agentdojo_native_launcher._git", side_effect=["b" * 40, ""]):
+            with (
+                mock.patch("experiments.agentdojo_native_launcher._git", side_effect=["b" * 40, ""]),
+                mock.patch("experiments.agentdojo_native_launcher._selector_catalog", return_value=_selector_catalog()),
+            ):
                 plan = build_plan(config)
         self.assertEqual(plan["status"], "planned")
         self.assertEqual(plan["agentdojo"]["commit"], "b" * 40)
         self.assertTrue(plan["checkpoint"]["training_binding"]["passed"])
         self.assertFalse(plan["adapter"]["lookup_first_enabled"])
+        self.assertEqual(plan["agentdojo"]["selector_catalog"]["sha256"], "e" * 64)
         self.assertIn("openai-compatible", plan["commands"]["benchmark"])
         self.assertIn("--user-task", plan["commands"]["benchmark"])
         self.assertNotIn("--enable-repair", plan["commands"]["adapter"])
@@ -93,7 +110,10 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
     def test_repair_variant_is_explicit_in_the_adapter_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = self._config(Path(directory), variant="repair")
-            with mock.patch("experiments.agentdojo_native_launcher._git", side_effect=["c" * 40, ""]):
+            with (
+                mock.patch("experiments.agentdojo_native_launcher._git", side_effect=["c" * 40, ""]),
+                mock.patch("experiments.agentdojo_native_launcher._selector_catalog", return_value=_selector_catalog()),
+            ):
                 plan = build_plan(config)
         self.assertTrue(plan["adapter"]["enable_repair"])
         self.assertIn("--enable-repair", plan["commands"]["adapter"])
@@ -104,6 +124,40 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
             config = replace(self._config(Path(directory)), injection_tasks=("injection_task_3",))
             with self.assertRaisesRegex(ValueError, "--attack"):
                 build_plan(config)
+
+    def test_unknown_selector_is_rejected_before_an_adapter_can_start(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config = replace(self._config(Path(directory)), user_tasks=("user_task_999",))
+            with (
+                mock.patch("experiments.agentdojo_native_launcher._git", side_effect=["f" * 40, ""]),
+                mock.patch("experiments.agentdojo_native_launcher._selector_catalog", return_value=_selector_catalog()),
+            ):
+                with self.assertRaisesRegex(ValueError, "user_task_999"):
+                    build_plan(config)
+
+    def test_duplicate_or_unknown_native_selectors_are_rejected_before_an_adapter_can_start(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            duplicate = replace(self._config(root), user_tasks=("user_task_17", "user_task_17"))
+            with (
+                mock.patch("experiments.agentdojo_native_launcher._git", side_effect=["1" * 40, ""]),
+                mock.patch("experiments.agentdojo_native_launcher._selector_catalog", return_value=_selector_catalog()),
+            ):
+                with self.assertRaisesRegex(ValueError, "must be unique"):
+                    build_plan(duplicate)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            invalid_attack = replace(
+                self._config(root),
+                injection_tasks=("injection_task_3",),
+                attack="not-a-registered-attack",
+            )
+            with (
+                mock.patch("experiments.agentdojo_native_launcher._git", side_effect=["2" * 40, ""]),
+                mock.patch("experiments.agentdojo_native_launcher._selector_catalog", return_value=_selector_catalog()),
+            ):
+                with self.assertRaisesRegex(ValueError, "not-a-registered-attack"):
+                    build_plan(invalid_attack)
 
     def test_dirty_benchmark_checkout_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

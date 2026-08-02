@@ -7,8 +7,9 @@ AgentDojo remains the runner and source of utility/security metrics.
 
 The command is dry-run by default. It verifies the clean train/holdout audit,
 the merged checkpoint's source binding, the AgentDojo checkout, exact command
-lines, adapter source hash, model-weight hash, and task selectors; then writes
-`run_manifest.json`. Add `--execute` only after the active SFT job has
+lines, adapter source hash, model-weight hash, and task selectors against the
+pinned suite's own selector catalog; then writes `run_manifest.json`. Add
+`--execute` only after the active SFT job has
 finished and no other process owns the GPU.
 
 ```powershell

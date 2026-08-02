@@ -52,5 +52,18 @@ condition.
 
 The result remains a native external evaluation only after `--execute` has
 completed, AgentDojo's own logs are present, and the native utility/security
-metrics are reported alongside this run manifest. A successful dry plan is
+metrics are reported alongside this run manifest. The launcher records a hash
+and byte count for every native JSON log and its adapter log at completion.
+Validate those records before reporting a result:
+
+```powershell
+& $py -m experiments.agentdojo_native_result_validator `
+  --run-manifest <completed-native-run\run_manifest.json> `
+  --output <new-agentdojo-validation.json>
+```
+
+The validator accepts the registered clean condition and the registered
+`direct`-injection condition. It rejects missing, extra, modified, source-
+rebound, or errored task logs, and keeps injection-task utility controls
+separate from the user-task utility/security pairs. A successful dry plan is
 readiness evidence, not a benchmark result.

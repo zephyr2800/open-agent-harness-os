@@ -104,6 +104,22 @@ def _file_record(path: Path) -> dict[str, Any]:
     }
 
 
+def _native_log_records(log_directory: Path) -> dict[str, Any]:
+    """Bind every official AgentDojo JSON log emitted by a completed run."""
+
+    native_logs = log_directory.resolve()
+    if not native_logs.is_dir():
+        raise ValueError(f"native AgentDojo log directory does not exist: {native_logs}")
+    records = [_file_record(path) for path in sorted(native_logs.rglob("*.json")) if path.is_file()]
+    if not records:
+        raise ValueError(f"native AgentDojo log directory contains no JSON task results: {native_logs}")
+    return {
+        "schema": "agentdojo-native-logs/v1",
+        "directory": str(native_logs),
+        "records": records,
+    }
+
+
 def _write_json_atomic(path: Path, value: dict[str, Any]) -> None:
     temporary = path.with_name(path.name + ".tmp")
     temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -474,6 +490,7 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
                     check=False,
                     creationflags=creationflags,
                 )
+        native_output = _native_log_records(run_dir / "native-logs") if benchmark.returncode == 0 else None
         result = {
             **running,
             "status": "completed" if benchmark.returncode == 0 else "failed",
@@ -481,6 +498,8 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
             "adapter_health": health,
             "benchmark_returncode": benchmark.returncode,
         }
+        if native_output is not None:
+            result["native_output"] = native_output
     except Exception as error:
         result = {
             **running,
@@ -491,6 +510,11 @@ def execute(plan: dict[str, Any]) -> dict[str, Any]:
     finally:
         if process is not None:
             result["adapter_process"] = _stop(process)
+        if result.get("status") == "completed":
+            try:
+                result["adapter_log"] = _file_record(run_dir / "adapter.jsonl")
+            except (OSError, ValueError) as error:
+                result = {**result, "status": "failed", "error": repr(error)}
     _write_json_atomic(run_dir / "run_manifest.json", result)
     return result
 

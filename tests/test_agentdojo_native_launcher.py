@@ -10,7 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
-from experiments.agentdojo_native_launcher import NativeRunConfig, _assert_port_available, build_plan
+from experiments.agentdojo_native_launcher import NativeRunConfig, _assert_port_available, _native_log_records, build_plan
 from experiments.data_split_audit import REQUIRED_FROZEN_FIXTURE_HASHES, validate_required_audit_manifest
 
 
@@ -175,3 +175,16 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
             port = listener.getsockname()[1]
             with self.assertRaisesRegex(RuntimeError, "already in use"):
                 _assert_port_available(port)
+
+    def test_native_log_records_bind_only_completed_agentdojo_json_results(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            logs = Path(directory) / "native-logs"
+            result = logs / "openai-compatible" / "workspace" / "user_task_17" / "none" / "none.json"
+            result.parent.mkdir(parents=True)
+            result.write_text('{"utility": true}\n', encoding="utf-8")
+            (logs / "benchmark.stdout.log").write_text("finished\n", encoding="utf-8")
+            records = _native_log_records(logs)
+        self.assertEqual(records["schema"], "agentdojo-native-logs/v1")
+        self.assertEqual(records["directory"], str(logs.resolve()))
+        self.assertEqual(len(records["records"]), 1)
+        self.assertEqual(records["records"][0]["path"], str(result.resolve()))

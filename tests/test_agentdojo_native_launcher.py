@@ -101,6 +101,7 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
                 plan = build_plan(config)
         self.assertEqual(plan["status"], "planned")
         self.assertEqual(plan["agentdojo"]["commit"], "b" * 40)
+        self.assertEqual(plan["agentdojo"]["source_tree"]["schema"], "python-source-tree/v1")
         self.assertTrue(plan["checkpoint"]["training_binding"]["passed"])
         self.assertFalse(plan["adapter"]["lookup_first_enabled"])
         self.assertEqual(plan["agentdojo"]["selector_catalog"]["sha256"], "e" * 64)

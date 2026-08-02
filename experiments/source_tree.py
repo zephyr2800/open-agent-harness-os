@@ -30,6 +30,8 @@ def _sha256(path: Path) -> str:
 def _source_files(root: Path) -> list[Path]:
     files: list[Path] = []
     for path in root.rglob("*"):
+        if path.is_symlink():
+            raise ValueError(f"source tree must not contain symlinks: {path}")
         if not path.is_file():
             continue
         relative = path.relative_to(root)

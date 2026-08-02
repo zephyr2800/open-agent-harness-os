@@ -78,6 +78,10 @@ except importlib.metadata.PackageNotFoundError:
 
 print(json.dumps({
     "package_file": str(pathlib.Path(tau2.__file__).resolve()),
+    "module_files": {
+        "experiments.agentdojo_adapter_server": str(pathlib.Path(adapter_server.__file__).resolve()),
+        "experiments.tau2_native_runner": str(pathlib.Path(runner_wrapper.__file__).resolve()),
+    },
     "python_version": sys.version,
     "tau2_version": version,
 }, sort_keys=True))
@@ -114,6 +118,9 @@ _NATIVE_RESULT_SCHEMA_PROBE_SCRIPT = """
 import json
 import pathlib
 import sys
+
+import experiments.agentdojo_adapter_server as adapter_server
+import experiments.tau2_native_runner as runner_wrapper
 
 import tau2
 from tau2.data_model.simulation import Results
@@ -269,11 +276,24 @@ def _runtime_probe(config: Tau2NativeRunConfig, environment: dict[str, str]) -> 
             "--python imports τ³-bench from outside --tau2-root; install the pinned checkout "
             "into the supplied runtime before evaluating"
         )
+    module_files = payload.get("module_files") if isinstance(payload, dict) else None
+    if not isinstance(module_files, dict):
+        raise ValueError("τ³-bench runtime probe did not return resolved local module paths")
+    normalized_module_files: dict[str, str] = {}
+    for module in ("experiments.agentdojo_adapter_server", "experiments.tau2_native_runner"):
+        module_file = module_files.get(module)
+        if not isinstance(module_file, str) or not module_file:
+            raise ValueError(f"τ³-bench runtime probe did not resolve {module}")
+        module_path = Path(module_file).expanduser().resolve()
+        if not _is_within(module_path, REPO_ROOT):
+            raise ValueError(f"τ³-bench runtime imports {module} from outside this harness checkout")
+        normalized_module_files[module] = str(module_path)
     return {
         "python": str(config.python),
         "python_version": payload.get("python_version"),
         "tau2_version": payload.get("tau2_version"),
         "package_file": str(package_path.resolve()),
+        "module_files": normalized_module_files,
         "source_bound": True,
     }
 
@@ -579,6 +599,7 @@ def build_plan(config: Tau2NativeRunConfig) -> dict[str, Any]:
         "tau2": {
             "root": str(config.tau2_root),
             "commit": tau2_commit,
+            "source_tree": record_source_tree(config.tau2_root),
             "domain": config.domain,
             "task_set": config.task_set,
             "task_split": config.task_split,

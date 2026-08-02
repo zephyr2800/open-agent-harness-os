@@ -372,6 +372,7 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
         "agentdojo": {
             "root": str(config.agentdojo_root),
             "commit": agentdojo_commit,
+            "source_tree": record_source_tree(config.agentdojo_root),
             "benchmark_version": config.benchmark_version,
             "suite": config.suite,
             "user_tasks": list(config.user_tasks),

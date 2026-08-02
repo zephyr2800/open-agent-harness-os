@@ -95,7 +95,7 @@ authentication-plus-TLS gate.
 
 Run the consolidated source-checkout gate with
 `python -m experiments.launch_preflight --with-tests`. Its recorded result is
-`experiments/results/launch-preflight-v6.json`; it verifies the local preview
+`experiments/results/launch-preflight-v31.json`; it verifies the local preview
 surface and intentionally does not certify public multi-user deployment.
 
 ## MCP stdio integration

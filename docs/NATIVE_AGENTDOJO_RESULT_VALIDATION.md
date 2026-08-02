@@ -11,8 +11,9 @@ python -m experiments.agentdojo_native_result_validator `
 ```
 
 It requires a completed zero-return-code launcher manifest, a clean-audit-bound
-merged checkpoint, the pinned AgentDojo benchmark entrypoint and commit, exact
-registered selectors, loopback `openai-compatible` policy adapter, loaded
+merged checkpoint, the pinned AgentDojo benchmark entrypoint, commit, and
+source-tree fingerprint, exact registered selectors, loopback
+`openai-compatible` policy adapter, loaded
 checkpoint health check, adapter-log record, and current Project 1/harness
 source-tree fingerprints. It verifies every recorded native JSON file by hash
 and byte count, then rejects any missing, extra, selector-mismatched, modified,

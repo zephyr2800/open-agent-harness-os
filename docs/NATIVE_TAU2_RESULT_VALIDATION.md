@@ -9,13 +9,17 @@ python -m experiments.tau2_native_result_validator --run-manifest C:\path\to\nat
 ~~~
 
 The validator rejects a result unless it is tied to the clean merged
-checkpoint and audit, the source-bound pinned τ³ checkout, the exact
-telecom/base task list and budget, the loopback local policy, the recorded
-adapter command and health check, the compatibility runner, and a
-byte-consistent preserved copy of the official results file. The launcher also
-uses the pinned τ³ runtime's own Pydantic Results model before preserving the
-file. The validator rejects any native simulation terminated with
-infrastructure_error.
+checkpoint and audit, a clean pinned τ³ checkout at the recorded Git commit
+and source-tree fingerprint, the exact telecom/base selectors re-derived from
+the recorded selector-catalog digest, the exact local adapter port and `/v1`
+endpoint, the recorded adapter command and health check, the compatibility
+runner, and a byte-consistent preserved copy of the official results file.
+Both local commands must use their recorded Python runtime as direct
+`python -m` invocations, and the runtime-resolved adapter and runner modules
+must be the recorded source files inside the recorded harness tree. The
+launcher also uses the pinned τ³ runtime's own Pydantic Results model before
+preserving the file. The validator rejects any native simulation terminated
+with infrastructure_error.
 
 It also recomputes the recorded Project 1 and harness runtime source trees.
 Changing either tree after execution invalidates local result consistency.

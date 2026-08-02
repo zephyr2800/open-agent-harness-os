@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -62,10 +63,27 @@ REQUIRED_DOCS = (
     "benchmarks/fixtures/task-spec-external-bar-lite-v2.json",
     "benchmarks/fixtures/native-external-registration-v1.json",
 )
+_USER_HOME_PATH_RE = re.compile(r"(?i)(?:[A-Z]:)?[\\/](?:users|home)[\\/][^\\/\s\"']+")
 
 
 def _check(check_id: str, passed: bool, detail: Any) -> dict[str, Any]:
     return {"id": check_id, "passed": bool(passed), "detail": detail}
+
+
+def _redact_public_log(value: str) -> str:
+    """Retain diagnostic tails without publishing machine-local path details."""
+
+    roots = (
+        (str(ROOT), "<workspace>"),
+        (tempfile.gettempdir(), "<temp>"),
+        (str(Path.home()), "<user-home>"),
+    )
+    redacted = value
+    for root, replacement in sorted(roots, key=lambda item: len(item[0]), reverse=True):
+        if root:
+            redacted = redacted.replace(root, replacement)
+            redacted = redacted.replace(root.replace("\\", "/"), replacement)
+    return _USER_HOME_PATH_RE.sub("<user-home>", redacted)
 
 
 def _mcp_check() -> dict[str, Any]:
@@ -647,8 +665,8 @@ def _build_source_wheel(output_dir: Path) -> tuple[Path | None, dict[str, Any]]:
         "wheel_returncode": wheel_completed.returncode,
         "wheel": candidates[0].name if len(candidates) == 1 else None,
         "wheel_count": len(candidates),
-        "wheel_stdout_tail": wheel_completed.stdout[-2000:],
-        "wheel_stderr_tail": wheel_completed.stderr[-2000:],
+        "wheel_stdout_tail": _redact_public_log(wheel_completed.stdout[-2000:]),
+        "wheel_stderr_tail": _redact_public_log(wheel_completed.stderr[-2000:]),
     }
     if wheel_completed.returncode != 0 or len(candidates) != 1:
         return None, detail

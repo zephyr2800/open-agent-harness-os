@@ -25,9 +25,9 @@ actually complete.
 
 The local developer-preview harness passes its documented product checks:
 
-- Project 2 tests: 184/184 (including dense-reliability, source-bound wheel integrity, scorecard, promotion-protocol, native-result-validator, energy-measurement, and corpus-quality-audit checks)
+- Project 2 tests: 190/190 (including dense-reliability, source-bound wheel integrity, scorecard, promotion-protocol, native-result-validator, energy-measurement, and corpus-quality-audit checks)
 - Project 1 tests: 47/47
-- Launch preflight v28: 16/16 (including a fresh clean-source wheel build, source-tree binding, and extracted-wheel installation smoke)
+- Launch preflight v31: 16/16 (including a fresh clean-source wheel build, source-tree binding, and extracted-wheel installation smoke)
 
 The associated Qwopus3.5-9B frozen promotion matrix completed privately under a
 fixed protocol: 483/552 independently verified successes (87.5%), zero unsafe

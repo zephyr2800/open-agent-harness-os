@@ -42,6 +42,21 @@ def _simulation(task_id: str, reward: float, *, termination: str = "agent_stop",
     }
 
 
+def _selector_catalog(task_ids: tuple[str, ...]) -> dict[str, object]:
+    normalized = {
+        "schema": "tau2-selector-catalog/v1",
+        "domain": "telecom",
+        "task_set": "telecom",
+        "task_split": "base",
+        "task_ids": sorted(task_ids),
+        "solo_task_ids": sorted(task_ids),
+    }
+    digest = hashlib.sha256(
+        (json.dumps(normalized, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    ).hexdigest()
+    return {**normalized, "sha256": digest}
+
+
 def _write_fixture(
     root: Path,
     *,
@@ -58,6 +73,20 @@ def _write_fixture(
     package_file = tau2_root / "src" / "tau2" / "__init__.py"
     package_file.parent.mkdir(parents=True)
     package_file.write_text("__version__ = '1.0.1'\n", encoding="utf-8")
+    (tau2_root / "data").mkdir()
+    (tau2_root / "data" / "telecom.json").write_text("{}\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=tau2_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "add", "."], cwd=tau2_root, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture"],
+        cwd=tau2_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    tau2_commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=tau2_root, check=True, capture_output=True, text=True
+    ).stdout.strip()
     checkpoint = root / "checkpoint"
     checkpoint.mkdir()
     (checkpoint / "model.safetensors").write_bytes(b"weights")
@@ -78,7 +107,7 @@ def _write_fixture(
         "class TransformersActionPolicy: ...\n",
         encoding="utf-8",
     )
-    wrapper_source = root / "tau2_native_runner.py"
+    wrapper_source = harness_root / "experiments" / "tau2_native_runner.py"
     wrapper_source.write_text("def main():\n    return 0\n", encoding="utf-8")
     adapter_log = run_dir / "adapter.jsonl"
     adapter_log.write_text("{\"request\":\"native\"}\n", encoding="utf-8")
@@ -86,7 +115,7 @@ def _write_fixture(
     results = {
         "timestamp": "2026-08-02T00:00:00",
         "info": {
-            "git_commit": "a" * 40,
+            "git_commit": tau2_commit,
             "seed": 0,
             "num_trials": 1,
             "max_steps": 30,
@@ -115,6 +144,7 @@ def _write_fixture(
         "schema": "tau2-native-run/v1",
         "status": "completed",
         "run_dir": str(run_dir.resolve()),
+        "variant": "model-only",
         "checkpoint": {
             "directory": str(checkpoint.resolve()),
             "model_weights": _record(checkpoint / "model.safetensors"),
@@ -125,12 +155,13 @@ def _write_fixture(
         "train_holdout_audit": {"passed": True},
         "tau2": {
             "root": str(tau2_root.resolve()),
-            "commit": "a" * 40,
+            "commit": tau2_commit,
+            "source_tree": record_source_tree(tau2_root),
             "domain": "telecom",
             "task_set": "telecom",
             "task_split": "base",
             "task_ids": list(task_ids),
-            "selector_catalog": {"sha256": "b" * 64},
+            "selector_catalog": _selector_catalog(task_ids),
             "condition": "official-solo-telecom; no external user simulator",
         },
         "policy": {
@@ -166,6 +197,12 @@ def _write_fixture(
         "runtime": {
             "source_bound": True,
             "package_file": str(package_file.resolve()),
+            "module_files": {
+                "experiments.agentdojo_adapter_server": str(adapter_source.resolve()),
+                "experiments.tau2_native_runner": str(wrapper_source.resolve()),
+            },
+            "python_version": "3.12.0",
+            "tau2_version": "1.0.1",
             "tau2_runtime": str(root / "runtime"),
             "platform": "test-platform",
         },
@@ -220,6 +257,17 @@ def _write_fixture(
     return manifest_path
 
 
+def _rewrite_results_and_refresh_records(manifest: Path, payload: dict[str, object]) -> None:
+    results = manifest.parent / "tau2-native-results" / "results.json"
+    results.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    record = _record(results)
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    manifest_payload["native_output"]["results_record"] = record
+    manifest_payload["native_output"]["preserved_results_record"] = record
+    manifest_payload["native_output"]["schema_validation"]["results_record"] = record
+    manifest.write_text(json.dumps(manifest_payload, indent=2) + "\n", encoding="utf-8")
+
+
 class Tau2NativeResultValidatorTests(unittest.TestCase):
     def test_help_supports_a_legacy_windows_console_encoding(self) -> None:
         environment = os.environ.copy()
@@ -256,6 +304,68 @@ class Tau2NativeResultValidatorTests(unittest.TestCase):
             results = manifest.parent / "tau2-native-results" / "results.json"
             results.write_text("{}\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "sha256 does not match"):
+                validate_native_result(manifest)
+
+    def test_rejects_a_result_bound_to_a_different_loopback_adapter_port(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = _write_fixture(root)
+            results = manifest.parent / "tau2-native-results" / "results.json"
+            payload = json.loads(results.read_text(encoding="utf-8"))
+            payload["info"]["agent_info"]["llm_args"]["api_base"] = "http://127.0.0.1:8091/v1"
+            _rewrite_results_and_refresh_records(manifest, payload)
+            with self.assertRaisesRegex(ValueError, "recorded loopback adapter host, port, and /v1 endpoint"):
+                validate_native_result(manifest)
+
+    def test_rejects_non_module_execution_and_runtime_module_rebinding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = _write_fixture(root)
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            python = payload["commands"]["benchmark"][0]
+            payload["commands"]["benchmark"] = [
+                python,
+                "-c",
+                "print('unrelated')",
+                "-m",
+                "experiments.tau2_native_runner",
+                "run",
+            ]
+            manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "must start with its Python runtime followed by -m"):
+                validate_native_result(manifest)
+
+            manifest = _write_fixture(root / "runtime-module")
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            payload["runtime"]["module_files"]["experiments.tau2_native_runner"] = payload["adapter"]["source"]["path"]
+            manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "did not resolve the recorded τ³ runner-wrapper module"):
+                validate_native_result(manifest)
+
+    def test_rejects_tampered_selector_catalog_or_dirty_tau2_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = _write_fixture(root)
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            payload["tau2"]["selector_catalog"]["sha256"] = "0" * 64
+            manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "selector_catalog.sha256"):
+                validate_native_result(manifest)
+
+            manifest = _write_fixture(root / "dirty-checkout")
+            (root / "dirty-checkout" / "tau2" / "data" / "telecom.json").write_text('{"changed": true}\n', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "checkout is dirty"):
+                validate_native_result(manifest)
+
+    def test_rejects_boolean_identity_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = _write_fixture(root)
+            results = manifest.parent / "tau2-native-results" / "results.json"
+            payload = json.loads(results.read_text(encoding="utf-8"))
+            payload["info"]["seed"] = True
+            _rewrite_results_and_refresh_records(manifest, payload)
+            with self.assertRaisesRegex(ValueError, "native results.info.seed must be an integer"):
                 validate_native_result(manifest)
 
     def test_rejects_infrastructure_error_and_refuses_to_overwrite_output(self) -> None:

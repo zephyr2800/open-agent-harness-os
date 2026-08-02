@@ -194,8 +194,8 @@
         "wheel": "open_agent_harness_os-0.1.8-py3-none-any.whl",
         "wheel_count": 1,
         "wheel_returncode": 0,
-        "wheel_stderr_tail": "\n[notice] A new release of pip is available: 26.0.1 -> 26.2\n[notice] To update, run: C:\\Users\\steve\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe -m pip install --upgrade pip\n",
-        "wheel_stdout_tail": "Processing .\\.\n  Installing build dependencies: started\n  Installing build dependencies: finished with status 'done'\n  Getting requirements to build wheel: started\n  Getting requirements to build wheel: finished with status 'done'\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: open-agent-harness-os\n  Building wheel for open-agent-harness-os (pyproject.toml): started\n  Building wheel for open-agent-harness-os (pyproject.toml): finished with status 'done'\n  Created wheel for open-agent-harness-os: filename=open_agent_harness_os-0.1.8-py3-none-any.whl size=138982 sha256=ccd8b95a09dfcdfdc69c31fad091d3fd427d5eb9988d66369dcfa41499c2b382\n  Stored in directory: C:\\Users\\steve\\AppData\\Local\\Temp\\pip-ephem-wheel-cache-ee0uwj7u\\wheels\\a6\\a8\\4d\\e6348f0b2106be9187eb52c7c35d64b4989d5d8e2ce24388e9\nSuccessfully built open-agent-harness-os\n"
+        "wheel_stderr_tail": "\n[notice] A new release of pip is available: 26.0.1 -> 26.2\n[notice] To update, run: <user-home>\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe -m pip install --upgrade pip\n",
+        "wheel_stdout_tail": "Processing .\\.\n  Installing build dependencies: started\n  Installing build dependencies: finished with status 'done'\n  Getting requirements to build wheel: started\n  Getting requirements to build wheel: finished with status 'done'\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: open-agent-harness-os\n  Building wheel for open-agent-harness-os (pyproject.toml): started\n  Building wheel for open-agent-harness-os (pyproject.toml): finished with status 'done'\n  Created wheel for open-agent-harness-os: filename=open_agent_harness_os-0.1.8-py3-none-any.whl size=199900 sha256=13c907876eae2ca321e95643352641532a0ebd326c9f19332246f711a0b6cfd3\n  Stored in directory: <temp>\\pip-ephem-wheel-cache-z7v7a9ou\\wheels\\d6\\a1\\2d\\22e468bb4328633491eaf7d83a2ab2c5e0e97e295c105e3882\nSuccessfully built open-agent-harness-os\n"
       },
       "id": "wheel_build",
       "passed": true
@@ -204,15 +204,15 @@
       "detail": {
         "bytecode_entries": 0,
         "bytecode_free": true,
-        "bytes": 138982,
-        "entry_count": 74,
+        "bytes": 199900,
+        "entry_count": 86,
         "exists": true,
         "path": "open_agent_harness_os-0.1.8-py3-none-any.whl",
-        "record_entries": 74,
+        "record_entries": 86,
         "record_hashes_valid": true,
         "required_modules_present": true,
         "safe_paths": true,
-        "sha256": "ccd8b95a09dfcdfdc69c31fad091d3fd427d5eb9988d66369dcfa41499c2b382",
+        "sha256": "13c907876eae2ca321e95643352641532a0ebd326c9f19332246f711a0b6cfd3",
         "wheel_metadata_present": true,
         "zipfile": true
       },
@@ -227,21 +227,21 @@
         "imports_returncode": 0,
         "install_returncode": 0,
         "path": "open_agent_harness_os-0.1.8-py3-none-any.whl",
-        "reference_wheel_manifest_sha256": "5362689f614cbf173e21ff8a4e8c158665e39997465c16ea77c8c2783d7c33b5",
-        "reference_wheel_sha256": "ccd8b95a09dfcdfdc69c31fad091d3fd427d5eb9988d66369dcfa41499c2b382",
-        "sha256": "ccd8b95a09dfcdfdc69c31fad091d3fd427d5eb9988d66369dcfa41499c2b382",
+        "reference_wheel_manifest_sha256": "c28321232c5a6f131b5b1af2ae7bc099f016b6bc0255c50c73e9a4872ca1378d",
+        "reference_wheel_sha256": "13c907876eae2ca321e95643352641532a0ebd326c9f19332246f711a0b6cfd3",
+        "sha256": "13c907876eae2ca321e95643352641532a0ebd326c9f19332246f711a0b6cfd3",
         "source_matches_wheel": true,
-        "source_package_sha256": "22395cbc393edbddf5cdf2e59f12955731b6d5f906d14fe8ccb56e3fa5385b15",
+        "source_package_sha256": "006e024aebd6349d6cb9ad7a903ee5180c2959cce27da51b9ab3bad434fb0f06",
         "wheel_manifest_matches_reference": true,
-        "wheel_manifest_sha256": "5362689f614cbf173e21ff8a4e8c158665e39997465c16ea77c8c2783d7c33b5",
-        "wheel_package_sha256": "22395cbc393edbddf5cdf2e59f12955731b6d5f906d14fe8ccb56e3fa5385b15"
+        "wheel_manifest_sha256": "c28321232c5a6f131b5b1af2ae7bc099f016b6bc0255c50c73e9a4872ca1378d",
+        "wheel_package_sha256": "006e024aebd6349d6cb9ad7a903ee5180c2959cce27da51b9ab3bad434fb0f06"
       },
       "id": "wheel_install_smoke",
       "passed": true
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 47 tests in 0.006s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 47 tests in 0.007s\n\nOK",
         "returncode": 0
       },
       "id": "companion_unit_tests",
@@ -269,10 +269,12 @@
           "docs/RESEARCH_LANDSCAPE_2026-07-29.md",
           "docs/RESEARCH_BREAKTHROUGH_PROTOCOL_2026-07-29.md",
           "docs/EXTERNAL_EVALUATION_RUNBOOK_2026-07-29.md",
+          "docs/NATIVE_EVALUATION_REGISTRATION_2026-08-01.md",
           "docs/PUBLIC_RELEASE_CHECKLIST.md",
           "docs/PROVENANCE_REVIEW.md",
           "benchmarks/fixtures/task-spec-external-bar-lite-v1.json",
-          "benchmarks/fixtures/task-spec-external-bar-lite-v2.json"
+          "benchmarks/fixtures/task-spec-external-bar-lite-v2.json",
+          "benchmarks/fixtures/native-external-registration-v1.json"
         ]
       },
       "id": "launch_docs",
@@ -280,14 +282,14 @@
     },
     {
       "detail": {
-        "output_tail": "----------------------------------------------------------------------\nRan 110 tests in 2.226s\n\nOK",
+        "output_tail": "----------------------------------------------------------------------\nRan 190 tests in 8.795s\n\nOK (skipped=1)",
         "returncode": 0
       },
       "id": "unit_tests",
       "passed": true
     }
   ],
-  "created_at": "2026-08-01T22:49:58.306939+00:00",
+  "created_at": "2026-08-02T06:23:08.910041+00:00",
   "limitations": [
     "This preflight does not establish public multi-user, operational, or external-benchmark readiness.",
     "The MCP check is in-process; the separate stdio subprocess artifact remains the protocol evidence."
@@ -295,5 +297,5 @@
   "passed": true,
   "schema": "launch-preflight/v1",
   "scope": "local-developer-preview",
-  "source_package_sha256": "22395cbc393edbddf5cdf2e59f12955731b6d5f906d14fe8ccb56e3fa5385b15"
+  "source_package_sha256": "006e024aebd6349d6cb9ad7a903ee5180c2959cce27da51b9ab3bad434fb0f06"
 }

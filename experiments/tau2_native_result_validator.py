@@ -15,6 +15,7 @@ import hashlib
 import json
 import math
 import re
+import subprocess
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Mapping
@@ -24,7 +25,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from experiments.source_tree import verify_source_tree_record
-from experiments.native_evaluation_registration import verify_registration_record
+from experiments.native_evaluation_registration import validate_tau2_registration, verify_registration_record
 
 
 SCHEMA = "tau2-native-result-validation/v1"
@@ -119,15 +120,17 @@ def _verify_file_record(value: Any, field: str, *, expected_path: Path | None = 
 
 
 def _command_values(command: Any, field: str) -> list[str]:
-    return [_string(value, f"{field}[]") for value in _list(command, field)]
+    values = [_string(value, f"{field}[]") for value in _list(command, field)]
+    if not values:
+        raise ValueError(f"{field} must be a non-empty command")
+    return values
 
 
-def _module_in_command(command: Any, module: str, field: str) -> bool:
+def _require_module_command(command: Any, module: str, field: str) -> list[str]:
     values = _command_values(command, field)
-    for index in range(len(values) - 1):
-        if values[index] == "-m" and values[index + 1] == module:
-            return True
-    return False
+    if len(values) < 3 or values[1] != "-m" or values[2] != module:
+        raise ValueError(f"{field} must start with its Python runtime followed by -m {module}")
+    return values
 
 
 def _command_flag(command: Any, flag: str, field: str) -> str:
@@ -147,11 +150,99 @@ def _family(task_id: str) -> str:
     return match.group(1) if match else "unparsed"
 
 
-def _assert_loopback_api_base(value: Any) -> None:
+def _assert_loopback_api_base(value: Any, *, expected_port: int) -> None:
     api_base = _string(value, "native results.info.agent_info.llm_args.api_base")
-    parsed = urlparse(api_base)
-    if parsed.scheme != "http" or parsed.hostname != "127.0.0.1" or not parsed.port or not parsed.path.rstrip("/").endswith("/v1"):
-        raise ValueError("native results must bind the policy to a loopback OpenAI-compatible endpoint")
+    try:
+        parsed = urlparse(api_base)
+        port = parsed.port
+    except ValueError as error:
+        raise ValueError("native results must bind the policy to a valid loopback OpenAI-compatible endpoint") from error
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname != "127.0.0.1"
+        or port != expected_port
+        or parsed.path.rstrip("/") != "/v1"
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        raise ValueError("native results must bind the policy to the recorded loopback adapter host, port, and /v1 endpoint")
+
+
+def _git(root: Path, *args: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", str(root), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip() or "unknown git error"
+        raise ValueError(f"could not inspect the pinned τ³-bench checkout: {detail}")
+    return completed.stdout.strip()
+
+
+def _catalog_strings(value: Any, field: str) -> list[str]:
+    values = [_string(item, f"{field}[]") for item in _list(value, field)]
+    if not values:
+        raise ValueError(f"{field} must be a non-empty list")
+    if values != sorted(set(values)):
+        raise ValueError(f"{field} must be sorted and unique as emitted by the pinned selector probe")
+    return values
+
+
+def _validate_selector_catalog(tau2: Mapping[str, Any], selectors: list[str]) -> dict[str, Any]:
+    catalog = _mapping(tau2.get("selector_catalog"), "manifest.tau2.selector_catalog")
+    if catalog.get("schema") != "tau2-selector-catalog/v1":
+        raise ValueError("manifest.tau2.selector_catalog has an unexpected schema")
+    normalized = {
+        "schema": "tau2-selector-catalog/v1",
+        "domain": _string(catalog.get("domain"), "manifest.tau2.selector_catalog.domain"),
+        "task_set": _string(catalog.get("task_set"), "manifest.tau2.selector_catalog.task_set"),
+        "task_split": _string(catalog.get("task_split"), "manifest.tau2.selector_catalog.task_split"),
+        "task_ids": _catalog_strings(catalog.get("task_ids"), "manifest.tau2.selector_catalog.task_ids"),
+        "solo_task_ids": _catalog_strings(catalog.get("solo_task_ids"), "manifest.tau2.selector_catalog.solo_task_ids"),
+    }
+    if (
+        normalized["domain"] != tau2["domain"]
+        or normalized["task_set"] != tau2["task_set"]
+        or normalized["task_split"] != tau2["task_split"]
+    ):
+        raise ValueError("manifest.tau2.selector_catalog does not match the registered τ³ condition")
+    digest = hashlib.sha256(
+        (json.dumps(normalized, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    ).hexdigest()
+    if _string(catalog.get("sha256"), "manifest.tau2.selector_catalog.sha256").lower() != digest:
+        raise ValueError("manifest.tau2.selector_catalog.sha256 does not match its selector catalog")
+    if not set(selectors).issubset(set(normalized["task_ids"])):
+        raise ValueError("manifest.tau2.task_ids are not present in the pinned τ³ selector catalog")
+    if not set(selectors).issubset(set(normalized["solo_task_ids"])):
+        raise ValueError("manifest.tau2.task_ids are not valid for the pinned τ³ solo condition")
+    return {**normalized, "sha256": digest}
+
+
+def _validate_tau2_checkout(tau2: Mapping[str, Any], *, root: Path, commit: str) -> dict[str, Any]:
+    source_tree = verify_source_tree_record(
+        tau2.get("source_tree"),
+        field="manifest.tau2.source_tree",
+        expected_root=root,
+    )
+    current_commit = _git(root, "rev-parse", "HEAD").lower()
+    if current_commit != commit.lower():
+        raise ValueError("manifest.tau2.commit does not match the current pinned τ³ checkout")
+    if _git(root, "status", "--porcelain"):
+        raise ValueError("pinned τ³ checkout is dirty and cannot support a source-bound native result")
+    return source_tree
+
+
+def _runtime_module_file(runtime: Mapping[str, Any], module: str) -> Path:
+    module_files = _mapping(runtime.get("module_files"), "manifest.runtime.module_files")
+    path = Path(_string(module_files.get(module), f"manifest.runtime.module_files.{module}")).expanduser().resolve()
+    if not path.is_file():
+        raise ValueError(f"manifest runtime-resolved module file is unavailable: {module}")
+    return path
 
 
 def _positive_budget(manifest: Mapping[str, Any]) -> tuple[Mapping[str, Any], Mapping[str, Any]]:
@@ -202,8 +293,7 @@ def _validate_adapter_binding(
 ) -> dict[str, Any]:
     source_record = _verify_file_record(adapter.get("source"), "manifest.adapter.source")
     adapter_command = _mapping(manifest.get("commands"), "manifest.commands").get("adapter")
-    if not _module_in_command(adapter_command, "experiments.agentdojo_adapter_server", "commands.adapter"):
-        raise ValueError("manifest adapter command does not invoke the recorded local adapter server")
+    _require_module_command(adapter_command, "experiments.agentdojo_adapter_server", "commands.adapter")
     if _command_path(adapter_command, "--model-checkpoint", "commands.adapter") != checkpoint_directory:
         raise ValueError("manifest adapter command is not bound to the recorded merged checkpoint")
     if _command_flag(adapter_command, "--host", "commands.adapter") != "127.0.0.1":
@@ -279,14 +369,16 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
     commit = _string(tau2.get("commit"), "manifest.tau2.commit")
     if not _GIT_COMMIT_RE.fullmatch(commit):
         raise ValueError("manifest.tau2.commit must be a hexadecimal Git commit")
+    tau2_root = Path(_string(tau2.get("root"), "manifest.tau2.root")).expanduser().resolve()
+    tau2_source_tree = _validate_tau2_checkout(tau2, root=tau2_root, commit=commit)
     selectors = [_string(value, "manifest.tau2.task_ids[]") for value in _list(tau2.get("task_ids"), "manifest.tau2.task_ids")]
     if not selectors or len(set(selectors)) != len(selectors):
         raise ValueError("manifest.tau2.task_ids must be a non-empty, unique selector list")
-    catalog = _mapping(tau2.get("selector_catalog"), "manifest.tau2.selector_catalog")
-    catalog_sha256 = _string(catalog.get("sha256"), "manifest.tau2.selector_catalog.sha256")
-    if not _SHA256_RE.fullmatch(catalog_sha256):
-        raise ValueError("manifest.tau2.selector_catalog.sha256 must be a SHA-256 digest")
+    selector_catalog = _validate_selector_catalog(tau2, selectors)
 
+    variant = _string(manifest.get("variant"), "manifest.variant")
+    if variant not in {"model-only", "repair"}:
+        raise ValueError("manifest.variant must be model-only or repair")
     policy, budget = _positive_budget(manifest)
     adapter = _mapping(manifest.get("adapter"), "manifest.adapter")
     if adapter.get("host") != "127.0.0.1" or not isinstance(adapter.get("harness_variant"), str) or not adapter["harness_variant"]:
@@ -301,7 +393,6 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
     runtime = _mapping(manifest.get("runtime"), "manifest.runtime")
     if runtime.get("source_bound") is not True:
         raise ValueError("manifest.runtime.source_bound must be true")
-    tau2_root = Path(_string(tau2.get("root"), "manifest.tau2.root")).expanduser().resolve()
     package_file = Path(_string(runtime.get("package_file"), "manifest.runtime.package_file")).expanduser().resolve()
     try:
         package_file.relative_to(tau2_root)
@@ -314,13 +405,24 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
     if wrapper.get("delegates_to") != "tau2.cli.main":
         raise ValueError("manifest.runner_wrapper must delegate directly to tau2.cli.main")
     wrapper_record = _verify_file_record(wrapper.get("source"), "manifest.runner_wrapper.source")
+    adapter_module_file = _runtime_module_file(runtime, "experiments.agentdojo_adapter_server")
+    runner_module_file = _runtime_module_file(runtime, "experiments.tau2_native_runner")
+    if adapter_module_file != Path(adapter_binding["source"]["path"]).resolve():
+        raise ValueError("manifest runtime did not resolve the recorded adapter source module")
+    if runner_module_file != Path(wrapper_record["path"]).resolve():
+        raise ValueError("manifest runtime did not resolve the recorded τ³ runner-wrapper module")
+    harness_root = Path(adapter_binding["source_trees"]["harness"]["root"]).resolve()
+    try:
+        runner_module_file.relative_to(harness_root)
+    except ValueError as error:
+        raise ValueError("manifest τ³ runner-wrapper source is outside the recorded harness source tree") from error
     compatibility = _mapping(wrapper.get("compatibility"), "manifest.runner_wrapper.compatibility")
     if compatibility.get("id") != COMPATIBILITY_ID or not isinstance(compatibility.get("required"), bool):
         raise ValueError("manifest.runner_wrapper compatibility metadata is incomplete or unexpected")
     commands = _mapping(manifest.get("commands"), "manifest.commands")
-    if not _module_in_command(commands.get("benchmark"), "experiments.tau2_native_runner", "commands.benchmark"):
-        raise ValueError("manifest benchmark command does not use the recorded τ³ compatibility runner")
-    benchmark_command = _command_values(commands.get("benchmark"), "commands.benchmark")
+    benchmark_command = _require_module_command(
+        commands.get("benchmark"), "experiments.tau2_native_runner", "commands.benchmark"
+    )
     adapter_command = _command_values(commands.get("adapter"), "commands.adapter")
     if Path(benchmark_command[0]).expanduser().resolve() != Path(adapter_command[0]).expanduser().resolve():
         raise ValueError("manifest benchmark and adapter must use the same recorded τ³ Python runtime")
@@ -358,18 +460,48 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
     if schema_record["sha256"] != preserved_record["sha256"] or schema_record["bytes"] != preserved_record["bytes"]:
         raise ValueError("native results schema validation is not bound to the preserved results bytes")
 
-    registration = verify_registration_record(manifest["registration"]) if "registration" in manifest else None
-    if registration is not None:
-        if registration["benchmark"] != "tau2":
+    registration_record = verify_registration_record(manifest["registration"]) if "registration" in manifest else None
+    registration = None
+    if registration_record is not None:
+        if registration_record["benchmark"] != "tau2":
             raise ValueError("manifest preregistration is not a tau2 registration")
-        if registration.get("condition") != "official-solo-telecom":
+        if registration_record.get("condition") != "official-solo-telecom":
             raise ValueError("manifest preregistration condition does not match the native tau2 solo condition")
+        quantization_value = policy.get("quantization")
+        quantization = (
+            None
+            if quantization_value is None
+            else _string(quantization_value, "manifest.policy.quantization")
+        )
+        registration = validate_tau2_registration(
+            Path(registration_record["path"]),
+            training_sources=audit.get("training_sources"),
+            variant=variant,
+            source_commit=commit,
+            tau2_version=_string(runtime.get("tau2_version"), "manifest.runtime.tau2_version"),
+            python_version=_string(runtime.get("python_version"), "manifest.runtime.python_version"),
+            domain=_string(tau2.get("domain"), "manifest.tau2.domain"),
+            task_set=_string(tau2.get("task_set"), "manifest.tau2.task_set"),
+            task_split=_string(tau2.get("task_split"), "manifest.tau2.task_split"),
+            task_ids=selectors,
+            seed=_integer(policy.get("seed"), "manifest.policy.seed"),
+            max_new_tokens=_integer(policy.get("max_new_tokens"), "manifest.policy.max_new_tokens", minimum=1),
+            quantization=quantization,
+            num_trials=_integer(budget.get("num_trials"), "manifest.budget.num_trials", minimum=1),
+            max_steps=_integer(budget.get("max_steps"), "manifest.budget.max_steps", minimum=1),
+            max_errors=_integer(budget.get("max_errors"), "manifest.budget.max_errors", minimum=1),
+            max_concurrency=_integer(budget.get("max_concurrency"), "manifest.budget.max_concurrency", minimum=1),
+            max_retries=_integer(budget.get("max_retries"), "manifest.budget.max_retries", minimum=0),
+        )
 
     return {
         "run_dir": run_dir,
         "checkpoint_directory": checkpoint_directory,
         "checkpoint_records": checkpoint_records,
         "tau2": tau2,
+        "tau2_source_tree": tau2_source_tree,
+        "selector_catalog": selector_catalog,
+        "variant": variant,
         "policy": policy,
         "budget": budget,
         "adapter": adapter,
@@ -390,31 +522,42 @@ def _validate_native_identity(
     tau2: Mapping[str, Any],
     policy: Mapping[str, Any],
     budget: Mapping[str, Any],
+    adapter: Mapping[str, Any],
 ) -> Mapping[str, Any]:
     info = _mapping(results.get("info"), "native results.info")
-    if info.get("git_commit") != tau2["commit"]:
+    if _string(info.get("git_commit"), "native results.info.git_commit").lower() != str(tau2["commit"]).lower():
         raise ValueError("native results.info.git_commit does not match the pinned τ³ checkout")
     for key in ("num_trials", "max_steps", "max_errors"):
-        if info.get(key) != budget[key]:
+        if _integer(info.get(key), f"native results.info.{key}", minimum=1) != _integer(
+            budget[key], f"manifest.budget.{key}", minimum=1
+        ):
             raise ValueError(f"native results.info.{key} does not match the registered execution budget")
-    if info.get("seed") != policy["seed"]:
+    if _integer(info.get("seed"), "native results.info.seed") != _integer(policy["seed"], "manifest.policy.seed"):
         raise ValueError("native results.info.seed does not match the registered policy seed")
 
     agent = _mapping(info.get("agent_info"), "native results.info.agent_info")
-    if agent.get("implementation") != "llm_agent_solo" or agent.get("llm") != policy["model"]:
+    if (
+        _string(agent.get("implementation"), "native results.info.agent_info.implementation") != "llm_agent_solo"
+        or _string(agent.get("llm"), "native results.info.agent_info.llm") != _string(policy["model"], "manifest.policy.model")
+    ):
         raise ValueError("native results agent identity does not match the registered official solo condition")
     llm_args = _mapping(agent.get("llm_args"), "native results.info.agent_info.llm_args")
-    _assert_loopback_api_base(llm_args.get("api_base"))
+    _assert_loopback_api_base(
+        llm_args.get("api_base"),
+        expected_port=_integer(adapter.get("port"), "manifest.adapter.port", minimum=1),
+    )
     if _number(llm_args.get("temperature"), "native results.info.agent_info.llm_args.temperature") != 0.0:
         raise ValueError("native results must be deterministic with temperature zero")
-    if llm_args.get("max_tokens") != policy["max_new_tokens"]:
+    if _integer(llm_args.get("max_tokens"), "native results.info.agent_info.llm_args.max_tokens", minimum=1) != _integer(
+        policy["max_new_tokens"], "manifest.policy.max_new_tokens", minimum=1
+    ):
         raise ValueError("native results max_tokens does not match the registered local policy limit")
 
     user = _mapping(info.get("user_info"), "native results.info.user_info")
-    if user.get("implementation") != "dummy_user":
+    if _string(user.get("implementation"), "native results.info.user_info.implementation") != "dummy_user":
         raise ValueError("native results must use τ³-bench's official DummyUser solo condition")
     environment = _mapping(info.get("environment_info"), "native results.info.environment_info")
-    if environment.get("domain_name") != "telecom":
+    if _string(environment.get("domain_name"), "native results.info.environment_info.domain_name") != "telecom":
         raise ValueError("native results must be from the registered telecom domain")
     return info
 
@@ -514,6 +657,7 @@ def validate_native_result(run_manifest_path: str | Path) -> dict[str, Any]:
         tau2=validated["tau2"],
         policy=validated["policy"],
         budget=validated["budget"],
+        adapter=validated["adapter"],
     )
     rows, termination_reasons = _validate_rows(
         results,

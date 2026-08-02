@@ -5,6 +5,12 @@
 - Added a checked-in native-evaluation preregistration, source-bound
   AgentDojo/tau2 launchers, immutable artifact validators, and regression
   coverage for the local OpenAI-compatible adapter transport.
+- Bind completed AgentDojo evidence to the current pinned checkout's
+  source-tree fingerprint, rejecting source drift before a result is reported.
+- Hardened τ³ result validation against stale local endpoints, command/module
+  rebinding, dirty or mismatched benchmark checkouts, selector-catalog drift,
+  and JSON boolean-versus-integer identity confusion; public wheel-build log
+  tails now redact machine-local paths.
 - Separated the fixed native diagnostic from a conditional adaptive AutoDojo
   security protocol; neither is presented as a general capability or security
   certification.

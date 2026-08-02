@@ -455,6 +455,11 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
     entrypoint = Path(_string(agentdojo.get("entrypoint"), "manifest.agentdojo.entrypoint")).expanduser().resolve()
     if entrypoint != (agentdojo_root / "src" / "agentdojo" / "scripts" / "benchmark.py").resolve() or not entrypoint.is_file():
         raise ValueError("manifest AgentDojo entrypoint is not the pinned official benchmark module")
+    agentdojo_source = verify_source_tree_record(
+        agentdojo.get("source_tree"),
+        field="manifest.agentdojo.source_tree",
+        expected_root=agentdojo_root,
+    )
     commit = _string(agentdojo.get("commit"), "manifest.agentdojo.commit")
     if not _GIT_COMMIT_RE.fullmatch(commit):
         raise ValueError("manifest.agentdojo.commit must be a hexadecimal Git commit")
@@ -535,7 +540,7 @@ def _validate_manifest(manifest: Mapping[str, Any], manifest_path: Path) -> dict
         "run_dir": run_dir,
         "checkpoint_records": checkpoint_records,
         "adapter_binding": adapter_binding,
-        "agentdojo": dict(agentdojo),
+        "agentdojo": {**agentdojo, "source_tree": agentdojo_source},
         "variant": variant,
         "policy": dict(policy),
         "condition": {

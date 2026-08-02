@@ -195,6 +195,7 @@ def _write_fixture(root: Path, *, injection: bool = False) -> Path:
         "agentdojo": {
             "root": str(agentdojo_root.resolve()),
             "commit": "a" * 40,
+            "source_tree": record_source_tree(agentdojo_root),
             "benchmark_version": "v1.2.2",
             "suite": "workspace",
             "user_tasks": user_tasks,
@@ -290,6 +291,12 @@ class AgentDojoNativeResultValidatorTests(unittest.TestCase):
             manifest = _write_fixture(root / "source-drift")
             (root / "source-drift" / "project1" / "policy.py").write_text("POLICY = 'changed'\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "source_trees.project1"):
+                validate_native_result(manifest)
+
+            manifest = _write_fixture(root / "agentdojo-source-drift")
+            entrypoint = root / "agentdojo-source-drift" / "agentdojo" / "src" / "agentdojo" / "scripts" / "benchmark.py"
+            entrypoint.write_text("def main():\n    return 1\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "agentdojo.source_tree"):
                 validate_native_result(manifest)
 
     def test_rejects_unrecorded_extra_native_json(self) -> None:

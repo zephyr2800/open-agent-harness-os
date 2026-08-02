@@ -360,15 +360,19 @@ available.
 - `experiments/run_promotion_matrix.py`: one-command greedy/sampled matrix
   runner that hides contract hints, reuses one loaded checkpoint, and records
   runtime plus independent replay outcomes for every task.
+- `experiments/holdout_novelty_audit.py`: identifier-normalized lexical
+  template-affinity screen. It binds its report to the exact training-source
+  and task-spec hashes, but is explicitly not a semantic-novelty claim.
 - `experiments/promotion_decision.py`: separate frozen promotion gate that
   requires all three slices, all recorded runs, independent replay agreement,
-  zero unsafe attempts, and no unknown task specifications.
+  zero unsafe attempts, no unknown task specifications, and a bound passing
+  template-affinity report.
 - The harness now checks `expected_result_contains` in addition to tool
   execution, independent evidence, action ordering, and artifact state. This
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 110/110 after evaluator hardening, dense-reliability,
+- The current project test suite is 115/115 after evaluator hardening, dense-reliability,
   atomic concurrent
   trace-retention coverage, and HTTP bearer-auth coverage.
 - Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,

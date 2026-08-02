@@ -11,7 +11,8 @@ from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
-from experiments.promotion_decision import decide
+from experiments.holdout_novelty_audit import validate_manifest as validate_novelty_manifest
+from experiments.promotion_decision import REQUIRED_PROMOTION_TASK_SPEC_HASHES, decide
 
 
 def _run(task_spec: str, seed: int, *, passed: bool = True) -> dict:
@@ -66,10 +67,31 @@ def _bound_checkpoint(path: Path, audit: Path, *, training_digest: str | None = 
     return checkpoint
 
 
-def _attach_audit(matrix: dict, path: Path, checkpoint: Path) -> None:
+def _write_required_novelty_audit(path: Path, audit: Path) -> Path:
+    audit_gate = validate_required_audit_manifest(audit)
+    path.write_text(json.dumps({
+        "schema": "holdout-novelty-audit/v1",
+        "passed": True,
+        "train": audit_gate["training_sources"],
+        "task_specs": [
+            {"path": f"C:/fixtures/{name}", "sha256": digest}
+            for name, digest in REQUIRED_PROMOTION_TASK_SPEC_HASHES.items()
+        ],
+    }), encoding="utf-8")
+    return path
+
+
+def _attach_audit(matrix: dict, path: Path, checkpoint: Path) -> Path:
     audit_gate = validate_required_audit_manifest(path)
+    novelty = _write_required_novelty_audit(path.with_name("holdout-novelty.json"), path)
+    novelty_gate = validate_novelty_manifest(
+        novelty,
+        expected_training_sources=audit_gate["training_sources"],
+        expected_task_spec_hashes=REQUIRED_PROMOTION_TASK_SPEC_HASHES,
+    )
     matrix["checkpoint"] = str(checkpoint)
     matrix["train_holdout_audit"] = audit_gate
+    matrix["holdout_novelty_audit"] = novelty_gate
     matrix["checkpoint_training_binding"] = validate_checkpoint_training_binding(checkpoint, audit_gate)
     matrix["task_spec_hashes"] = [
         {"path": f"C:/fixtures/{name}", "sha256": digest}
@@ -80,6 +102,7 @@ def _attach_audit(matrix: dict, path: Path, checkpoint: Path) -> None:
             "task-spec-industry-proxy-v2.json",
         }
     ]
+    return novelty
 
 
 class PromotionDecisionTests(unittest.TestCase):
@@ -102,11 +125,12 @@ class PromotionDecisionTests(unittest.TestCase):
                     for seed in (0, 1, 2)
                 ],
             }
-            _attach_audit(matrix, audit, checkpoint)
-            result = decide(matrix, audit)
+            novelty = _attach_audit(matrix, audit, checkpoint)
+            result = decide(matrix, audit, novelty)
         self.assertTrue(result["passed"])
         self.assertEqual(result["decision"], "promote")
         self.assertTrue(result["gates"]["required_train_holdout_audit"])
+        self.assertTrue(result["gates"]["holdout_template_novelty"])
 
     def test_rejects_incomplete_matrix_even_if_present_rows_pass(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -123,8 +147,8 @@ class PromotionDecisionTests(unittest.TestCase):
                 ],
             }
             matrix["runs"][0]["complete"] = False
-            _attach_audit(matrix, audit, checkpoint)
-            result = decide(matrix, audit)
+            novelty = _attach_audit(matrix, audit, checkpoint)
+            result = decide(matrix, audit, novelty)
         self.assertFalse(result["passed"])
         self.assertFalse(result["gates"]["expected_run_count"])
         self.assertFalse(result["gates"]["all_required_seeds_present"])
@@ -144,8 +168,8 @@ class PromotionDecisionTests(unittest.TestCase):
                     _run("other.json", 0),
                 ],
             }
-            _attach_audit(matrix, audit, checkpoint)
-            result = decide(matrix, audit)
+            novelty = _attach_audit(matrix, audit, checkpoint)
+            result = decide(matrix, audit, novelty)
         self.assertFalse(result["passed"])
         self.assertEqual(result["decision"], "reject")
         self.assertFalse(result["gates"]["no_unknown_task_specs"])
@@ -165,9 +189,9 @@ class PromotionDecisionTests(unittest.TestCase):
                     _run("task-spec-industry-proxy-v2.json", 0),
                 ],
             }
-            _attach_audit(matrix, audit, checkpoint)
+            novelty = _attach_audit(matrix, audit, checkpoint)
             matrix["task_spec_hashes"][0]["sha256"] = "0" * 64
-            result = decide(matrix, audit)
+            result = decide(matrix, audit, novelty)
         self.assertFalse(result["passed"])
         self.assertFalse(result["gates"]["pinned_task_spec_hashes"])
 
@@ -185,8 +209,8 @@ class PromotionDecisionTests(unittest.TestCase):
                     _run("task-spec-industry-proxy-v2.json", 0),
                 ],
             }
-            _attach_audit(matrix, audit, checkpoint)
-            result = decide(matrix, audit)
+            novelty = _attach_audit(matrix, audit, checkpoint)
+            result = decide(matrix, audit, novelty)
         self.assertFalse(result["passed"])
         self.assertFalse(result["gates"]["checkpoint_training_binding"])
 
@@ -205,3 +229,26 @@ class PromotionDecisionTests(unittest.TestCase):
             result = decide(matrix, audit)
         self.assertFalse(result["passed"])
         self.assertFalse(result["gates"]["required_train_holdout_audit"])
+
+    def test_rejects_failed_or_unlinked_template_novelty_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            audit = _write_required_audit(root / "audit.json")
+            checkpoint = _bound_checkpoint(root, audit)
+            matrix = {
+                "schema": "promotion-matrix/v1",
+                "seeds": [0],
+                "runs": [
+                    _run("task-spec-research-v4.json", 0),
+                    _run("task-spec-industry-proxy-v1.json", 0),
+                    _run("task-spec-industry-proxy-v2.json", 0),
+                ],
+            }
+            novelty = _attach_audit(matrix, audit, checkpoint)
+            payload = json.loads(novelty.read_text(encoding="utf-8"))
+            payload["passed"] = False
+            novelty.write_text(json.dumps(payload), encoding="utf-8")
+            result = decide(matrix, audit, novelty)
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["gates"]["holdout_template_novelty"])
+        self.assertFalse(result["holdout_novelty_audit"]["report_passed"])

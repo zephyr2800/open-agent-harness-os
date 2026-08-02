@@ -55,6 +55,12 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def task_spec_sha256(path: Path) -> str:
+    """Hash a checked-in task spec independently of Git's CRLF checkout mode."""
+
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
@@ -294,7 +300,7 @@ def audit(train_jsonl: list[Path], task_specs: list[Path]) -> dict[str, Any]:
     for path in task_specs:
         document = json.loads(path.read_text(encoding="utf-8"))
         tasks = document.get("tasks", []) if isinstance(document, dict) else document
-        fixtures.append({"path": str(path), "sha256": _sha256(path), "tasks": len(tasks)})
+        fixtures.append({"path": str(path), "sha256": task_spec_sha256(path), "tasks": len(tasks)})
         for task in tasks:
             task_id = str(task.get("task_id") or task.get("id") or "<unknown>")
             for marker in _task_markers(task):

@@ -45,6 +45,21 @@ be described as held-out:
 See [train/holdout integrity](TRAIN_HOLDOUT_INTEGRITY.md) for the exact
 contract markers and interpretation.
 
+Run the complementary template-affinity screen over the three promotion
+slices. It deliberately normalizes identifiers, so it catches a structurally
+near holdout that has no literal marker collision. This is an enforceable
+local screen, not a semantic novelty or external-generalization claim:
+
+```powershell
+& $py -m experiments.holdout_novelty_audit `
+  --train-jsonl <candidate-training.jsonl> `
+  --task-spec benchmarks\fixtures\task-spec-research-v4.json `
+  --task-spec benchmarks\fixtures\task-spec-industry-proxy-v1.json `
+  --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
+  --manifest experiments\results\candidate-holdout-novelty-audit.json `
+  --fail-on-affinity
+```
+
 The qualifying SFT and merge commands record the training-corpus SHA-256 and
 row count in `training_manifest.json`, then copy that manifest into the merged
 checkpoint. The matrix rejects a checkpoint unless those source fingerprints
@@ -68,6 +83,7 @@ try {
     --checkpoint (Join-Path $root 'work\action-model-project2-qwopus35-9b-qlora-v1-merged') `
     --output experiments\results\research-project2-qwopus35-9b-promotion-greedy-v1.json `
     --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
+    --holdout-novelty-audit experiments\results\candidate-holdout-novelty-audit.json `
     --task-spec benchmarks\fixtures\task-spec-research-v4.json `
     --task-spec benchmarks\fixtures\task-spec-industry-proxy-v1.json `
     --task-spec benchmarks\fixtures\task-spec-industry-proxy-v2.json `
@@ -89,6 +105,7 @@ The promotion rule is machine-checked by:
 & $py -m experiments.promotion_decision `
   --matrix experiments\results\research-project2-qwopus35-9b-promotion-greedy-v1.json `
   --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
+  --holdout-novelty-audit experiments\results\candidate-holdout-novelty-audit.json `
   --output experiments\results\research-project2-qwopus35-9b-promotion-decision-v1.json
 ```
 
@@ -134,6 +151,7 @@ Before any RL command, authorize the run with the machine gate:
 & $py -m experiments.verified_rl_gate `
   --decision experiments\results\research-project2-qwopus35-9b-promotion-decision-v1.json `
   --train-holdout-audit experiments\results\candidate-train-holdout-audit.json `
+  --holdout-novelty-audit experiments\results\candidate-holdout-novelty-audit.json `
   --external-bar-v1 experiments\results\research-project2-qwopus35-9b-external-bar-lite-v1.json `
   --external-bar-v2 experiments\results\research-project2-qwopus35-9b-external-bar-lite-v2.json `
   --checkpoint (Join-Path $root 'work\action-model-project2-qwopus35-9b-qlora-v1-merged') `

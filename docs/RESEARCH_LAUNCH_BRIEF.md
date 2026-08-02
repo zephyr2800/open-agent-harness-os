@@ -156,7 +156,8 @@ replays. ([model card](https://huggingface.co/Jackrong/Qwopus3.5-9B-v3),
 
 The local product surface has a CLI, loopback HTTP API, MCP stdio server,
 typed Action IR, allowlisted tools, default high-risk denial, independent
-verification, bounded budgets, and replayable JSONL traces. The 95-test suite,
+verification, bounded budgets, and replayable JSONL traces. The current
+173-test suite,
 offline demo, replay smoke, explicit concurrent-retention preflight, and
 bearer-authentication plus tenant-isolation checks support a technically
 capable local preview.

@@ -114,8 +114,9 @@ $py = 'python'
 & $py -m compileall -q .
 ```
 
-Current result: 170 Project 2 tests pass. The latest delta includes the
-external-adapter, preregistration, and evidence/replay regressions.
+Current result: 173 Project 2 tests pass. The current suite includes the
+external-adapter, preregistration, evidence/replay, and loopback
+OpenAI-transport regressions.
 
 ## Independent research fixture
 
@@ -383,12 +384,13 @@ available.
   prevents generic final answers from receiving a verified-success score.
 - `verify/independent.py` applies the same expected-result check during replay,
   keeping runtime and independent success semantics aligned.
-- The current project test suite is 115/115 after evaluator hardening, dense-reliability,
-  atomic concurrent
-  trace-retention coverage, and HTTP bearer-auth coverage.
-- Current wheel/preflight artifact: `work/package-dist-0.1.8-final/open_agent_harness_os-0.1.8-py3-none-any.whl`,
-  SHA-256 is recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`;
-  it contains the explicit non-loopback authentication-plus-TLS gate.
+- The current project test suite is 173/173 after evaluator hardening,
+  dense-reliability, atomic concurrent trace-retention, HTTP bearer-auth, and
+  loopback OpenAI-transport coverage.
+- Current wheel/preflight evidence is
+  `experiments/results/clean-wheel-smoke-v25.json` and
+  `experiments/results/launch-preflight-v21.json`; the source/package and
+  wheel-manifest fingerprints are recorded in `docs/PUBLIC_RELEASE_CHECKLIST.md`.
 - `experiments/launch_preflight.py` provides the reproducible source-checkout
   command `python -m experiments.launch_preflight --with-tests --output
   experiments/results/launch-preflight-local.json`; the artifact

@@ -44,6 +44,25 @@ VARIANTS = {
 }
 
 
+_SELECTOR_CATALOG_SCRIPT = """
+import json
+import sys
+
+from agentdojo.task_suite.load_suites import get_suite
+from agentdojo.agent_pipeline.agent_pipeline import DEFENSES
+from agentdojo.attacks.attack_registry import ATTACKS
+
+benchmark_version, suite_name = sys.argv[1:]
+suite = get_suite(benchmark_version, suite_name)
+print(json.dumps({
+    "user_tasks": sorted(suite.user_tasks),
+    "injection_tasks": sorted(suite.injection_tasks),
+    "attacks": sorted(ATTACKS),
+    "defenses": sorted(DEFENSES),
+}, sort_keys=True))
+"""
+
+
 @dataclass(frozen=True)
 class NativeRunConfig:
     checkpoint: Path
@@ -178,6 +197,90 @@ def _benchmark_command(config: NativeRunConfig) -> list[str]:
     return command
 
 
+def _selector_catalog(config: NativeRunConfig, environment: dict[str, str]) -> dict[str, Any]:
+    """Read valid selectors from the pinned benchmark without loading the policy."""
+
+    selector_environment = os.environ.copy()
+    selector_environment.update(environment)
+    try:
+        completed = subprocess.run(
+            [
+                str(config.python),
+                "-c",
+                _SELECTOR_CATALOG_SCRIPT,
+                config.benchmark_version,
+                config.suite,
+            ],
+            cwd=config.agentdojo_root,
+            env=selector_environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ValueError(f"could not inspect task selectors from the pinned AgentDojo checkout: {error}") from error
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip() or "unknown selector-catalog error"
+        raise ValueError(f"could not inspect task selectors from the pinned AgentDojo checkout: {detail}")
+    try:
+        payload = json.loads(completed.stdout)
+    except ValueError as error:
+        raise ValueError("pinned AgentDojo selector catalog was not valid JSON") from error
+    if not isinstance(payload, dict):
+        raise ValueError("pinned AgentDojo selector catalog was not an object")
+    user_tasks = payload.get("user_tasks")
+    injection_tasks = payload.get("injection_tasks")
+    attacks = payload.get("attacks")
+    defenses = payload.get("defenses")
+    if not (
+        isinstance(user_tasks, list)
+        and isinstance(injection_tasks, list)
+        and isinstance(attacks, list)
+        and isinstance(defenses, list)
+        and all(isinstance(item, str) and item for item in user_tasks + injection_tasks + attacks + defenses)
+    ):
+        raise ValueError("pinned AgentDojo selector catalog had invalid task IDs")
+    normalized = {
+        "schema": "agentdojo-selector-catalog/v1",
+        "benchmark_version": config.benchmark_version,
+        "suite": config.suite,
+        "user_tasks": sorted(set(user_tasks)),
+        "injection_tasks": sorted(set(injection_tasks)),
+        "attacks": sorted(set(attacks)),
+        "defenses": sorted(set(defenses)),
+    }
+    normalized_bytes = (json.dumps(normalized, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    return {**normalized, "sha256": hashlib.sha256(normalized_bytes).hexdigest()}
+
+
+def _validate_selectors(config: NativeRunConfig, catalog: dict[str, Any]) -> None:
+    available_user_tasks = set(catalog["user_tasks"])
+    available_injection_tasks = set(catalog["injection_tasks"])
+    available_attacks = set(catalog["attacks"])
+    available_defenses = set(catalog["defenses"])
+    if len(set(config.user_tasks)) != len(config.user_tasks):
+        raise ValueError("each --user-task selector must be unique to preserve the registered evaluation budget")
+    if len(set(config.injection_tasks)) != len(config.injection_tasks):
+        raise ValueError("each --injection-task selector must be unique to preserve the registered evaluation budget")
+    unknown_user_tasks = sorted(set(config.user_tasks) - available_user_tasks)
+    unknown_injection_tasks = sorted(set(config.injection_tasks) - available_injection_tasks)
+    if unknown_user_tasks:
+        raise ValueError(
+            "--user-task selector(s) not found in the pinned "
+            f"AgentDojo {config.suite!r} suite at {config.benchmark_version}: {', '.join(unknown_user_tasks)}"
+        )
+    if unknown_injection_tasks:
+        raise ValueError(
+            "--injection-task selector(s) not found in the pinned "
+            f"AgentDojo {config.suite!r} suite at {config.benchmark_version}: {', '.join(unknown_injection_tasks)}"
+        )
+    if config.attack and config.attack not in available_attacks:
+        raise ValueError(f"--attack is not registered by the pinned AgentDojo checkout: {config.attack}")
+    if config.defense and config.defense not in available_defenses:
+        raise ValueError(f"--defense is not registered by the pinned AgentDojo checkout: {config.defense}")
+
+
 def build_plan(config: NativeRunConfig) -> dict[str, Any]:
     """Validate immutable inputs and return an executable native-run plan."""
 
@@ -211,6 +314,8 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
     if agentdojo_dirty:
         raise ValueError("--agentdojo-root must be clean; commit or discard local benchmark changes before a native run")
     environment, pythonpath = _agentdojo_environment(config)
+    selector_catalog = _selector_catalog(config, environment)
+    _validate_selectors(config, selector_catalog)
     adapter = REPO_ROOT / "experiments" / "agentdojo_adapter_server.py"
     return {
         "schema": "agentdojo-native-run/v1",
@@ -236,6 +341,7 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
             "attack": config.attack,
             "defense": config.defense,
             "entrypoint": str(benchmark_entrypoint),
+            "selector_catalog": selector_catalog,
         },
         "adapter": {
             "source": _file_record(adapter),

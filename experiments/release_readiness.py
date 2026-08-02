@@ -53,11 +53,13 @@ def _current_wheel_smoke(
         if package_version
         else None
     )
-    candidates: list[tuple[Path, dict[str, Any]]] = []
-    for path in sorted(results.glob("clean-wheel-smoke-*.json")):
+    candidates: list[tuple[int, Path, dict[str, Any]]] = []
+    for path in results.glob("clean-wheel-smoke-v*.json"):
+        match = re.fullmatch(r"clean-wheel-smoke-v(\d+)\.json", path.name)
         report = _load(path)
         if (
-            report is not None
+            match is not None
+            and report is not None
             and report.get("passed") is True
             and report.get("wheel") == expected_wheel
             and report.get("source_package_sha256") == expected_source_package_sha256
@@ -67,9 +69,9 @@ def _current_wheel_smoke(
             and report.get("wheel_manifest_matches_reference") is True
             and report.get("wheel_manifest_sha256") == report.get("reference_wheel_manifest_sha256")
         ):
-            candidates.append((path, report))
+            candidates.append((int(match.group(1)), path, report))
     if candidates:
-        path, report = candidates[-1]
+        _, path, report = max(candidates, key=lambda item: item[0])
         return path, report, expected_wheel
     missing = results / f"clean-wheel-smoke-current-{package_version or 'unknown'}.json"
     return missing, None, expected_wheel

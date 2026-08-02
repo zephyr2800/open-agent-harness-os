@@ -750,7 +750,7 @@ def run(*, wheel: Path | None = DEFAULT_WHEEL, include_tests: bool = False) -> d
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", default=str(ROOT / "experiments" / "results" / "launch-preflight-v8.json"))
+    parser.add_argument("--output", default=str(ROOT / "experiments" / "results" / "launch-preflight-v9.json"))
     parser.add_argument("--wheel", help="optional wheel; source checkouts build a fresh wheel by default")
     parser.add_argument("--with-tests", action="store_true", help="also run the full source test suite")
     args = parser.parse_args()

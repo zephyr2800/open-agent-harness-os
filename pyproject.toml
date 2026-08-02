@@ -16,6 +16,7 @@ harness-preflight = "experiments.launch_preflight:main"
 harness-scorecard = "experiments.scorecard:main"
 harness-promotion-decision = "experiments.promotion_decision:main"
 harness-agentdojo-adapter = "experiments.agentdojo_adapter_server:main"
+harness-tua-preflight = "experiments.tua_bench_preflight:main"
 harness = "app.cli:main"
 
 [tool.setuptools]

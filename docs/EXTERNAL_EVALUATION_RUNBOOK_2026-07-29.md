@@ -101,6 +101,12 @@ plane, and verifier-first repair where the benchmark permits it. If a native
 grader cannot observe the harness's evidence plane, report it as a harness
 ablation and keep the native score primary.
 
+Before installation or setup, run the local
+[`TUA-Bench host preflight`](TUA_BENCH_PREFLIGHT.md). It records only the
+checkout, container-backend, `uv`, and explicitly named setup-asset
+prerequisites; it never turns a host-ready result into a TUA score or a claim
+that this harness has a native TUA policy bridge.
+
 ## Scorecard conversion
 
 Convert only after the native run is complete:

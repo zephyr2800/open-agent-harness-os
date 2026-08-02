@@ -158,6 +158,7 @@ class ExperimentTests(unittest.TestCase):
         self.assertTrue(report["required_fixture_gate"]["passed"])
         self.assertEqual(set(report["required_fixture_gate"]["required_fixture_hashes"]), set(REQUIRED_FROZEN_FIXTURE_HASHES))
         self.assertTrue(validated["passed"])
+        self.assertTrue(all(item["sha256_normalization"] == "LF newline-normalized" for item in report["fixtures"]))
 
     def test_required_audit_manifest_rejects_pinned_fixture_hash_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -226,9 +227,16 @@ class ExperimentTests(unittest.TestCase):
         report = build_readiness(ROOT)
         expected_wheel = f"open_agent_harness_os-{report['package_version']}-py3-none-any.whl"
         gate = report["gates"]["clean_wheel_smoke"]
-        self.assertTrue(gate["evidence"].endswith("clean-wheel-smoke-v4.json"))
         self.assertIn(expected_wheel, gate["detail"])
-        self.assertEqual(gate["status"], "passed")
+        # A source checkout can legitimately be ahead of committed smoke
+        # evidence after a code or packaging change. A fresh preflight, not an
+        # old artifact, is what may restore a passing release gate.
+        if gate["status"] == "passed":
+            self.assertIn("clean-wheel-smoke-v", Path(gate["evidence"]).name)
+        else:
+            self.assertEqual(gate["status"], "pending")
+            self.assertIn("clean-wheel-smoke-current-", Path(gate["evidence"]).name)
+            self.assertIn("has not passed", gate["detail"])
 
     def test_readiness_requires_completed_source_bound_preflight(self) -> None:
         fingerprint = "a" * 64

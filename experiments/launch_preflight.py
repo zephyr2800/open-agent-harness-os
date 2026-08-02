@@ -55,6 +55,7 @@ REQUIRED_DOCS = (
     "docs/RESEARCH_LANDSCAPE_2026-07-29.md",
     "docs/RESEARCH_BREAKTHROUGH_PROTOCOL_2026-07-29.md",
     "docs/EXTERNAL_EVALUATION_RUNBOOK_2026-07-29.md",
+    "docs/TUA_BENCH_PREFLIGHT.md",
     "docs/PUBLIC_RELEASE_CHECKLIST.md",
     "docs/PROVENANCE_REVIEW.md",
     "benchmarks/fixtures/task-spec-external-bar-lite-v1.json",

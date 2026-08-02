@@ -67,6 +67,7 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
         (entrypoint / "benchmark.py").write_text("# benchmark placeholder\n", encoding="utf-8")
         project1 = root / "project1"
         project1.mkdir()
+        (project1 / "policy.py").write_text("POLICY = 'native-test'\n", encoding="utf-8")
         runtime = root / "agentdojo-runtime"
         runtime.mkdir()
         return NativeRunConfig(
@@ -103,6 +104,8 @@ class AgentDojoNativeLauncherTests(unittest.TestCase):
         self.assertTrue(plan["checkpoint"]["training_binding"]["passed"])
         self.assertFalse(plan["adapter"]["lookup_first_enabled"])
         self.assertEqual(plan["agentdojo"]["selector_catalog"]["sha256"], "e" * 64)
+        self.assertEqual(plan["adapter"]["source_trees"]["project1"]["schema"], "python-source-tree/v1")
+        self.assertGreater(plan["adapter"]["source_trees"]["harness"]["file_count"], 0)
         self.assertIn("openai-compatible", plan["commands"]["benchmark"])
         self.assertIn("--user-task", plan["commands"]["benchmark"])
         self.assertNotIn("--enable-repair", plan["commands"]["adapter"])

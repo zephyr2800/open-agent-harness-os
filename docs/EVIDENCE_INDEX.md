@@ -139,7 +139,7 @@ model claim.
 - `experiments/results/product-smoke-v0.json` covers six workflows with 1.0
   protocol validity, 0.833333 verified-success rate, and a deliberate safety
   denial for high-risk delete.
-- `experiments/results/launch-preflight-v14.json` is the current local developer-
+- `experiments/results/launch-preflight-v15.json` is the current local developer-
   preview gate: product smoke, MCP contract/replay, locality, high-risk
   safety, persistence, HTTP bearer authentication, token-principal trace
   isolation, non-loopback TLS gating, per-tool security metadata, wheel

@@ -78,7 +78,7 @@ developer preview; it does not close multi-user isolation, production
 operational, security-review, or external-agent benchmark gates.
 
 The current consolidated source-checkout preflight is recorded at
-`experiments/results/launch-preflight-v14.json`. It passes the six-case product
+`experiments/results/launch-preflight-v15.json`. It passes the six-case product
  smoke, MCP contract and replay, local-only endpoint policy, bearer
  authentication, high-risk denial, persistence, wheel integrity,
 launch-document presence, the non-loopback token-plus-TLS gate, tenant trace
@@ -88,7 +88,7 @@ tests and the recorded v5 preflight artifact contains an 83-test subcheck.
 The historical source-bound v9 preflight contains a 137-test subcheck; the
 historical v11 preflight contains a 150-test subcheck; the historical v12
 preflight contains a 151-test subcheck; the historical v13 preflight contains
-a 154-test subcheck; the current v14 preflight contains a 156-test subcheck. The
+a 154-test subcheck; the current v15 preflight contains a 156-test subcheck. The
 preflight deliberately reports its scope as `local-developer-preview`; public
 launch gates remain separate.
 

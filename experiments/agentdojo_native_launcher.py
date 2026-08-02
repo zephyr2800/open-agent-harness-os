@@ -29,6 +29,7 @@ from experiments.data_split_audit import (
     validate_checkpoint_training_binding,
     validate_required_audit_manifest,
 )
+from experiments.source_tree import record_source_tree
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -345,6 +346,10 @@ def build_plan(config: NativeRunConfig) -> dict[str, Any]:
         },
         "adapter": {
             "source": _file_record(adapter),
+            "source_trees": {
+                "project1": record_source_tree(config.project1_root),
+                "harness": record_source_tree(REPO_ROOT),
+            },
             "host": "127.0.0.1",
             "port": config.port,
             "harness_variant": VARIANTS[config.variant]["harness_variant"],

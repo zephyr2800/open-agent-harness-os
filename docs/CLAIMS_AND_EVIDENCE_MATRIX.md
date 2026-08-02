@@ -25,7 +25,7 @@ metadata.
 | The product is public-launch ready | Not supported | public identity/operations, usability, security review, licensing, and external benchmark gates remain | Say “developer-preview candidate,” not “production-ready.” |
 
 Evidence freshness: `launch-preflight-v9.json` above remains a valid historical
-artifact, but `experiments/results/launch-preflight-v14.json` is the current
+artifact, but `experiments/results/launch-preflight-v15.json` is the current
 developer-preview evidence: 16/16 checks, 156/156 Project 2 tests, and 47/47
 companion-project tests.
 

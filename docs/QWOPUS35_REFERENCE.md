@@ -28,6 +28,28 @@ The linked PDF is primarily an SFT engineering guide for Qwopus3.5-27B, not a pr
 
 The 9B Kaggle notebook adds fixed-seed sampling, deduplication after mixing, length filtering, format QA, and a Qwen thinking template. The separate GRPO notebook uses SFT cold-start first, then grouped rollouts with structural, correctness, and anti-repetition rewards. Its rewards are math-specific and must not be copied into the action model unchanged.
 
+## Source refresh — 2026-08-02
+
+The current model card says its reported HumanEval result changed when the
+evaluation context length changed. That is a useful warning, not a result we
+can import: every local comparison must pin the model revision, chat template,
+thinking policy, decoding settings, maximum length, task hashes, and evaluator
+before reading a score difference as a model improvement.
+
+The Hugging Face model tree currently lists 22 adapters/derivatives. Many are
+quantizations, abliterated variants, or downstream task-specific fine-tunes;
+their existence is not independent quality, provenance, or action-policy
+evidence. The clean branch therefore remains pinned to the original local
+Qwopus3.5-9B-v3 snapshot rather than selecting a derivative by popularity.
+
+The linked guide has since added a Qwopus3.6 27B GSPO-style tutorial. It
+emphasizes dry runs, reward tests, a short smoke run, explicit checkpointing,
+and sequence-level importance sampling with a DR-GRPO loss configuration. It
+is a useful checklist for a future post-training protocol, but it is a public
+tutorial for another model/task: it does not validate a reward, scale, or RL
+claim for this 9B Action IR policy. Our verifier-defined rewards and promotion
+gate remain the controlling protocol.
+
 ## How this changes our two-project design
 
 ### Project 1: Open Local Action Model
